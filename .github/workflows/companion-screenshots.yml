@@ -53,17 +53,17 @@ jobs:
             adb shell am start -n com.ghost.tesla.mobile/.MainActivity --es tic_local http://10.0.2.2:8766
             sleep 10
             mkdir -p docs/images/companion
-            adb exec-out screencap -p > docs/images/companion/companion-v021-home.png
+            adb exec-out screencap -p > docs/images/companion/companion-v030-home.png
             adb shell am force-stop com.ghost.tesla.mobile
             adb shell am start -n com.ghost.tesla.mobile/.MainActivity --es tic_local http://10.0.2.2:8766 --es tic_view neural4
             sleep 8
-            adb exec-out screencap -p > docs/images/companion/companion-v021-neural.png
+            adb exec-out screencap -p > docs/images/companion/companion-v030-neural.png
 
       - name: Commit screenshots
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/images/companion/companion-v021-home.png docs/images/companion/companion-v021-neural.png
-          git commit -m "Add Companion v0.2.1 emulator screenshots" || exit 0
+          git add docs/images/companion/companion-v030-home.png docs/images/companion/companion-v030-neural.png
+          git commit -m "Add Companion v0.3.0 emulator screenshots" || exit 0
           git pull --rebase origin main
           git push origin HEAD:main
