@@ -1,0 +1,33 @@
+name: Feature request
+description: Suggest an improvement
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Proposed behavior
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Dashboard
+        - Winter Readiness
+        - Departure learning
+        - Thermal / charging
+        - Neural / models
+        - Tessie
+        - TeslaMate
+        - Installer / updates
+        - Remote access
+        - Documentation
+        - Other
