@@ -2,14 +2,14 @@
 set -Eeuo pipefail
 
 VERSION="0.8.27.6"
-REPO_URL="${GHOST_REPO_URL:-https://github.com/prokyle123/ghost-tesla-ai.git}"
+REPO_URL="${GHOST_REPO_URL:-https://github.com/prokyle123/tesla-intelligence-core.git}"
 INSTALL_DIR="/opt/ghost-tesla-ai"
 DATA_DIR="/var/lib/ghost-tesla-ai"
 CONF_DIR="/etc/ghost-tesla-ai"
 
 banner(){
   echo "============================================================"
-  echo " GHOST Tesla AI v${VERSION} - Interactive Installer"
+  echo " Tesla Intelligence Core v${VERSION} - Interactive Installer"
   echo "============================================================"
 }
 fail(){ echo "ERROR: $*" >&2; exit 1; }
@@ -30,7 +30,7 @@ if [[ ! -d "$SCRIPT_DIR/ghost_tesla_ai" ]]; then
   command -v git >/dev/null 2>&1 || { command -v sudo >/dev/null 2>&1 && sudo apt-get update -y && sudo apt-get install -y git; }
   TMP="$(mktemp -d)"
   trap 'rm -rf "$TMP"' EXIT
-  echo "Downloading GHOST Tesla AI..."
+  echo "Downloading Tesla Intelligence Core..."
   git clone --depth 1 "$REPO_URL" "$TMP/repo"
   exec bash "$TMP/repo/install.sh" "$@"
 fi
@@ -40,7 +40,7 @@ banner
 if [[ "${EUID}" -eq 0 ]]; then SUDO=""; CALLING_USER="${SUDO_USER:-root}"; else command -v sudo >/dev/null 2>&1 || fail "sudo is required"; SUDO="sudo"; CALLING_USER="${USER}"; fi
 DEFAULT_USER="$CALLING_USER"
 [[ "$DEFAULT_USER" == "root" ]] && DEFAULT_USER="$(logname 2>/dev/null || echo pi)"
-prompt_default INSTALL_USER "Linux user that should run GHOST" "$DEFAULT_USER"
+prompt_default INSTALL_USER "Linux user that should run Tesla Intelligence Core" "$DEFAULT_USER"
 id "$INSTALL_USER" >/dev/null 2>&1 || fail "Linux user '$INSTALL_USER' does not exist"
 
 ARCH="$(uname -m)"
@@ -142,7 +142,7 @@ else KEEP_CONFIG=false; fi
 if ! $KEEP_CONFIG; then
   TMP_ENV="$(mktemp)"
   cat > "$TMP_ENV" <<ENV
-# GHOST Tesla AI v$VERSION
+# Tesla Intelligence Core v$VERSION
 GHOST_AI_HOST=0.0.0.0
 GHOST_AI_PORT=$DASH_PORT
 GHOST_AI_DATA_DIR=$DATA_DIR
@@ -237,7 +237,7 @@ fi
 if $CONFIG_FUNNEL; then
   echo
   if ! command -v tailscale >/dev/null 2>&1; then
-    echo "Tailscale is not installed. Core GHOST is complete; install/connect Tailscale, then run:"
+    echo "Tailscale is not installed. Core Tesla Intelligence Core is complete; install/connect Tailscale, then run:"
     echo "  sudo -u $INSTALL_USER $INSTALL_DIR/venv/bin/python -m ghost_tesla_ai.funnel_pin_setup"
     echo "  sudo systemctl enable --now ghost-tesla-ai-funnel-gateway.service"
     echo "  sudo tailscale funnel --bg http://127.0.0.1:8777"
@@ -258,7 +258,7 @@ $SUDO systemctl --no-pager --plain is-active ghost-tesla-ai-collector.service gh
 
 echo
 echo "============================================================"
-echo " GHOST Tesla AI installed"
+echo " Tesla Intelligence Core installed"
 echo " Dashboard : http://${IP:-localhost}:${DASH_PORT}"
 echo " Status    : ghost-ai status"
 echo " Config    : $ENV_FILE"
