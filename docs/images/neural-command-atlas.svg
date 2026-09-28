@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="760" viewBox="0 0 1600 760">
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#07111d"/><stop offset="1" stop-color="#0a1d2b"/></linearGradient>
+  <radialGradient id="core"><stop stop-color="#124d69"/><stop offset="1" stop-color="#0a1b2b"/></radialGradient>
+  <filter id="glow"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <marker id="arrowC" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#46d9ff"/></marker>
+  <marker id="arrowP" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#8d72ff"/></marker>
+  <style>
+    .t{font-family:Inter,Segoe UI,Arial,sans-serif;fill:#e8f2ff}.mut{fill:#7ea4c6}.cap{fill:#46d9ff;font-size:15px;font-weight:700;letter-spacing:1.6px}
+    .node{fill:#0b1a28;stroke:#2a5270;stroke-width:1.4}.cyan{stroke:#46d9ff}.purple{stroke:#8d72ff}.green{stroke:#46e6a1}.gold{stroke:#e8b74f}
+    .h{font-size:17px;font-weight:700}.s{font-size:12px}.tiny{font-size:10px}
+    .line{fill:none;stroke:#46d9ff;stroke-width:2;opacity:.72}.pline{fill:none;stroke:#8d72ff;stroke-width:2;opacity:.72}.gline{fill:none;stroke:#46e6a1;stroke-width:2;opacity:.72}
+  </style>
+</defs>
+<rect width="1600" height="760" rx="24" fill="url(#bg)"/>
+<rect x="18" y="18" width="1564" height="724" rx="20" fill="none" stroke="#173d55"/>
+<text x="50" y="58" class="t" font-size="25" font-weight="800">Neural Command Atlas</text>
+<text x="50" y="84" class="mut" font-family="Inter,Segoe UI,Arial" font-size="14">Sequence intake → recurrent memory → shared latent state → multitask forecasts → truth / governor loop</text>
+<rect x="1370" y="39" width="160" height="34" rx="17" fill="#0b3a2b" stroke="#22c97c"/><text x="1450" y="61" text-anchor="middle" class="t s" fill="#46e6a1">LIVE + TRAINING</text>
+
+<text x="65" y="130" class="cap">SEQUENCE WINDOW</text>
+<text x="335" y="130" class="cap">FEATURE LANES</text>
+<text x="610" y="130" class="cap">RECURRENT CORE</text>
+<text x="910" y="130" class="cap">LATENT CONSTELLATION</text>
+<text x="1195" y="130" class="cap">MULTITASK HEAD</text>
+<text x="1430" y="130" class="cap">OUTPUTS</text>
+
+<g>
+  <rect x="62" y="160" width="190" height="430" rx="18" class="node"/>
+  <text x="82" y="188" class="t h">13 time steps</text><text x="82" y="208" class="mut s">rolling context window</text>
+  <rect x="82" y="232" width="150" height="18" rx="9" fill="#0e2636" stroke="#25485e"/><text x="92" y="245" class="mut tiny">-60m · pack / SOC / state</text><rect x="82" y="257" width="150" height="18" rx="9" fill="#0e2636" stroke="#25485e"/><text x="92" y="270" class="mut tiny">-55m · pack / SOC / state</text><rect x="82" y="282" width="150" height="18" rx="9" fill="#0e2636" stroke="#25485e"/><text x="92" y="295" class="mut tiny">-50m · pack / SOC / state</text><rect x="82" y="307" width="150" height="18" rx="9" fill="#0e2636" stroke="#25485e"/><text x="92" y="320" class="mut tiny">-45m · pack / SOC / state</text><rect x="82" y="332" width="150" height="18" rx="9" fill="#0e2636" stroke="#25485e"/><text x="92" y="345" class="mut tiny">-40m · pack / SOC / state</text><rect x="82" y="357" width="150" height="18" rx="9" fill="#0e2636" stroke="#25485e"/><text x="92" y="370" class="mut tiny">-35m · pack / SOC / state</text><rect x="82" y="382" width="150" height="18" rx="9" fill="#0e2636" stroke="#25485e"/><text x="92" y="395" class="mut tiny">-30m · pack / SOC / state</text><rect x="82" y="407" width="150" height="18" rx="9" fill="#0e2636" stroke="#25485e"/><text x="92" y="420" class="mut tiny">-25m · pack / SOC / state</text><rect x="82" y="432" width="150" height="18" rx="9" fill="#0e2636" stroke="#25485e"/><text x="92" y="445" class="mut tiny">-20m · pack / SOC / state</text><rect x="82" y="457" width="150" height="18" rx="9" fill="#0e2636" stroke="#25485e"/><text x="92" y="470" class="mut tiny">-15m · pack / SOC / state</text><rect x="82" y="482" width="150" height="18" rx="9" fill="#0e2636" stroke="#46d9ff"/><text x="92" y="495" class="mut tiny">-10m · pack / SOC / state</text><rect x="82" y="507" width="150" height="18" rx="9" fill="#0e2636" stroke="#46d9ff"/><text x="92" y="520" class="mut tiny">-5m · pack / SOC / state</text><rect x="82" y="532" width="150" height="18" rx="9" fill="#0e2636" stroke="#46d9ff"/><text x="92" y="545" class="mut tiny">NOW · pack / SOC / state</text>
+</g>
+
+<g>
+  <rect x="315" y="160" width="210" height="430" rx="18" class="node"/>
+  <text x="335" y="188" class="t h">32 features</text><text x="335" y="208" class="mut s">normalized + masked</text>
+  <text x="338" y="250" class="t s">PACK</text><rect x="405" y="238" width="70" height="13" rx="7" fill="#46d9ff" opacity=".85"/><text x="338" y="289" class="t s">SOC</text><rect x="405" y="277" width="92" height="13" rx="7" fill="#46d9ff" opacity=".85"/><text x="338" y="328" class="t s">CABIN</text><rect x="405" y="316" width="114" height="13" rx="7" fill="#36a7d1" opacity=".85"/><text x="338" y="367" class="t s">AIR</text><rect x="405" y="355" width="70" height="13" rx="7" fill="#36a7d1" opacity=".85"/><text x="338" y="406" class="t s">CHARGE</text><rect x="405" y="394" width="92" height="13" rx="7" fill="#36a7d1" opacity=".85"/><text x="338" y="445" class="t s">HEATER</text><rect x="405" y="433" width="114" height="13" rx="7" fill="#8d72ff" opacity=".85"/><text x="338" y="484" class="t s">SPEED</text><rect x="405" y="472" width="70" height="13" rx="7" fill="#8d72ff" opacity=".85"/><text x="338" y="523" class="t s">AGE</text><rect x="405" y="511" width="92" height="13" rx="7" fill="#8d72ff" opacity=".85"/>
+  <rect x="340" y="548" width="160" height="26" rx="13" fill="#102a3a" stroke="#46e6a1"/><text x="420" y="566" text-anchor="middle" class="t tiny">ROBUST SCALER</text>
+</g>
+
+<path d="M252 370 C280 370 285 370 315 370" class="line" marker-end="url(#arrowC)"/>
+
+<g>
+  <rect x="600" y="210" width="220" height="112" rx="20" class="node purple" filter="url(#glow)"/>
+  <text x="710" y="246" text-anchor="middle" class="t h">GRU LAYER 1</text><text x="710" y="269" text-anchor="middle" class="mut s">input 32 → hidden 64</text>
+  <g fill="#8d72ff"><rect x="630" y="286" width="8" height="15" rx="2"/><rect x="643" y="281" width="8" height="20" rx="2"/><rect x="656" y="276" width="8" height="25" rx="2"/><rect x="669" y="271" width="8" height="30" rx="2"/><rect x="682" y="266" width="8" height="35" rx="2"/><rect x="695" y="286" width="8" height="15" rx="2"/><rect x="708" y="281" width="8" height="20" rx="2"/><rect x="721" y="276" width="8" height="25" rx="2"/><rect x="734" y="271" width="8" height="30" rx="2"/><rect x="747" y="266" width="8" height="35" rx="2"/><rect x="760" y="286" width="8" height="15" rx="2"/><rect x="773" y="281" width="8" height="20" rx="2"/></g>
+  <rect x="600" y="364" width="220" height="112" rx="20" class="node purple" filter="url(#glow)"/>
+  <text x="710" y="400" text-anchor="middle" class="t h">GRU LAYER 2</text><text x="710" y="423" text-anchor="middle" class="mut s">hidden 64 → hidden 64</text>
+  <g fill="#8d72ff"><rect x="630" y="444" width="8" height="14" rx="2"/><rect x="643" y="439" width="8" height="19" rx="2"/><rect x="656" y="434" width="8" height="24" rx="2"/><rect x="669" y="429" width="8" height="29" rx="2"/><rect x="682" y="444" width="8" height="14" rx="2"/><rect x="695" y="439" width="8" height="19" rx="2"/><rect x="708" y="434" width="8" height="24" rx="2"/><rect x="721" y="429" width="8" height="29" rx="2"/><rect x="734" y="444" width="8" height="14" rx="2"/><rect x="747" y="439" width="8" height="19" rx="2"/><rect x="760" y="434" width="8" height="24" rx="2"/><rect x="773" y="429" width="8" height="29" rx="2"/></g>
+  <path d="M710 322 L710 364" class="pline" marker-end="url(#arrowP)"/>
+</g>
+<path d="M525 370 C560 370 565 265 600 265" class="line" marker-end="url(#arrowC)"/>
+
+<g>
+  <circle cx="995" cy="345" r="115" fill="url(#core)" stroke="#46d9ff" stroke-width="2.5" filter="url(#glow)"/>
+  <circle cx="995" cy="345" r="82" fill="#0c2132" stroke="#315d77"/>
+  <circle cx="1091.0" cy="345.0" r="5" fill="#8d72ff"/><circle cx="1083.7" cy="381.7" r="5" fill="#46d9ff"/><circle cx="1062.9" cy="412.9" r="5" fill="#46d9ff"/><circle cx="1031.7" cy="433.7" r="5" fill="#8d72ff"/><circle cx="995.0" cy="441.0" r="5" fill="#46d9ff"/><circle cx="958.3" cy="433.7" r="5" fill="#46d9ff"/><circle cx="927.1" cy="412.9" r="5" fill="#8d72ff"/><circle cx="906.3" cy="381.7" r="5" fill="#46d9ff"/><circle cx="899.0" cy="345.0" r="5" fill="#46d9ff"/><circle cx="906.3" cy="308.3" r="5" fill="#8d72ff"/><circle cx="927.1" cy="277.1" r="5" fill="#46d9ff"/><circle cx="958.3" cy="256.3" r="5" fill="#46d9ff"/><circle cx="995.0" cy="249.0" r="5" fill="#8d72ff"/><circle cx="1031.7" cy="256.3" r="5" fill="#46d9ff"/><circle cx="1062.9" cy="277.1" r="5" fill="#46d9ff"/><circle cx="1083.7" cy="308.3" r="5" fill="#8d72ff"/>
+  <text x="995" y="337" text-anchor="middle" class="t h">SHARED LATENT</text>
+  <text x="995" y="360" text-anchor="middle" class="mut s">learned vehicle state</text>
+  <text x="995" y="382" text-anchor="middle" class="mut tiny">thermal · charge · commute · timing</text>
+  <rect x="865" y="175" width="150" height="48" rx="15" class="node green"/><text x="940" y="197" text-anchor="middle" class="t s">WARM PARKED</text><text x="940" y="214" text-anchor="middle" class="mut tiny">latent cluster</text>
+  <rect x="1020" y="175" width="150" height="48" rx="15" class="node cyan"/><text x="1095" y="197" text-anchor="middle" class="t s">THERMAL PREP</text><text x="1095" y="214" text-anchor="middle" class="mut tiny">latent cluster</text>
+  <rect x="865" y="500" width="150" height="48" rx="15" class="node"/><text x="940" y="522" text-anchor="middle" class="t s">COLD PARKED</text><text x="940" y="539" text-anchor="middle" class="mut tiny">latent cluster</text>
+  <rect x="1020" y="500" width="150" height="48" rx="15" class="node green"/><text x="1095" y="522" text-anchor="middle" class="t s">CHARGING HOLD</text><text x="1095" y="539" text-anchor="middle" class="mut tiny">latent cluster</text>
+</g>
+<path d="M820 420 C860 420 850 345 880 345" class="pline" marker-end="url(#arrowP)"/>
+
+<g>
+  <rect x="1190" y="210" width="180" height="58" rx="17" class="node purple"/><text x="1280" y="235" text-anchor="middle" class="t h">DENSE 64 → 48</text><text x="1280" y="254" text-anchor="middle" class="mut tiny">shared representation</text>
+  <rect x="1190" y="295" width="180" height="58" rx="17" class="node purple"/><text x="1280" y="320" text-anchor="middle" class="t h">SiLU</text><text x="1280" y="339" text-anchor="middle" class="mut tiny">nonlinear activation</text>
+  <rect x="1190" y="380" width="180" height="58" rx="17" class="node purple"/><text x="1280" y="405" text-anchor="middle" class="t h">DENSE 48 → 5</text><text x="1280" y="424" text-anchor="middle" class="mut tiny">multitask output head</text>
+  <path d="M1280 268 L1280 295 M1280 353 L1280 380" class="pline" marker-end="url(#arrowP)"/>
+  <rect x="1190" y="485" width="180" height="54" rx="17" class="node green"/><text x="1280" y="508" text-anchor="middle" class="t s">TRUTH QUALIFIER</text><text x="1280" y="527" text-anchor="middle" class="mut tiny">resolved evidence</text>
+  <rect x="1190" y="558" width="180" height="54" rx="17" class="node gold"/><text x="1280" y="581" text-anchor="middle" class="t s">ROLLBACK GUARD</text><text x="1280" y="600" text-anchor="middle" class="mut tiny">promotion safety</text>
+</g>
+<path d="M1110 345 C1150 345 1150 239 1190 239" class="pline" marker-end="url(#arrowP)"/>
+
+<g>
+  <rect x="1410" y="185" width="150" height="58" rx="17" class="node green"/><text x="1485" y="209" text-anchor="middle" class="t s">SOC +60 MIN</text><text x="1485" y="229" text-anchor="middle" fill="#46e6a1" font-family="Inter,Segoe UI,Arial" font-size="15" font-weight="700">74.7%</text><rect x="1410" y="267" width="150" height="58" rx="17" class="node green"/><text x="1485" y="291" text-anchor="middle" class="t s">PACK +60 MIN</text><text x="1485" y="311" text-anchor="middle" fill="#46e6a1" font-family="Inter,Segoe UI,Arial" font-size="15" font-weight="700">27.3°C</text><rect x="1410" y="349" width="150" height="58" rx="17" class="node green"/><text x="1485" y="373" text-anchor="middle" class="t s">CABIN +60 MIN</text><text x="1485" y="393" text-anchor="middle" fill="#46e6a1" font-family="Inter,Segoe UI,Arial" font-size="15" font-weight="700">25.5°C</text><rect x="1410" y="431" width="150" height="58" rx="17" class="node green"/><text x="1485" y="455" text-anchor="middle" class="t s">SOC +3 HR</text><text x="1485" y="475" text-anchor="middle" fill="#46e6a1" font-family="Inter,Segoe UI,Arial" font-size="15" font-weight="700">74.8%</text><rect x="1410" y="513" width="150" height="58" rx="17" class="node green"/><text x="1485" y="537" text-anchor="middle" class="t s">PACK +3 HR</text><text x="1485" y="557" text-anchor="middle" fill="#46e6a1" font-family="Inter,Segoe UI,Arial" font-size="15" font-weight="700">26.7°C</text>
+</g>
+<path d="M1370 409 C1390 409 1390 214 1410 214" class="gline" marker-end="url(#arrowC)"/>
+<path d="M1370 409 C1390 409 1390 296 1410 296" class="gline"/>
+<path d="M1370 409 C1390 409 1390 378 1410 378" class="gline"/>
+<path d="M1370 409 C1390 409 1390 460 1410 460" class="gline"/>
+<path d="M1370 409 C1390 409 1390 542 1410 542" class="gline"/>
+
+<rect x="565" y="650" width="770" height="60" rx="18" fill="#081724" stroke="#1d4a61"/>
+<text x="585" y="676" class="cap">PREDICTION → TRUTH → GOVERNOR LIFECYCLE</text>
+<circle cx="955" cy="682" r="5" fill="#e8b74f"/><text x="970" y="686" class="mut s">pending</text>
+<circle cx="1055" cy="682" r="5" fill="#46e6a1"/><text x="1070" y="686" class="mut s">truth resolved</text>
+<circle cx="1190" cy="682" r="5" fill="#8d72ff"/><text x="1205" y="686" class="mut s">governor</text>
+<circle cx="1300" cy="682" r="5" fill="#46d9ff"/><text x="1315" y="686" class="mut s">served prod</text>
+
+<text x="50" y="724" class="mut s">Tesla Intelligence Core · Neural Engine / Command Atlas</text>
+</svg>
