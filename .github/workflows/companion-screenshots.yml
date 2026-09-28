@@ -48,15 +48,13 @@ jobs:
           script: |
             python3 -m http.server 8766 --directory web/templates >/tmp/tic-demo-http.log 2>&1 &
             adb install -r companion/android/app/build/outputs/apk/debug/app-debug.apk
-            adb shell run-as com.ghost.tesla.mobile mkdir -p shared_prefs
-            printf '%s' '<?xml version="1.0" encoding="utf-8" standalone="yes" ?><map><string name="local">http://10.0.2.2:8766</string><string name="private"></string><string name="public"></string></map>' | adb shell run-as com.ghost.tesla.mobile sh -c 'cat > shared_prefs/ghost.xml'
             adb shell am force-stop com.ghost.tesla.mobile
-            adb shell am start -n com.ghost.tesla.mobile/.MainActivity
-            sleep 8
+            adb shell am start -n com.ghost.tesla.mobile/.MainActivity --es tic_local http://10.0.2.2:8766
+            sleep 10
             mkdir -p docs/images/companion
             adb exec-out screencap -p > docs/images/companion/companion-v020-home.png
-            adb shell input tap 325 2240
-            sleep 4
+            adb shell input tap 325 2200
+            sleep 5
             adb exec-out screencap -p > docs/images/companion/companion-v020-neural.png
 
       - name: Commit screenshots
