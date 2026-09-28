@@ -2,16 +2,26 @@
 
 # Tesla Intelligence Core
 
-### Local-first predictive intelligence for your Tesla — running on your own Raspberry Pi.
+### A self-hosted Tesla learning system that predicts what happens next — not just what is happening now.
 
-**Thermal learning · charging behavior · trip-pattern learning · winter readiness · neural forecasting**
+**Telemetry → local history → learned behavior → neural forecasting → truth validation → readiness**
 
 [![Release](https://img.shields.io/github/v/release/prokyle123/tesla-intelligence-core?display_name=tag&sort=semver)](https://github.com/prokyle123/tesla-intelligence-core/releases)
 [![Smoke](https://github.com/prokyle123/tesla-intelligence-core/actions/workflows/smoke.yml/badge.svg)](https://github.com/prokyle123/tesla-intelligence-core/actions/workflows/smoke.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-![Python](https://img.shields.io/badge/Python-3.11%2B-3776ab)
 ![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-5%20recommended-c51a4a)
 ![Read only](https://img.shields.io/badge/Vehicle%20control-read--only-2ea44f)
+
+**Core stack**
+
+![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
+![PyTorch](https://img.shields.io/badge/PyTorch-GRU-EE4C2C?logo=pytorch&logoColor=white)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-baseline%20ML-F7931E?logo=scikitlearn&logoColor=white)
+![Flask](https://img.shields.io/badge/Flask-dashboard-000000?logo=flask&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-local%20history-003B57?logo=sqlite&logoColor=white)
+![Web UI](https://img.shields.io/badge/Web%20UI-HTML%20%2F%20CSS%20%2F%20JS-E34F26?logo=html5&logoColor=white)
+![Bash](https://img.shields.io/badge/Bash-installer%20%2B%20ops-4EAA25?logo=gnubash&logoColor=white)
+![systemd](https://img.shields.io/badge/systemd-services%20%2B%20timers-5B5B5B)
 
 **[Quick install](#quick-start) · [Visual tour](#visual-tour) · [How it works](#how-it-works) · [Documentation](#documentation) · [Latest release](https://github.com/prokyle123/tesla-intelligence-core/releases/latest)**
 
@@ -109,20 +119,55 @@ The thermal power-path view compares wall input with derived non-pack and pack e
 
 ## Why this project is different
 
-Most Tesla dashboards show you **what is happening now**.
+### Most dashboards stop at telemetry. Tesla Intelligence Core keeps going.
 
-Tesla Intelligence Core is designed to learn enough history to answer what is likely to happen **next**:
+A telemetry-only dashboard can tell you the battery is **82°F and 80% right now**. Tesla Intelligence Core is built to turn that snapshot into a continuously improving model of **your particular car, your charging setup, your routine, and what is likely to happen next**.
 
-| Live state | Learned context | Prediction |
-|---|---|---|
-| Battery / module temperatures | How your pack cools and warms | Pack temperature at departure |
-| SOC / charging power | Your real charging rate | Departure SOC / charge deadline |
-| Drive starts | Your recurring departure patterns | Next-trip probability |
-| Past trips | Typical SOC use and commute behavior | Arrival SOC reserve |
-| Outside air + weather | Cold-soak and thermal history | Winter readiness |
-| Historical outcomes | Prediction vs reality | Truth / model audit |
+| | |
+|---|---|
+| **🧠 Learns your car** | Builds evidence about pack cooling, thermal retention, cold soak, charging behavior, trip energy use and other behavior from your own history instead of relying only on fixed assumptions. |
+| **🕒 Learns your routine** | Finds repeated departure patterns from actual drive starts. A configured departure is only a fading prior, while random and secondary trips remain useful without taking over the routine. |
+| **🔮 Forecasts multiple futures** | The neural engine consumes rolling telemetry sequences and produces multi-horizon outputs for **SOC, pack temperature and cabin temperature** rather than a single one-off estimate. |
+| **🎯 Checks prediction against reality** | **Truth Lab** resolves old predictions when future telemetry arrives, so the system can measure what actually happened instead of displaying a forecast and forgetting it. |
+| **🛡️ Governs its own models** | Challenger and production generations can be compared before promotion. The governor, promotion gates and rollback path are visible in the Neural Engine instead of being hidden behind an opaque “AI” label. |
+| **❄️ Turns models into an answer you can use** | Winter Readiness combines live conditions, learned evidence and forecasts into a score with **human-readable limiters** showing exactly what is costing points. |
+| **🔒 Local-first and read-only** | History, events and trained model artifacts live on your Pi. The project observes and predicts; it does not intentionally send driving, locking, charging or climate-control commands to the vehicle. |
+| **🔌 More than one telemetry path** | Supports **Tessie API** and **TeslaMate MQTT**, with optional weather, EcoFlow, Starlink and Tailscale integrations around the core intelligence stack. |
 
-The result is not just a graph dump. The main view produces a **Winter Readiness Score** and human-readable **Winter Readiness Limiters** that explain exactly what is reducing confidence/readiness.
+### From raw telemetry to a closed learning loop
+
+```text
+Tesla telemetry
+      ↓
+Local SQLite history
+      ↓
+Trips · charging · thermal events · departure patterns
+      ↓
+Classical ML + PyTorch GRU sequence model
+      ↓
+Future SOC · pack temperature · cabin temperature
+      ↓
+Truth Lab: prediction → actual outcome
+      ↓
+Governor: challenger → promotion / hold / rollback
+      ↓
+Winter Readiness + human-readable limiters
+```
+
+### A telemetry view vs. Tesla Intelligence Core
+
+| Telemetry-only view | Tesla Intelligence Core |
+|---|---|
+| Current SOC | **Projected departure SOC + projected arrival reserve** |
+| Current pack temperature | **1h / 3h / multi-hour pack-temperature forecasts** |
+| Drive history | **Learned recurring departure behavior** |
+| Charging power | **Learned charging behavior + charge-deadline context** |
+| Weather / outside temperature | **Cold-soak and thermal-margin evidence** |
+| One model output | **Serving + challenger generations with promotion gates** |
+| Prediction shown once | **Prediction later resolved against truth** |
+| Generic status | **Explainable Winter Readiness with exact limiters** |
+
+> **The goal is not to put an “AI” badge on a Tesla dashboard. The goal is to build a local system that learns, predicts, checks itself against reality, and gets more useful as it observes the car.**
 
 ---
 
