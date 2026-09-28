@@ -44,6 +44,8 @@ public class MainActivity extends Activity {
             if(x!=null&&!x.trim().isEmpty()) tail=norm(x);
             x=launch.getStringExtra("tic_public");
             if(x!=null&&!x.trim().isEmpty()) pub=norm(x);
+            x=launch.getStringExtra("tic_view");
+            if(x!=null&&!x.trim().isEmpty()) view=x.trim();
         }
 
         build();
