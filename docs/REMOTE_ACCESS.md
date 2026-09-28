@@ -2,6 +2,8 @@
 
 Tesla Intelligence Core can be used entirely on your local network. Remote access is optional.
 
+For the in-car use case, see **[Tesla in-car browser access](TESLA_BROWSER.md)**. On the development setup, the Tesla browser would not load the Pi's local/private URL, while the PIN-protected public HTTPS Funnel route did work. Vehicle/software/network behavior can vary.
+
 > The dashboard can contain personal vehicle history. Treat it accordingly.
 
 ## Option 1: private Tailscale access
