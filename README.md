@@ -33,7 +33,7 @@
 ![TeslaMate](https://img.shields.io/badge/source-TeslaMate-0ea5e9)
 ![Local first](https://img.shields.io/badge/data-local--first-2ea44f)
 ![Predictive](https://img.shields.io/badge/focus-predictive%20analytics-8b5cf6)
-![Android companion](https://img.shields.io/badge/Android-companion%20v0.2.0-3DDC84?logo=android&logoColor=white)
+![Android companion](https://img.shields.io/badge/Android-companion%20v0.2.1-3DDC84?logo=android&logoColor=white)
 ![Tesla browser](https://img.shields.io/badge/in--car%20browser-PIN%20Funnel-43D8FF)
 
 **[Quick install](#quick-start) · [Visual tour](#visual-tour) · [Use cases](docs/USE_CASES.md) · [How it works](#how-it-works) · [Documentation](#documentation) · [Latest release](https://github.com/prokyle123/tesla-intelligence-core/releases/latest)**
@@ -170,7 +170,7 @@ Tesla Intelligence Core is not limited to a desktop browser.
 
 The Android companion keeps the Pi dashboard as the source of truth, then adds a mobile shell with fast view switching, connection diagnostics and automatic endpoint failover.
 
-**Companion v0.2.0 adds the full current dashboard navigation:**
+**Companion v0.2.1 adds the full current dashboard navigation:**
 
 `Home / Winter Readiness · Neural Engine · Truth Lab · Thermal History · AI Lab · Models · Data Quality · Sources · Events · Production · History`
 
@@ -182,9 +182,16 @@ Local LAN -> private Tailscale -> optional public HTTPS
 
 That makes the app useful both at home and away from the local network without hard-coding somebody else's IP or Tailscale hostname into a public build.
 
-**[Download Android Companion v0.2.0](https://github.com/prokyle123/tesla-intelligence-core/releases/download/v0.8.27.6/Tesla-Intelligence-Core-Companion-v0.2.0-debug.apk)** · **[Source](companion/android)**
+**[Download Android Companion v0.2.1](https://github.com/prokyle123/tesla-intelligence-core/releases/download/v0.8.27.6/Tesla-Intelligence-Core-Companion-v0.2.1-debug.apk)** · **[Source](companion/android)**
 
-The v0.2.0 update preserves the original S25/system-navigation fixes and the Neural Atlas aspect-ratio fix while adding first-run setup, current Pi views, public/PIN-gateway support and Tesla-browser guidance.
+The v0.2.1 update preserves the original S25/system-navigation fixes and the Neural Atlas aspect-ratio fix while adding first-run setup, current Pi views, public/PIN-gateway support and Tesla-browser guidance.
+
+<p align="center">
+  <img src="docs/images/companion/companion-v021-home.png" alt="Tesla Intelligence Core Companion home / readiness view" width="42%">
+  &nbsp;&nbsp;
+  <img src="docs/images/companion/companion-v021-neural.png" alt="Tesla Intelligence Core Companion Neural Engine view" width="42%">
+</p>
+<p align="center"><sub><b>Companion v0.2.1</b> — current Pi dashboard inside the Android shell with fast READY / EVENTS / NEURAL / TRUTH / THERMAL navigation and automatic endpoint failover.</sub></p>
 
 > [!NOTE]
 > The current public companion APK is a debug-signed sideload build. An older copy built on another machine may have a different Android signature and require one uninstall before installing the GitHub build.
