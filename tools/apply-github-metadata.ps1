@@ -10,7 +10,7 @@ $Topics = @(
   "raspberry-pi",
   "self-hosted",
   "machine-learning",
-  "deep-learning",
+  "android",
   "pytorch",
   "time-series",
   "time-series-forecasting",
