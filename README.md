@@ -1,175 +1,426 @@
-# GHOST Tesla AI
+<div align="center">
 
-**Local-first Tesla winter-readiness, thermal, charging, trip-pattern and energy learning for Raspberry Pi.**
+# Tesla Intelligence Core
 
-![Version](https://img.shields.io/badge/version-0.8.27.6-40e0d0)
+### Local-first predictive intelligence for your Tesla — running on your own Raspberry Pi.
+
+**Thermal learning · charging behavior · trip-pattern learning · winter readiness · neural forecasting**
+
+[![Release](https://img.shields.io/github/v/release/prokyle123/tesla-intelligence-core?display_name=tag&sort=semver)](https://github.com/prokyle123/tesla-intelligence-core/releases)
+[![Smoke](https://github.com/prokyle123/tesla-intelligence-core/actions/workflows/smoke.yml/badge.svg)](https://github.com/prokyle123/tesla-intelligence-core/actions/workflows/smoke.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776ab)
-![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-64--bit-c51a4a)
-![License](https://img.shields.io/badge/license-MIT-green)
+![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-5%20recommended-c51a4a)
+![Read only](https://img.shields.io/badge/Vehicle%20control-read--only-2ea44f)
 
-GHOST turns Tesla telemetry into a continuously learning local model of **your car**: how the battery warms and cools, how fast it charges, when trips usually happen, how much SOC they use, and what condition the car is likely to be in when you leave.
+</div>
 
-It was built first as a winter-readiness dashboard and grew into a local Tesla telemetry + machine-learning lab.
+Tesla Intelligence Core is a self-hosted Tesla telemetry and learning system built around one practical question:
 
-> **Read-only project:** GHOST observes telemetry and builds predictions. It does not send driving, climate, charging, locking, or other control commands to the vehicle.
+> **When I leave next, what condition will the car and battery actually be in?**
 
-![GHOST dashboard](docs/images/dashboard-overview.png)
+It watches live telemetry, builds a local history, learns recurring behavior, extracts trips/charging/thermal events, trains predictive models, and turns all of that into a dashboard that explains **what it expects and why**.
 
-## What it does
+It started as a winter-readiness project and grew into a broader local vehicle-intelligence platform.
 
-- **Winter Readiness Score (0-100)** with human-readable **Winter Readiness Limiters** explaining every active point deduction.
-- **Battery thermal intelligence** using pack/module temperatures, outside air, thermal margin, cooling/warming trend and cold-soak history.
-- **Future pack-temperature forecasts** including learned 1-hour / 3-hour outlooks and weather-linked cold conditions.
-- **Learned departure schedule** from real drive history instead of a permanently hard-coded commute time.
-- **Routine vs random trip handling** so occasional drives do not destroy the normal schedule model.
-- **Next-trip probability + confidence** separate from overall schedule quality.
-- **Departure SOC, projected arrival SOC, pack-at-departure and warm-up recommendations.**
-- **Level-1 / charging memory** for real charge-rate and overnight behavior.
-- **Cabin HVAC + preconditioning observation** and battery-heater state.
-- **PyTorch GRU temporal model** with shadow/challenger training, promotion gates and rollback logic.
-- **Classical ML models** for SOC, cabin and pack-temperature prediction.
-- **Prediction auditing / Truth Lab** to compare forecasts against what actually happened.
-- **Automatic telemetry event extraction** for drives, charging, cold soak and thermal events.
-- **Tessie API or TeslaMate MQTT** as telemetry sources.
-- **Historical Tessie backfill** so a fresh install can begin learning from prior data immediately.
-- **Open-Meteo weather context** with no weather API key required.
-- **Optional EcoFlow RIVER 3 status** in the operations header.
-- **Optional Starlink local power telemetry.**
-- **Optional Tailscale Funnel + local PIN gateway** for remote HTTPS access without exposing the raw dashboard directly.
-- **SQLite local history + local model files.**
+> [!IMPORTANT]
+> **Read-only by design.** Tesla Intelligence Core observes telemetry and builds predictions. It does **not** send driving, climate, charging, locking, or other control commands to the vehicle.
 
-## Quick install
+<p align="center">
+  <img src="docs/images/dashboard-overview.png" alt="Tesla Intelligence Core dashboard" width="96%">
+</p>
 
-Recommended target: **Raspberry Pi 5, 64-bit Raspberry Pi OS or Debian**.
+---
+
+## Why this project is different
+
+Most Tesla dashboards show you **what is happening now**.
+
+Tesla Intelligence Core is designed to learn enough history to answer what is likely to happen **next**:
+
+| Live state | Learned context | Prediction |
+|---|---|---|
+| Battery / module temperatures | How your pack cools and warms | Pack temperature at departure |
+| SOC / charging power | Your real charging rate | Departure SOC / charge deadline |
+| Drive starts | Your recurring departure patterns | Next-trip probability |
+| Past trips | Typical SOC use and commute behavior | Arrival SOC reserve |
+| Outside air + weather | Cold-soak and thermal history | Winter readiness |
+| Historical outcomes | Prediction vs reality | Truth / model audit |
+
+The result is not just a graph dump. The main view produces a **Winter Readiness Score** and human-readable **Winter Readiness Limiters** that explain exactly what is reducing confidence/readiness.
+
+---
+
+## Highlights
+
+### ❄️ Winter Readiness
+- 0–100 readiness score
+- Human-readable **Winter Readiness Limiters**
+- Exact point deductions instead of a mystery score
+- Live pack, module, ambient, charging and departure context
+- Projected pack temperature at departure
+- Projected departure and arrival SOC
+- Warm-up / preconditioning context
+- Cold-soak and thermal-retention learning
+
+### 🧠 Learned departures
+- Learns actual drive-start behavior from telemetry
+- Optional configured departure is only a **fading prior**
+- Repeated routine departures gain weight naturally
+- Random / secondary trips remain useful without dragging the main routine around
+- Separate **schedule confidence** and **next-trip probability**
+
+<p align="center">
+  <img src="docs/images/departure-learning.png" alt="Learned departure planning" width="86%">
+</p>
+
+### 🔋 Battery + charging intelligence
+- Pack / module temperature tracking
+- Pack current, voltage and power context where available
+- Charge-rate and Level-1 behavior memory
+- Charge deadline estimation
+- Arrival reserve logic
+- Thermal margin and pack trend
+- Battery-heater / HVAC / preconditioning observation
+
+### 📈 Prediction stack
+- Scikit-learn baseline models
+- PyTorch GRU temporal sequence model
+- Challenger / shadow model workflow
+- Promotion gates and rollback-oriented governor
+- Prediction auditing / **Truth Lab**
+- Model generations stored independently
+
+### 🛰️ Telemetry + integrations
+- **Tessie API**
+- **TeslaMate MQTT**
+- Tessie historical backfill
+- Open-Meteo weather context
+- Optional EcoFlow RIVER 3 telemetry
+- Optional Starlink local power telemetry
+- Optional Tailscale private access
+- Optional PIN-protected Tailscale Funnel
+
+### 🔒 Local-first
+- SQLite history lives on your Pi
+- Learned model artifacts stay on your Pi
+- Credentials live outside the repository
+- Public remote access is optional
+- Raw dashboard and public PIN gateway use separate ports
+
+---
+
+# Quick start
+
+## Recommended hardware
+
+- **Raspberry Pi 5** recommended
+- 64-bit Raspberry Pi OS or Debian
+- Internet connection during install
+- Python 3.11+
+- One telemetry source:
+  - **Tessie** account/API token, or
+  - an existing **TeslaMate MQTT** broker
+
+A Pi 4 or other 64-bit Debian-class machine may work, but the project is developed with Pi 5-class hardware in mind and neural training is the most CPU-intensive workload.
+
+## One-command interactive install
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/prokyle123/ghost-tesla-ai/main/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/prokyle123/tesla-intelligence-core/main/install.sh)
 ```
 
-The installer is interactive. It asks for only what it needs, including:
+The installer asks for what it needs as it goes:
 
-- Linux user to run GHOST
-- local timezone
-- Tessie **or** TeslaMate MQTT
-- Tessie token and optional VIN, if using Tessie
-- optional initial departure-time seed
-- amount of history to backfill
-- optional EcoFlow RIVER 3 integration
-- optional Starlink telemetry support
-- optional PIN-protected Tailscale Funnel
+1. Linux service user
+2. Timezone
+3. Tessie or TeslaMate
+4. Tessie token / optional VIN, or MQTT connection details
+5. Optional departure-time seed
+6. Historical backfill window
+7. Dashboard port
+8. Optional EcoFlow integration
+9. Optional Starlink support
+10. Optional PIN-protected Tailscale Funnel
 
-Secrets are written to the Pi, **not** committed to the repository.
+It then installs dependencies, creates the Python environment, builds the systemd services/timers, initializes the database, starts collection + dashboard services, and can begin historical learning immediately.
 
-See [Installation](docs/INSTALL.md) for the full process.
+> [!TIP]
+> For Tessie users, a historical backfill lets the system begin learning from prior driving/charging behavior instead of waiting weeks from a completely empty database.
 
-## Dashboard
+Full walkthrough: **[Installation guide](docs/INSTALL.md)**
 
-The main screen is deliberately centered on one question:
+---
 
-> **If I leave when GHOST thinks I am going to leave, what condition will the battery and car be in?**
+# What happens after install?
 
-The top Winter Readiness card combines live pack state, weather, expected departure, arrival reserve and learned evidence. If the score is below 100, **Winter Readiness Limiters** explain the reason and exact point hit.
-
-### Learned departure planning
-
-![Learned departure planning](docs/images/departure-learning.png)
-
-A configured departure time is only a **fading prior**. Once enough real drives exist, observed behavior takes over. Random trips remain useful training data but are down-weighted relative to repeated routine departures.
-
-## Data flow
+Open:
 
 ```text
-Tessie API / TeslaMate MQTT
-          |
-          v
-   telemetry collector
-          |
-          v
-      SQLite history
-       /     |      \
-      /      |       \
- events   classical ML   PyTorch GRU
-      \      |       /
-       \     |      /
-        readiness + forecasts
-                |
-                v
-        Flask dashboard :8766
-                |
-        optional PIN gateway :8777
-                |
-        optional Tailscale Funnel
+http://PI_ADDRESS:8766
 ```
 
-More detail: [Architecture](docs/ARCHITECTURE.md).
+The system begins collecting telemetry and gradually fills in the parts that require evidence.
 
-## Where data lives
+You should expect some cards to show **LEARNING**, **THIN**, or lower confidence early on. That is intentional. Tesla Intelligence Core is designed to expose when it does *not* yet have enough history rather than pretending every estimate is equally strong.
 
-By default:
-
-- Code: `/opt/ghost-tesla-ai`
-- Config: `/etc/ghost-tesla-ai/ghost.env`
-- Tessie token: `/etc/ghost-tesla-ai/tessie.token`
-- SQLite / learned state: `/var/lib/ghost-tesla-ai`
-- Models: `/var/lib/ghost-tesla-ai/models`
-
-The repository intentionally ignores databases, tokens, environment files, trained model artifacts and logs.
-
-## Useful commands
+Useful commands:
 
 ```bash
-# Overall status
+# System / data status
 ghost-ai status
 
 # Run an intelligence cycle now
 ghost-ai intelligence
 
-# Follow the dashboard log
+# Dashboard logs
 sudo journalctl -u ghost-tesla-ai-web.service -f
 
-# Follow telemetry collection
+# Collector logs
 sudo journalctl -u ghost-tesla-ai-collector.service -f
 
-# Dashboard
-http://PI_ADDRESS:8766
+# Neural training logs
+sudo journalctl -u ghost-tesla-ai-neural.service -f
 ```
 
-## Hardware / performance
-
-A Pi 5 is recommended because neural training is CPU-intensive. The live dashboard and telemetry collector are light; GRU training is the expensive part and runs separately so the dashboard can remain responsive.
-
-The code is not intentionally locked to one Tesla model, but development/testing has primarily been around Model 3 telemetry. Different vehicles and telemetry providers may expose different fields, so community testing is welcome.
-
-## Security and privacy
-
-GHOST can contain extremely personal vehicle history. Before exposing it remotely, read [Security](SECURITY.md) and [Remote access](docs/REMOTE_ACCESS.md).
-
-Important defaults:
-
-- telemetry/history stays local on the Pi unless your telemetry provider itself is cloud-based;
-- Tessie credentials are stored outside the repository;
-- the optional public Funnel is designed to terminate at GHOST's PIN gateway on `127.0.0.1:8777`;
-- direct LAN/Tailscale access can remain private on port `8766`.
-
-## Project status
-
-This is an experimental enthusiast project, not a Tesla product and not a safety system. Predictions are estimates and should not be treated as guarantees about battery temperature, range, charging completion or vehicle operation.
-
-## Documentation
-
-- [Install](docs/INSTALL.md)
-- [Configuration](docs/CONFIGURATION.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Remote access](docs/REMOTE_ACCESS.md)
-- [Privacy](PRIVACY.md)
-- [Security](SECURITY.md)
-- [Contributing](CONTRIBUTING.md)
-- [Changelog](CHANGELOG.md)
-
-## License
-
-MIT. See [LICENSE](LICENSE).
+> [!NOTE]
+> The public project name is **Tesla Intelligence Core**. Internal package, CLI and service names still use the original `ghost_tesla_ai`, `ghost-ai`, and `ghost-tesla-ai-*` names for compatibility with existing installs.
 
 ---
 
-GHOST Tesla AI is not affiliated with or endorsed by Tesla, Tessie, EcoFlow, Starlink, Tailscale, or Open-Meteo. Product and service names belong to their respective owners.
+# How it works
+
+```mermaid
+flowchart TD
+    A[Tessie API] --> C[Telemetry Collector]
+    B[TeslaMate MQTT] --> C
+    C --> D[(SQLite History)]
+    D --> E[Event Intelligence]
+    D --> F[Classical ML]
+    D --> G[PyTorch GRU]
+    E --> H[Departure Learning]
+    E --> I[Cold-Soak / Charging / Trip Evidence]
+    F --> J[Forecast Layer]
+    G --> J
+    H --> J
+    I --> J
+    J --> K[Winter Readiness + Limiters]
+    K --> L[Flask Dashboard :8766]
+    L --> M[Private LAN / Tailscale]
+    L --> N[Optional PIN Gateway :8777]
+    N --> O[Optional Tailscale Funnel]
+```
+
+### Data flow in plain English
+
+1. **Collect** normalized telemetry from Tessie or TeslaMate.
+2. **Store** it in local SQLite history.
+3. **Extract events** such as drives, charging windows and thermal evidence.
+4. **Learn behavior** such as recurring departures and cold-soak patterns.
+5. **Train models** for future SOC / temperature behavior.
+6. **Compare predictions against truth** as later telemetry arrives.
+7. **Build readiness** from live state + learned evidence + forecasts.
+8. **Explain the result** in the dashboard.
+
+Deep dive: **[Architecture](docs/ARCHITECTURE.md)**
+
+---
+
+# The dashboard
+
+The main dashboard is intentionally operational rather than just analytical.
+
+### Winter Readiness
+The hero card answers whether the car appears ready for the next expected trip. If the score is not 100, the **Winter Readiness Limiters** show the actual reason and point hit.
+
+Examples of limiter-style conditions include:
+- pack forecast below target;
+- low projected arrival reserve;
+- insufficient departure charge;
+- thin commute evidence;
+- thin cold-soak history;
+- low evidence confidence.
+
+### Departure + workday plan
+Shows the learned next-departure context, departure SOC, projected arrival SOC, expected pack temperature and preconditioning/warm-up context.
+
+### Neural Engine
+Shows prediction/model state separately from the readiness score. Readiness is an operational score; model metrics are model-performance evidence.
+
+### Truth Lab / history
+Provides the deeper validation side of the project: what the system predicted versus what later happened.
+
+---
+
+# Telemetry sources
+
+## Tessie
+Best fit when you want:
+- live API telemetry;
+- historical backfill;
+- an easy way to seed learning on a new install.
+
+The installer stores the Tessie token at:
+
+```text
+/etc/ghost-tesla-ai/tessie.token
+```
+
+## TeslaMate MQTT
+Best fit when you already run TeslaMate and want Tesla Intelligence Core consuming the MQTT stream.
+
+You provide:
+- broker host;
+- port;
+- TeslaMate car ID;
+- optional MQTT username/password;
+- optional TLS.
+
+See **[Configuration](docs/CONFIGURATION.md)** for details.
+
+---
+
+# Data, privacy and security
+
+Vehicle telemetry can reveal extremely personal patterns: when you leave, where your routines occur, charging habits, and potentially location-related information contained in provider payloads.
+
+Default storage:
+
+```text
+Code       /opt/ghost-tesla-ai
+Config     /etc/ghost-tesla-ai/ghost.env
+Tessie     /etc/ghost-tesla-ai/tessie.token
+Database   /var/lib/ghost-tesla-ai/ghost_ai.sqlite3
+Models     /var/lib/ghost-tesla-ai/models
+```
+
+The repository ignores runtime databases, environment files, tokens, trained artifacts and logs.
+
+Read before exposing anything publicly:
+
+- **[Privacy](PRIVACY.md)**
+- **[Security](SECURITY.md)**
+- **[Remote access](docs/REMOTE_ACCESS.md)**
+
+### Remote access model
+
+Private access:
+
+```text
+Your device -> Tailscale -> Pi:8766
+```
+
+Optional public path:
+
+```text
+Internet HTTPS
+      ↓
+Tailscale Funnel
+      ↓
+127.0.0.1:8777
+      ↓
+PIN gateway
+      ↓
+127.0.0.1:8766
+```
+
+Do **not** point a public Funnel directly at `8766` if you expect the PIN gateway to protect the dashboard.
+
+---
+
+# Updating
+
+If you cloned the repository:
+
+```bash
+git pull
+./update.sh
+```
+
+Runtime history, model artifacts and secrets live outside the code tree and are preserved by the installer/update path.
+
+See **[Installation → Updating](docs/INSTALL.md#updating)**.
+
+---
+
+# Uninstalling
+
+From the repository:
+
+```bash
+./uninstall.sh
+```
+
+The uninstaller asks before removing learned data, models and configuration.
+
+---
+
+# Project status
+
+**Current public release: v0.8.27.6**
+
+This is an experimental enthusiast project, not a Tesla product and not a safety system.
+
+Predictions are estimates. Do not treat them as guarantees of:
+- battery temperature;
+- remaining range;
+- charging completion;
+- departure timing;
+- vehicle operation.
+
+Development/testing has primarily centered on **Model 3 telemetry**. The code is not intentionally locked to one Tesla model, but different vehicles/providers may expose different signals.
+
+If you run it on another Tesla, a compatibility report is genuinely useful.
+
+---
+
+# Documentation
+
+| Guide | What it covers |
+|---|---|
+| **[Install](docs/INSTALL.md)** | Full fresh-install walkthrough and validation |
+| **[Configuration](docs/CONFIGURATION.md)** | Environment settings and data paths |
+| **[Architecture](docs/ARCHITECTURE.md)** | Collector → learning → models → readiness |
+| **[Remote access](docs/REMOTE_ACCESS.md)** | Tailscale and PIN-protected Funnel |
+| **[Troubleshooting](docs/TROUBLESHOOTING.md)** | Services, logs, common install/runtime problems |
+| **[FAQ](docs/FAQ.md)** | Common project questions |
+| **[Compatibility](docs/COMPATIBILITY.md)** | What is known/tested and how to report results |
+| **[Privacy](PRIVACY.md)** | Data-handling expectations |
+| **[Security](SECURITY.md)** | Secrets and remote-exposure guidance |
+| **[Contributing](CONTRIBUTING.md)** | Issues, PRs and safe telemetry sharing |
+| **[Changelog](CHANGELOG.md)** | Release history |
+
+---
+
+# Contributing
+
+Useful contributions include:
+- field reports from other Tesla models;
+- Tessie / TeslaMate normalization fixes;
+- cold-climate thermal observations;
+- Pi performance improvements;
+- model/truth-audit improvements;
+- dashboard usability work;
+- synthetic/redacted test data.
+
+Please **do not** post VINs, exact locations, tokens, raw private telemetry or credentials in public issues.
+
+Start here: **[CONTRIBUTING.md](CONTRIBUTING.md)**
+
+---
+
+# License
+
+MIT — see **[LICENSE](LICENSE)**.
+
+---
+
+<div align="center">
+
+### Built for people who want to understand what their Tesla is doing — and what it is likely to do next.
+
+**Tesla Intelligence Core is unofficial and is not affiliated with or endorsed by Tesla, Tessie, EcoFlow, Starlink, Tailscale, or Open-Meteo.**
+
+Product and service names belong to their respective owners.
+
+</div>
