@@ -13,6 +13,8 @@
 ![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-5%20recommended-c51a4a)
 ![Read only](https://img.shields.io/badge/Vehicle%20control-read--only-2ea44f)
 
+**[Quick install](#quick-start) · [Visual tour](#visual-tour) · [How it works](#how-it-works) · [Documentation](#documentation) · [Latest release](https://github.com/prokyle123/tesla-intelligence-core/releases/latest)**
+
 </div>
 
 Tesla Intelligence Core is a self-hosted Tesla telemetry and learning system built around one practical question:
@@ -452,6 +454,8 @@ Useful contributions include:
 Please **do not** post VINs, exact locations, tokens, raw private telemetry or credentials in public issues.
 
 Start here: **[CONTRIBUTING.md](CONTRIBUTING.md)**
+
+Running Tesla Intelligence Core on a different Tesla model? **[Open a vehicle compatibility report](https://github.com/prokyle123/tesla-intelligence-core/issues/new?template=compatibility.yml)** — even a partial compatibility report helps map which telemetry signals are available across the fleet.
 
 ---
 
