@@ -3,7 +3,7 @@ $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $Root
 
 Write-Host "============================================================"
-Write-Host " TESLA INTELLIGENCE CORE COMPANION v0.2.0"
+Write-Host " TESLA INTELLIGENCE CORE COMPANION v0.2.1"
 Write-Host "============================================================"
 
 $adb = (Get-Command adb -ErrorAction SilentlyContinue).Source
@@ -58,5 +58,5 @@ Write-Host "`n[3/3] Launching companion..."
 & $adb shell am start -n com.ghost.tesla.mobile/.MainActivity
 
 Write-Host ""
-Write-Host "Installed + launched: Tesla Intelligence Core Companion v0.2.0" -ForegroundColor Green
+Write-Host "Installed + launched: Tesla Intelligence Core Companion v0.2.1" -ForegroundColor Green
 Write-Host "Fresh installs ask for Local / Tailnet / Public endpoints inside the app."
