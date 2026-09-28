@@ -33,6 +33,8 @@
 ![TeslaMate](https://img.shields.io/badge/source-TeslaMate-0ea5e9)
 ![Local first](https://img.shields.io/badge/data-local--first-2ea44f)
 ![Predictive](https://img.shields.io/badge/focus-predictive%20analytics-8b5cf6)
+![Android companion](https://img.shields.io/badge/Android-companion%20v0.2.0-3DDC84?logo=android&logoColor=white)
+![Tesla browser](https://img.shields.io/badge/in--car%20browser-PIN%20Funnel-43D8FF)
 
 **[Quick install](#quick-start) · [Visual tour](#visual-tour) · [Use cases](docs/USE_CASES.md) · [How it works](#how-it-works) · [Documentation](#documentation) · [Latest release](https://github.com/prokyle123/tesla-intelligence-core/releases/latest)**
 
@@ -602,6 +604,8 @@ If you run it on another Tesla, a compatibility report is genuinely useful.
 | **[Configuration](docs/CONFIGURATION.md)** | Environment settings and data paths |
 | **[Architecture](docs/ARCHITECTURE.md)** | Collector → learning → models → readiness |
 | **[Remote access](docs/REMOTE_ACCESS.md)** | Tailscale and PIN-protected Funnel |
+| **[Tesla browser](docs/TESLA_BROWSER.md)** | In-car browser access through the optional HTTPS Funnel + PIN gateway |
+| **[Android companion](companion/android/README.md)** | Mobile app, endpoint failover, current views and local build instructions |
 | **[Troubleshooting](docs/TROUBLESHOOTING.md)** | Services, logs, common install/runtime problems |
 | **[FAQ](docs/FAQ.md)** | Common project questions |
 | **[Compatibility](docs/COMPATIBILITY.md)** | What is known/tested and how to report results |
