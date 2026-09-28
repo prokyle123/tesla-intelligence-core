@@ -25,7 +25,7 @@ jobs:
       - name: Verify public installer repository
         run: |
           grep -q 'prokyle123/tesla-intelligence-core.git' install.sh
-          ! grep -R 'prokyle123/ghost-tesla-ai' --exclude-dir=.git .
+          ! grep -R 'prokyle123/ghost-tesla-ai' --exclude-dir=.git --exclude=smoke.yml .
 
       - name: Secret-shaped string sanity check
         run: |
