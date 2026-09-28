@@ -1,0 +1,47 @@
+name: Vehicle compatibility report
+description: Tell us what works on another Tesla / telemetry setup
+title: "[Compatibility]: "
+labels: ["compatibility"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Compatibility reports help more than broad "it works" claims. Please report which signals/features actually populate. **Do not post a full VIN.**
+  - type: input
+    id: vehicle
+    attributes:
+      label: Tesla model / model year
+      placeholder: Model Y / 2024
+    validations:
+      required: true
+  - type: dropdown
+    id: source
+    attributes:
+      label: Telemetry source
+      options:
+        - Tessie
+        - TeslaMate MQTT
+    validations:
+      required: true
+  - type: checkboxes
+    id: signals
+    attributes:
+      label: Working signals/features
+      options:
+        - label: SOC
+        - label: Outside / cabin temperature
+        - label: Pack temperature
+        - label: Module min/max temperature
+        - label: Charging state / charging power
+        - label: Drive event detection
+        - label: Departure learning
+        - label: Winter Readiness
+        - label: Neural forecast
+  - type: textarea
+    id: missing
+    attributes:
+      label: Missing / incorrect signals
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
