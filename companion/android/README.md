@@ -1,40 +1,44 @@
-# Tesla Intelligence Core Companion — Android v0.2.1
+# Tesla Intelligence Core Companion — Android v0.3.0
 
 Android companion for the Tesla Intelligence Core Raspberry Pi dashboard.
 
 The package remains `com.ghost.tesla.mobile` for continuity with the original GHOST companion builds.
 
-## v0.2.1
+## v0.3.0
 
-- Adds **READY** and **EVENTS** as first-class quick-navigation buttons.
-- Keeps Neural Engine, Truth Lab and Thermal History one tap away.
-- Keeps the **MORE** sheet for AI Lab, Models, Data Quality, Sources, Production, History, full Neural Atlas, Tesla-browser access and diagnostics.
-- Preserves Local → Tailnet → Public HTTPS failover and the PIN-gateway WebView session.
+This release rebuilds the connection layer and fixes modern Android safe-area behavior.
 
-- Rebrands the shell as **Tesla Intelligence Core Companion**.
-- Removes developer-specific IP addresses from fresh installs.
-- Adds first-run endpoint setup.
-- Tries **Local LAN → private Tailscale → optional public HTTPS** automatically.
-- Adds the current dashboard views:
-  - Home / Winter Readiness
-  - Neural Engine
-  - Truth Lab
-  - Thermal History
-  - AI Lab
-  - Models
-  - Data Quality
-  - Sources
-  - Events
-  - Production
-  - History
-- Keeps the dedicated landscape Neural Atlas view.
-- Keeps the S25/system-navigation fixes from v0.1.1.
-- Keeps the Neural Atlas aspect-ratio fix from v0.1.2.
-- Checks `/api/health`, `/health`, `/`, then TCP reachability.
-- Adds diagnostics for every configured endpoint.
-- Adds Tesla-browser access guidance and a public-URL copy button.
-- Accepts WebView cookies so a PIN-gateway session can persist.
-- Retests connectivity after returning from a longer background period.
+### Connection Center
+
+- Adds a dedicated **Connection Center** instead of relying on three passive URL fields.
+- Adds **Auto-Find Pi on Local Network**.
+- Scans the current local /24 for the default Tesla Intelligence Core dashboard port `8766`.
+- Verifies discovered hosts by checking the dashboard itself, not just whether a port is open.
+- Tests Local / Tailnet / Public routes **in parallel**.
+- Prefers the most private working route:
+  - Local LAN
+  - private Tailscale
+  - public HTTPS / PIN gateway
+- Stores the last successful route for diagnostics.
+- Adds **Test These Endpoints** before saving.
+- Adds **Open Public URL Anyway** for cases where WebView can reach a public login page even when a Java probe is inconclusive.
+- Recognizes public PIN/login pages and displays **LOGIN** instead of making the app look offline.
+- Retains detailed per-endpoint diagnostics.
+
+### Android system-bar fixes
+
+- Handles Android display cutouts / status-bar insets.
+- Keeps the companion header below the phone status bar.
+- Keeps the app navigation above the Android navigation area.
+- Requests visible system navigation controls without using immersive mode.
+- Re-applies safe-area insets when the app regains focus.
+- Uses `adjustResize` so the keyboard does not cover the connection setup.
+
+### Current quick navigation
+
+`READY · EVENTS · NEURAL · TRUTH · THERMAL · MORE`
+
+**MORE** includes AI Lab, Models, Data Quality, Sources, Production, History, full Neural Atlas, Connection Center, Tesla Browser Access and connection diagnostics.
 
 ## Endpoint order
 
