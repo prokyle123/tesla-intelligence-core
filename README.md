@@ -23,7 +23,18 @@
 ![Bash](https://img.shields.io/badge/Bash-installer%20%2B%20ops-4EAA25?logo=gnubash&logoColor=white)
 ![systemd](https://img.shields.io/badge/systemd-services%20%2B%20timers-5B5B5B)
 
-**[Quick install](#quick-start) · [Visual tour](#visual-tour) · [How it works](#how-it-works) · [Documentation](#documentation) · [Latest release](https://github.com/prokyle123/tesla-intelligence-core/releases/latest)**
+**Built around real EV constraints**
+
+![Winter](https://img.shields.io/badge/cold--weather-ready-1f6feb)
+![Level 1](https://img.shields.io/badge/Level%201-slow%20charging-f59e0b)
+![Tessie](https://img.shields.io/badge/source-Tessie-6f42c1)
+![TeslaMate](https://img.shields.io/badge/source-TeslaMate-0ea5e9)
+![Local first](https://img.shields.io/badge/data-local--first-2ea44f)
+![Predictive](https://img.shields.io/badge/focus-predictive%20analytics-8b5cf6)
+
+**[Quick install](#quick-start) · [Visual tour](#visual-tour) · [Use cases](docs/USE_CASES.md) · [How it works](#how-it-works) · [Documentation](#documentation) · [Latest release](https://github.com/prokyle123/tesla-intelligence-core/releases/latest)**
+
+⭐ **If this project is useful to you, star the repository.** It is the simplest way to help other Tesla / EV tinkerers discover it.
 
 </div>
 
@@ -532,6 +543,8 @@ If you run it on another Tesla, a compatibility report is genuinely useful.
 
 | Guide | What it covers |
 |---|---|
+| **[Use cases](docs/USE_CASES.md)** | Winter commuting, Level 1 charging, cold soak and other real-world scenarios |
+| **[Feature matrix](docs/FEATURE_MATRIX.md)** | What each feature uses and what question it answers |
 | **[Install](docs/INSTALL.md)** | Full fresh-install walkthrough and validation |
 | **[Configuration](docs/CONFIGURATION.md)** | Environment settings and data paths |
 | **[Architecture](docs/ARCHITECTURE.md)** | Collector → learning → models → readiness |
@@ -539,9 +552,13 @@ If you run it on another Tesla, a compatibility report is genuinely useful.
 | **[Troubleshooting](docs/TROUBLESHOOTING.md)** | Services, logs, common install/runtime problems |
 | **[FAQ](docs/FAQ.md)** | Common project questions |
 | **[Compatibility](docs/COMPATIBILITY.md)** | What is known/tested and how to report results |
+| **[Roadmap](ROADMAP.md)** | Current development directions and community priorities |
+| **[Support](SUPPORT.md)** | What to include when asking for help |
 | **[Privacy](PRIVACY.md)** | Data-handling expectations |
 | **[Security](SECURITY.md)** | Secrets and remote-exposure guidance |
 | **[Contributing](CONTRIBUTING.md)** | Issues, PRs and safe telemetry sharing |
+| **[Code of Conduct](CODE_OF_CONDUCT.md)** | Community participation expectations |
+| **[Citation](CITATION.cff)** | Citation metadata for research / derived work |
 | **[Changelog](CHANGELOG.md)** | Release history |
 
 ---
@@ -562,6 +579,18 @@ Please **do not** post VINs, exact locations, tokens, raw private telemetry or c
 Start here: **[CONTRIBUTING.md](CONTRIBUTING.md)**
 
 Running Tesla Intelligence Core on a different Tesla model? **[Open a vehicle compatibility report](https://github.com/prokyle123/tesla-intelligence-core/issues/new?template=compatibility.yml)** — even a partial compatibility report helps map which telemetry signals are available across the fleet.
+
+### Help the project get found
+
+GitHub discovery is driven less by hashtags and more by **repository Topics, stars, forks, useful releases, links, README search terms and community activity**.
+
+If Tesla Intelligence Core solves a real problem for you:
+
+- ⭐ **Star it** so other Tesla / EV owners are more likely to find it.
+- 🧪 Submit a **compatibility report** for your vehicle.
+- 🐛 Open a reproducible issue when something breaks.
+- 🔀 Send a pull request if you improve normalization, models, docs or the dashboard.
+- 🔗 Share the repository with people working on TeslaMate, Tessie, Raspberry Pi, EV charging or cold-weather telemetry.
 
 ---
 
