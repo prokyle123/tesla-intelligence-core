@@ -9,4 +9,4 @@ $SUDO rm -rf /opt/ghost-tesla-ai
 $SUDO rm -f /usr/local/bin/ghost-ai
 read -r -p "Delete learned data/models and config too? [y/N] " ans
 if [[ "$ans" =~ ^[Yy]$ ]]; then $SUDO rm -rf /var/lib/ghost-tesla-ai /etc/ghost-tesla-ai; else echo "Preserved /var/lib/ghost-tesla-ai and /etc/ghost-tesla-ai"; fi
-echo "GHOST Tesla AI removed."
+echo "Tesla Intelligence Core removed."
