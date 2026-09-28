@@ -370,7 +370,7 @@ public final class ConnectorManager {
             c.setReadTimeout(Math.max(500, timeoutMs + 250));
             c.setUseCaches(false);
             c.setInstanceFollowRedirects(true);
-            c.setRequestProperty("User-Agent", "TIC-Companion-Scanner/0.3.0");
+            c.setRequestProperty("User-Agent", "TIC-Companion-Scanner/0.3.1");
             int code = c.getResponseCode();
             if (code < 200 || code >= 400) return false;
 
