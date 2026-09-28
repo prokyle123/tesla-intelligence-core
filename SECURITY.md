@@ -1,23 +1,63 @@
 # Security
 
-## Reporting
+Tesla Intelligence Core is an enthusiast project. It is not a hardened enterprise authentication platform.
 
-For security-sensitive reports, use a private GitHub security advisory if enabled for the repository rather than posting credentials or exploit details in a public issue.
+## Reporting a security issue
+
+If GitHub private security advisories are available for this repository, use one for credential exposure, authentication bypasses or other security-sensitive reports.
+
+Do not post credentials, tokens, exploitable private deployment details, or unredacted telemetry in a public issue.
 
 ## Secrets
 
-The installer stores secrets outside the repository. Never commit:
+The installer keeps secrets outside the repository.
 
-- Tessie API tokens
-- MQTT passwords
-- EcoFlow credentials
-- `funnel_pin.json`
-- SQLite databases or raw telemetry exports
+Never commit:
+- Tessie API tokens;
+- MQTT passwords;
+- EcoFlow credentials;
+- Funnel PIN data;
+- SQLite databases;
+- raw telemetry exports.
 
-## Remote exposure
+## Network exposure
 
-Port `8766` is the raw Flask dashboard/API. Treat it as private LAN/tailnet access.
+Raw dashboard/API:
 
-For public Tailscale Funnel use, send Funnel traffic to `127.0.0.1:8777`, which is the PIN gateway. The gateway rate-limits failed PIN attempts and uses a hashed PIN plus signed session cookie.
+```text
+:8766
+```
 
-This is an enthusiast project, not a hardened enterprise authentication product. Put it behind networks/identity controls appropriate to your own threat model.
+Treat this as private LAN/tailnet access.
+
+Optional PIN gateway:
+
+```text
+127.0.0.1:8777
+```
+
+For the intended public Funnel path, send Funnel traffic to `8777`, not directly to `8766`.
+
+## PIN gateway
+
+The included gateway:
+- hashes the PIN using `scrypt` with a random salt;
+- uses a signed session cookie;
+- marks the session cookie Secure / HttpOnly;
+- is intended to rate-limit failed PIN attempts.
+
+It should be considered a lightweight protection layer for the project's optional Funnel workflow, not a replacement for a mature identity/access platform.
+
+## Dependency / host security
+
+Users remain responsible for:
+- OS updates;
+- Tailscale account security;
+- network/firewall policy;
+- Tessie/TeslaMate credential security;
+- physical access to the Pi;
+- backups containing telemetry.
+
+## Read-only scope
+
+Tesla Intelligence Core is currently designed as observation/prediction software and does not intentionally send vehicle control commands. Keeping that boundary narrow reduces the impact of application-layer bugs.
