@@ -31,12 +31,42 @@ Tesla Intelligence Core is a self-hosted Tesla telemetry and learning system bui
 
 > **When I leave next, what condition will the car and battery actually be in?**
 
-It watches live telemetry, builds a local history, learns recurring behavior, extracts trips/charging/thermal events, trains predictive models, and turns all of that into a dashboard that explains **what it expects and why**.
+Because **80% SOC is not the whole answer**.
+
+A car sitting at 80% on a mild afternoon is not the same situation as a car sitting at 80% after hours of cold soak before a long winter commute. If home charging is slow, every hour of available charging matters. If the drive is long, departure SOC is only half the story — the reserve expected at the other end matters too.
+
+Tesla Intelligence Core watches live telemetry, builds a local history, learns recurring behavior, extracts trips/charging/thermal events, trains predictive models, and turns all of that into a dashboard that explains **what it expects, how confident it is, and why**.
 
 It started as a winter-readiness project and grew into a broader local vehicle-intelligence platform.
 
 > [!IMPORTANT]
 > **Read-only by design.** Tesla Intelligence Core observes telemetry and builds predictions. It does **not** send driving, climate, charging, locking, or other control commands to the vehicle.
+
+### Built for real-world EV constraints
+
+Tesla Intelligence Core is especially useful when **time, temperature and charging speed all matter at once**.
+
+| Situation | What the system adds |
+|---|---|
+| **❄️ Long winter commute** | Learns typical trip behavior, projects departure conditions and estimates **arrival SOC reserve** instead of stopping at the current battery percentage. |
+| **🔌 Level 1 / slow home charging** | Learns the car's real charging behavior, tracks wall input and estimates whether the battery is on pace for the next departure. |
+| **🥶 Outdoor / cold-soaked car** | Tracks pack and module temperatures, cold-soak evidence, thermal retention and future pack-temperature forecasts. |
+| **🕒 Departure time changes** | Learns recurring drive starts from history and keeps **schedule confidence** separate from **next-trip confidence**, so a random trip does not have to redefine the routine. |
+| **⚡ Charging + thermal load together** | Shows charging power alongside derived pack / non-pack power so it is easier to understand where limited input power is going. |
+| **📉 Tight energy margin** | Combines departure SOC, projected trip use, expected arrival reserve and thermal context instead of relying on one live SOC number. |
+| **🧠 You want evidence, not magic** | Exposes prediction ranges, Truth Lab results, model generations, challenger/production state and readiness limiters instead of hiding everything behind a generic “AI” score. |
+
+#### The kind of questions it is built to answer
+
+- **Will slow overnight charging actually get me where I want to be by departure?**
+- **Will the pack still be cold when I leave?**
+- **How much SOC am I likely to have after the drive, not just before it?**
+- **Is today's thermal behavior normal for this car?**
+- **Is the current forecast based on strong history or thin evidence?**
+- **Did previous predictions turn out to be right?**
+- **Is the model improving enough to replace the current production model?**
+
+> **For people who depend on the car every day, the useful question is not “what does the telemetry say right now?” It is “what is this car likely to look like when I actually need it?”**
 
 <p align="center">
   <a href="docs/images/dashboard-overview.png">
@@ -121,7 +151,13 @@ The thermal power-path view compares wall input with derived non-pack and pack e
 
 ### Most dashboards stop at telemetry. Tesla Intelligence Core keeps going.
 
-A telemetry-only dashboard can tell you the battery is **82°F and 80% right now**. Tesla Intelligence Core is built to turn that snapshot into a continuously improving model of **your particular car, your charging setup, your routine, and what is likely to happen next**.
+A telemetry-only dashboard can tell you the battery is **82°F and 80% right now**.
+
+Tesla Intelligence Core asks the harder questions:
+
+> **What will that temperature be in three hours? What SOC will actually be available at departure? What will probably remain after the drive? Is this a routine departure or a random trip? How much evidence supports the answer? And when the future arrives, was the prediction right?**
+
+It is built to turn a live snapshot into a continuously improving model of **your particular car, your charging setup, your routine, and what is likely to happen next**.
 
 | | |
 |---|---|
@@ -194,11 +230,12 @@ Winter Readiness + human-readable limiters
 ### 🔋 Battery + charging intelligence
 - Pack / module temperature tracking
 - Pack current, voltage and power context where available
-- Charge-rate and Level-1 behavior memory
-- Charge deadline estimation
-- Arrival reserve logic
+- Charge-rate and **Level 1 behavior memory**
+- Charging pace / deadline context for the next departure
+- Projected departure SOC and **arrival reserve**
 - Thermal margin and pack trend
 - Battery-heater / HVAC / preconditioning observation
+- Wall-input vs pack / non-pack power context where available
 
 ### 📈 Prediction stack
 - Scikit-learn baseline models
@@ -536,7 +573,7 @@ MIT — see **[LICENSE](LICENSE)**.
 
 <div align="center">
 
-### Built for people who want to understand what their Tesla is doing — and what it is likely to do next.
+### Built for people who need more than a battery percentage — and want to know what their Tesla is likely to do next.
 
 **Tesla Intelligence Core is unofficial and is not affiliated with or endorsed by Tesla, Tessie, EcoFlow, Starlink, Tailscale, or Open-Meteo.**
 
