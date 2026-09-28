@@ -16,7 +16,7 @@ import java.net.URL;
 import java.util.concurrent.*;
 
 public class MainActivity extends Activity {
-    static final String VER="0.2.0";
+    static final String VER="0.2.1";
     static final int LOCAL_MS=3500, PRIVATE_MS=5000, PUBLIC_MS=7000;
     WebView web; TextView status, detail; SharedPreferences prefs;
     final ExecutorService io=Executors.newCachedThreadPool();
@@ -107,8 +107,8 @@ public class MainActivity extends Activity {
         root.addView(web,new LinearLayout.LayoutParams(-1,0,1));
 
         LinearLayout nav=new LinearLayout(this);nav.setBackgroundColor(Color.rgb(5,24,34));
-        String[][] items={{"HOME","morning"},{"NEURAL","neural4"},{"TRUTH","truth"},{"THERMAL","thermal"},{"MORE","more"}};
-        for(String[] it:items){TextView x=button(it[0]);x.setTextSize(12);x.setOnClickListener(v->{bars();if("more".equals(it[1]))more();else select(it[1]);});nav.addView(x,new LinearLayout.LayoutParams(0,d(50),1));}
+        String[][] items={{"READY","morning"},{"EVENTS","events"},{"NEURAL","neural4"},{"TRUTH","truth"},{"THERMAL","thermal"},{"MORE","more"}};
+        for(String[] it:items){TextView x=button(it[0]);x.setTextSize(10);x.setOnClickListener(v->{bars();if("more".equals(it[1]))more();else select(it[1]);});nav.addView(x,new LinearLayout.LayoutParams(0,d(50),1));}
         root.addView(nav,new LinearLayout.LayoutParams(-1,d(50)));setContentView(root);bars();
     }
 
