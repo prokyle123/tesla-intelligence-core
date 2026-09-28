@@ -1,0 +1,56 @@
+name: Bug report
+description: Report a reproducible Tesla Intelligence Core problem
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. **Do not paste tokens, passwords, full VINs, exact coordinates, or raw private telemetry.**
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: v0.8.27.6
+    validations:
+      required: true
+  - type: input
+    id: vehicle
+    attributes:
+      label: Tesla model / model year
+      placeholder: Model 3 / 2021
+    validations:
+      required: true
+  - type: dropdown
+    id: source
+    attributes:
+      label: Telemetry source
+      options:
+        - Tessie
+        - TeslaMate MQTT
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: host
+    attributes:
+      label: Host / OS
+      placeholder: Raspberry Pi 5 / Debian 13
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Redacted logs
+      description: Remove credentials, VINs, exact locations and other private telemetry first.
+      render: shell
