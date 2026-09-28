@@ -160,6 +160,57 @@ The thermal power-path view compares wall input with derived non-pack and pack e
 
 ---
 
+## Android companion + in-car browser
+
+Tesla Intelligence Core is not limited to a desktop browser.
+
+### 📱 Android companion
+
+The Android companion keeps the Pi dashboard as the source of truth, then adds a mobile shell with fast view switching, connection diagnostics and automatic endpoint failover.
+
+**Companion v0.2.0 adds the full current dashboard navigation:**
+
+`Home / Winter Readiness · Neural Engine · Truth Lab · Thermal History · AI Lab · Models · Data Quality · Sources · Events · Production · History`
+
+It can try three dashboard paths in order:
+
+```text
+Local LAN -> private Tailscale -> optional public HTTPS
+```
+
+That makes the app useful both at home and away from the local network without hard-coding somebody else's IP or Tailscale hostname into a public build.
+
+**[Download Android Companion v0.2.0](https://github.com/prokyle123/tesla-intelligence-core/releases/download/v0.8.27.6/Tesla-Intelligence-Core-Companion-v0.2.0-debug.apk)** · **[Source](companion/android)**
+
+The v0.2.0 update preserves the original S25/system-navigation fixes and the Neural Atlas aspect-ratio fix while adding first-run setup, current Pi views, public/PIN-gateway support and Tesla-browser guidance.
+
+> [!NOTE]
+> The current public companion APK is a debug-signed sideload build. An older copy built on another machine may have a different Android signature and require one uninstall before installing the GitHub build.
+
+### 🚗 Open the dashboard in the Tesla browser
+
+On the setup this project was developed with, the Tesla browser would not load the Pi's local/private dashboard address. A working route was:
+
+```text
+Tesla browser
+      ↓  Internet HTTPS
+Tailscale Funnel
+      ↓
+PIN gateway
+      ↓
+Tesla Intelligence Core
+```
+
+So if the Pi installation has Internet access, Funnel is correctly configured, and the car has Internet access, the dashboard can be opened directly from the Tesla browser using the public HTTPS URL.
+
+**Why the PIN?** Funnel makes that HTTPS endpoint reachable from the public Internet. The intended setup is **Funnel → PIN gateway → dashboard**, not Funnel directly to the raw dashboard.
+
+Vehicle software, networks and installations can vary; this documents the project's tested setup rather than assuming every Tesla behaves identically.
+
+**[Full Tesla browser + Funnel guide](docs/TESLA_BROWSER.md)**
+
+---
+
 ## Why this project is different
 
 ### Most dashboards stop at telemetry. Tesla Intelligence Core keeps going.
