@@ -15,7 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends Activity {
-    static final String VER = "0.3.0";
+    static final String VER = "0.3.1";
 
     WebView web;
     TextView status;
@@ -252,28 +252,36 @@ public class MainActivity extends Activity {
             @Override public void onReceivedTitle(WebView v, String title) {
                 if (title == null) return;
                 String low = title.toLowerCase();
-                if ("PUBLIC".equals(kind) && (low.contains("pin") || low.contains("login") || low.contains("gateway"))) {
+                if (low.contains("ghost access") || low.contains("pin") || low.contains("login") || low.contains("gateway")) {
                     status.setText("LOGIN");
-                    detail.setText("Public gateway • enter PIN");
+                    detail.setText("PIN gateway • enter PIN");
                 }
             }
         });
 
         web.setWebViewClient(new WebViewClient() {
             @Override public void onPageStarted(WebView v, String url, android.graphics.Bitmap favicon) {
-                detail.setText(kind + " • loading " + shortUrl(active));
+                if (url != null && url.contains("/__ghost_auth/")) {
+                    status.setText("LOGIN");
+                    detail.setText("PIN gateway • enter PIN");
+                } else {
+                    status.setText("VERIFY");
+                    detail.setText(kind + " • checking dashboard data…");
+                }
             }
 
             @Override public void onPageFinished(WebView v, String url) {
-                if (!"LOGIN".contentEquals(status.getText())) status.setText(kind);
-                detail.setText(kind + " • " + shortUrl(active));
-                apply();
-                ui.postDelayed(() -> apply(), 350);
-                ui.postDelayed(() -> apply(), 1200);
+                if (url != null && url.contains("/__ghost_auth/")) {
+                    status.setText("LOGIN");
+                    detail.setText("PIN gateway • enter PIN");
+                    return;
+                }
+                verifyWebViewData();
             }
 
             @Override public void onReceivedError(WebView v, WebResourceRequest request, WebResourceError error) {
                 if (request.isForMainFrame()) {
+                    status.setText("ERROR");
                     detail.setText(kind + " • WebView error " + error.getErrorCode());
                 }
             }
@@ -428,8 +436,13 @@ public class MainActivity extends Activity {
                     }
 
                     if (winner != null) {
-                        rememberWinner(winner.kind, winner.base);
-                        load(winner.base, winner.kind);
+                        if (winner.authRequired) {
+                            rememberWinner("PUBLIC", winner.base);
+                            loadAuth(winner.base);
+                        } else {
+                            rememberWinner(winner.kind, winner.base);
+                            load(winner.base, winner.kind);
+                        }
                     } else {
                         active = null;
                         kind = "OFFLINE";
@@ -454,9 +467,68 @@ public class MainActivity extends Activity {
     void load(String base, String k) {
         active = ConnectorManager.normalize(base);
         kind = k;
-        status.setText(k);
-        detail.setText(k + " • " + shortUrl(active));
+        status.setText("VERIFY");
+        detail.setText(k + " • checking dashboard data…");
         web.loadUrl(active + "/");
+    }
+
+    void loadAuth(String base) {
+        active = ConnectorManager.normalize(base);
+        kind = "PUBLIC";
+        status.setText("LOGIN");
+        detail.setText("PIN gateway • enter PIN");
+        web.loadUrl(active + "/");
+    }
+
+    void verifyWebViewData() {
+        if (active == null || active.isEmpty()) return;
+
+        String js =
+                "(function(){" +
+                "var r=document.documentElement;" +
+                "r.setAttribute('data-tic-api','CHECKING');" +
+                "fetch('/api/v3/overview',{cache:'no-store',credentials:'include'})" +
+                ".then(function(x){return x.text().then(function(t){" +
+                "var ok=(x.status===200&&t&&t.trim().charAt(0)==='{'&&(t.indexOf('\\\"readiness\\\"')>=0||t.indexOf('\\\"events\\\"')>=0||t.indexOf('\\\"version\\\"')>=0));" +
+                "if(ok){r.setAttribute('data-tic-api','DATA_OK');}" +
+                "else if(x.status===401){r.setAttribute('data-tic-api','AUTH');}" +
+                "else{r.setAttribute('data-tic-api','HTTP_'+x.status);}" +
+                "});})" +
+                ".catch(function(e){r.setAttribute('data-tic-api','ERROR');});" +
+                "})()";
+
+        web.evaluateJavascript(js, null);
+
+        ui.postDelayed(() -> web.evaluateJavascript(
+                "(function(){return document.documentElement.getAttribute('data-tic-api')||'UNKNOWN';})()",
+                value -> {
+                    String state = value == null ? "UNKNOWN" : value.replace("\\", "").replace("\"", "").trim();
+
+                    if ("DATA_OK".equals(state)) {
+                        status.setText(kind);
+                        detail.setText(kind + " • DATA OK • " + shortUrl(active));
+                        apply();
+                        ui.postDelayed(() -> apply(), 350);
+                        ui.postDelayed(() -> apply(), 1200);
+                        return;
+                    }
+
+                    if ("AUTH".equals(state)) {
+                        kind = "PUBLIC";
+                        status.setText("LOGIN");
+                        detail.setText("PIN gateway • enter PIN");
+                        return;
+                    }
+
+                    if ("CHECKING".equals(state) || "UNKNOWN".equals(state)) {
+                        ui.postDelayed(this::verifyWebViewData, 700);
+                        return;
+                    }
+
+                    status.setText("NO DATA");
+                    detail.setText(kind + " • dashboard API " + state);
+                }
+        ), 850);
     }
 
     void openAnyway(String base, String k) {
