@@ -6,6 +6,8 @@
 
 **Telemetry → local history → learned behavior → neural forecasting → truth validation → readiness**
 
+**Built for cold-soaked batteries, slow home charging, long commutes, and people who want evidence instead of guesses.**
+
 [![Release](https://img.shields.io/github/v/release/prokyle123/tesla-intelligence-core?display_name=tag&sort=semver)](https://github.com/prokyle123/tesla-intelligence-core/releases)
 [![Smoke](https://github.com/prokyle123/tesla-intelligence-core/actions/workflows/smoke.yml/badge.svg)](https://github.com/prokyle123/tesla-intelligence-core/actions/workflows/smoke.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
@@ -38,7 +40,7 @@
 
 </div>
 
-Tesla Intelligence Core is a self-hosted Tesla telemetry and learning system built around one practical question:
+Tesla Intelligence Core is a **self-hosted Tesla battery analytics, predictive telemetry and machine-learning platform for Raspberry Pi** built around one practical question:
 
 > **When I leave next, what condition will the car and battery actually be in?**
 
