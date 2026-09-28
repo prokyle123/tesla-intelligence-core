@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Installation guide
+    url: https://github.com/prokyle123/tesla-intelligence-core/blob/main/docs/INSTALL.md
+    about: Fresh install, telemetry source setup, backfill and first validation.
+  - name: Troubleshooting guide
+    url: https://github.com/prokyle123/tesla-intelligence-core/blob/main/docs/TROUBLESHOOTING.md
+    about: Service checks, logs, telemetry problems, learning and remote access.
+  - name: Security guidance
+    url: https://github.com/prokyle123/tesla-intelligence-core/blob/main/SECURITY.md
+    about: Read this before reporting credentials, authentication or exposure issues.
