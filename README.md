@@ -33,7 +33,7 @@
 ![TeslaMate](https://img.shields.io/badge/source-TeslaMate-0ea5e9)
 ![Local first](https://img.shields.io/badge/data-local--first-2ea44f)
 ![Predictive](https://img.shields.io/badge/focus-predictive%20analytics-8b5cf6)
-![Android companion](https://img.shields.io/badge/Android-companion%20v0.2.1-3DDC84?logo=android&logoColor=white)
+![Android companion](https://img.shields.io/badge/Android-companion%20v0.3.0-3DDC84?logo=android&logoColor=white)
 ![Tesla browser](https://img.shields.io/badge/in--car%20browser-PIN%20Funnel-43D8FF)
 
 **[Quick install](#quick-start) · [Visual tour](#visual-tour) · [Use cases](docs/USE_CASES.md) · [How it works](#how-it-works) · [Documentation](#documentation) · [Latest release](https://github.com/prokyle123/tesla-intelligence-core/releases/latest)**
@@ -168,30 +168,42 @@ Tesla Intelligence Core is not limited to a desktop browser.
 
 ### 📱 Android companion
 
-The Android companion keeps the Pi dashboard as the source of truth, then adds a mobile shell with fast view switching, connection diagnostics and automatic endpoint failover.
+The Android companion keeps the Pi dashboard as the source of truth, then wraps it in a phone-friendly shell with **automatic discovery, connection failover, diagnostics and direct access to the current Pi views**.
 
-**Companion v0.2.1 adds the full current dashboard navigation:**
+**Companion v0.3.0 rebuilds the connection layer.**
 
-`Home / Winter Readiness · Neural Engine · Truth Lab · Thermal History · AI Lab · Models · Data Quality · Sources · Events · Production · History`
+On first setup it can automatically scan the phone's local /24 network for a Tesla Intelligence Core dashboard on the default port `8766`. If it finds the Pi, it can fill the local endpoint automatically instead of making the user hunt down an IP address.
 
-It can try three dashboard paths in order:
+The Connection Center supports three routes:
 
 ```text
-Local LAN -> private Tailscale -> optional public HTTPS
+Local LAN
+    ↓ fallback
+Private Tailscale
+    ↓ fallback
+Public HTTPS / PIN gateway
 ```
 
-That makes the app useful both at home and away from the local network without hard-coding somebody else's IP or Tailscale hostname into a public build.
+The connector tests configured routes **in parallel**, then prefers the most-private working path. It also keeps per-route diagnostics, remembers the last successful route, lets you test endpoints before saving them and includes a manual public-WebView fallback for cases where the browser can reach a login page even when a background HTTP probe is inconclusive.
 
-**[Download Android Companion v0.2.1](https://github.com/prokyle123/tesla-intelligence-core/releases/download/v0.8.27.6/Tesla-Intelligence-Core-Companion-v0.2.1-debug.apk)** · **[Source](companion/android)**
+When the public route reaches the PIN gateway, the companion recognizes the login page and changes its state to **LOGIN** instead of simply looking offline.
 
-The v0.2.1 update preserves the original S25/system-navigation fixes and the Neural Atlas aspect-ratio fix while adding first-run setup, current Pi views, public/PIN-gateway support and Tesla-browser guidance.
+**Current quick navigation:**
+
+`READY · EVENTS · NEURAL · TRUTH · THERMAL · MORE`
+
+**MORE** exposes AI Lab, Models, Data Quality, Sources, Production, History, full-screen Neural Atlas, Connection Center, Tesla Browser Access and connection diagnostics.
+
+**[Download Android Companion v0.3.0](https://github.com/prokyle123/tesla-intelligence-core/releases/download/v0.8.27.6/Tesla-Intelligence-Core-Companion-v0.3.0-debug.apk)** · **[Source](companion/android)**
+
+v0.3.0 also fixes modern Android system-UI behavior: the app now handles status-bar / display-cutout insets, keeps its bottom navigation above Android's navigation area, requests normal system navigation controls instead of immersive mode and resizes around the keyboard during setup.
 
 <p align="center">
-  <img src="docs/images/companion/companion-v021-home.png" alt="Tesla Intelligence Core Companion home / readiness view" width="42%">
+  <img src="docs/images/companion/companion-v030-home.png" alt="Tesla Intelligence Core Companion home / readiness view" width="42%">
   &nbsp;&nbsp;
-  <img src="docs/images/companion/companion-v021-neural.png" alt="Tesla Intelligence Core Companion Neural Engine view" width="42%">
+  <img src="docs/images/companion/companion-v030-neural.png" alt="Tesla Intelligence Core Companion Neural Engine view" width="42%">
 </p>
-<p align="center"><sub><b>Companion v0.2.1</b> — current Pi dashboard inside the Android shell with fast READY / EVENTS / NEURAL / TRUTH / THERMAL navigation and automatic endpoint failover.</sub></p>
+<p align="center"><sub><b>Companion v0.3.0</b> — safe-area aware Android shell, LAN discovery, smart route selection and current READY / EVENTS / NEURAL / TRUTH / THERMAL navigation.</sub></p>
 
 > [!NOTE]
 > The current public companion APK is a debug-signed sideload build. An older copy built on another machine may have a different Android signature and require one uninstall before installing the GitHub build.
@@ -210,9 +222,11 @@ PIN gateway
 Tesla Intelligence Core
 ```
 
-So if the Pi installation has Internet access, Funnel is correctly configured, and the car has Internet access, the dashboard can be opened directly from the Tesla browser using the public HTTPS URL.
+This is useful because the Tesla browser does not need direct access to the Pi's LAN address. If the Pi installation has working Internet access, Funnel is configured correctly, and the car has Internet access, the dashboard can be reached directly from the Tesla browser using the public HTTPS URL.
 
 **Why the PIN?** Funnel makes that HTTPS endpoint reachable from the public Internet. The intended setup is **Funnel → PIN gateway → dashboard**, not Funnel directly to the raw dashboard.
+
+That means the same self-hosted dashboard can be available from a phone through LAN/Tailscale **and** from the in-car browser through the optional HTTPS route, while still putting an authentication step in front of the public path.
 
 Vehicle software, networks and installations can vary; this documents the project's tested setup rather than assuming every Tesla behaves identically.
 
