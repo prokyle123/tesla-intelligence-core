@@ -37,9 +37,9 @@ It started as a winter-readiness project and grew into a broader local vehicle-i
 
 ## Visual tour
 
-### 🧠 Neural Command Atlas
+### 🧠 Live Neural Engine Atlas
 
-The Neural Engine is visualized as a live pipeline rather than a black box: rolling sequence history feeds normalized feature lanes, two GRU layers build temporal memory, a shared latent state captures vehicle context, and a multitask head produces future SOC / pack / cabin forecasts. Truth resolution and the governor sit in the same loop so model promotion can be audited.
+This is the **actual Neural Engine dashboard from a running instance**, not a conceptual mock-up. Rolling sequence history feeds normalized feature lanes, two GRU layers build temporal memory, a shared latent state captures vehicle context, and a multitask head produces future SOC / pack / cabin forecasts. The same live view exposes Truth resolution, challenger/production comparison, governor state and rollback protection so the model lifecycle is visible instead of hidden.
 
 <p align="center">
   <a href="docs/images/neural-command-atlas.svg">
@@ -55,8 +55,8 @@ The Neural Engine is visualized as a live pipeline rather than a black box: roll
 
 Forecasts show the expected future pack temperature together with outside air, thermal margin and an estimate range — not just a single unexplained number.
 
-<a href="docs/images/temperature-forecasting.svg">
-  <img src="docs/images/temperature-forecasting.svg" alt="Future pack-temperature forecasting" width="100%">
+<a href="docs/images/temperature-forecasting.jpg">
+  <img src="docs/images/temperature-forecasting.jpg" alt="Future pack-temperature forecasting" width="100%">
 </a>
 
 </td>
@@ -75,6 +75,9 @@ The system learns repeated departure behavior from real drive history. A configu
 </table>
 
 > **The important part is the connection between the views:** live telemetry becomes history, history becomes learned behavior, learned behavior becomes forecasts, and the readiness layer explains what those forecasts mean for the next trip.
+
+> [!NOTE]
+> The screenshots come from a real development instance, so live values will differ from car to car. Some UI screenshots still carry the project's original **GHOST** internal branding; the public project name is **Tesla Intelligence Core**.
 
 ---
 
