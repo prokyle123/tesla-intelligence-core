@@ -7,15 +7,18 @@ import android.content.pm.ActivityInfo;
 import android.graphics.Color;
 import android.graphics.Insets;
 import android.net.Uri;
+import android.text.TextUtils;
 import android.view.*;
 import android.webkit.*;
 import android.widget.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class MainActivity extends Activity {
-    static final String VER = "0.3.2";
+    static final String VER = "0.4.0";
 
     WebView web;
     TextView status;
@@ -38,6 +41,9 @@ public class MainActivity extends Activity {
     String dt = "not tested";
     String dpb = "not tested";
     String lastJsError = "";
+    String lastSyncReport = "not run";
+    boolean dashboardReady = false;
+    final Map<String, TextView> navButtons = new LinkedHashMap<>();
 
     boolean map = false;
     boolean firstRunScanActive = false;
@@ -213,6 +219,7 @@ public class MainActivity extends Activity {
         detail.setTextColor(Color.rgb(105, 160, 184));
         detail.setTextSize(9);
         detail.setSingleLine(true);
+        detail.setEllipsize(TextUtils.TruncateAt.MIDDLE);
 
         titles.addView(title, new LinearLayout.LayoutParams(-1, d(22)));
         titles.addView(detail, new LinearLayout.LayoutParams(-1, d(16)));
@@ -318,6 +325,8 @@ public class MainActivity extends Activity {
             TextView x = button(it[0]);
             x.setTextSize(10);
             x.setPadding(0, 0, 0, 0);
+            x.setContentDescription(it[0] + " dashboard section");
+            if (!"more".equals(it[1])) navButtons.put(it[1], x);
             x.setOnClickListener(v -> {
                 bars();
                 if ("more".equals(it[1])) more();
@@ -327,6 +336,7 @@ public class MainActivity extends Activity {
         }
 
         root.addView(nav, new LinearLayout.LayoutParams(-1, d(50)));
+        updateNativeNav();
         setContentView(root);
         bars();
         root.requestApplyInsets();
@@ -336,7 +346,49 @@ public class MainActivity extends Activity {
         view = x;
         map = false;
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
-        apply();
+        updateNativeNav();
+        switchDashboardView(x);
+    }
+
+    void updateNativeNav() {
+        for (Map.Entry<String, TextView> e : navButtons.entrySet()) {
+            boolean selected = e.getKey().equals(view) && !map;
+            TextView b = e.getValue();
+            b.setBackgroundColor(selected ? Color.rgb(13, 72, 96) : Color.rgb(7, 30, 42));
+            b.setTextColor(selected ? Color.WHITE : Color.rgb(177, 222, 238));
+            b.setTypeface(null, selected ? 1 : 0);
+        }
+    }
+
+    void switchDashboardView(String target) {
+        if (active == null || active.isEmpty()) return;
+
+        String js =
+                "(function(){" +
+                "var n='" + target + "';" +
+                "try{" +
+                "if(typeof switchView==='function'){switchView(n);}" +
+                "else{" +
+                "var t=document.querySelector('.tab[data-view=\"'+n+'\"]');" +
+                "document.querySelectorAll('.tab').forEach(function(x){x.classList.toggle('active',x===t);});" +
+                "document.querySelectorAll('.view').forEach(function(v){v.classList.toggle('active',v.id==='view-'+n);});" +
+                "window.scrollTo(0,0);" +
+                "}" +
+                "var v=document.getElementById('view-'+n);" +
+                "return v&&v.classList.contains('active')?'OK:'+n:'MISSING:'+n;" +
+                "}catch(e){return 'ERROR:'+e;}" +
+                "})()";
+
+        web.evaluateJavascript(js, value -> {
+            String result = cleanJsValue(value);
+            if (result.startsWith("OK:")) {
+                detail.setText(kind + " • " + shortUrl(active) + " • " + target.toUpperCase());
+                applyCompanionCss();
+            } else if (result.startsWith("ERROR:") || result.startsWith("MISSING:")) {
+                lastJsError = "view switch • " + result;
+                detail.setText(kind + " • view switch issue");
+            }
+        });
     }
 
     void more() {
@@ -382,8 +434,10 @@ public class MainActivity extends Activity {
     void openMap() {
         view = "neural4";
         map = true;
+        updateNativeNav();
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
-        apply();
+        switchDashboardView("neural4");
+        ui.postDelayed(this::applyCompanionCss, 250);
     }
 
     void firstRunDiscovery() {
@@ -480,6 +534,7 @@ public class MainActivity extends Activity {
     void load(String base, String k) {
         active = ConnectorManager.normalize(base);
         kind = k;
+        dashboardReady = false;
         status.setText("VERIFY");
         detail.setText(k + " • checking dashboard data…");
         web.loadUrl(active + "/");
@@ -488,6 +543,7 @@ public class MainActivity extends Activity {
     void loadAuth(String base) {
         active = ConnectorManager.normalize(base);
         kind = "PUBLIC";
+        dashboardReady = false;
         status.setText("LOGIN");
         detail.setText("PIN gateway • enter PIN");
         web.loadUrl(active + "/");
@@ -519,7 +575,7 @@ public class MainActivity extends Activity {
 
                     if ("DATA_OK".equals(state)) {
                         status.setText(kind);
-                        detail.setText(kind + " • DATA OK • syncing views…");
+                        detail.setText(kind + " • " + shortUrl(active) + " • API OK");
                         forceDashboardRefresh();
                         return;
                     }
@@ -543,46 +599,85 @@ public class MainActivity extends Activity {
     }
 
     void forceDashboardRefresh() {
+        if (active == null || active.isEmpty()) return;
+
         String js =
+                "(function(){" +
+                "var root=document.documentElement;" +
+                "root.setAttribute('data-tic-sync','RUNNING');" +
                 "(async function(){" +
                 "var report=[];" +
                 "try{" +
                 "var r=await fetch('/api/status',{cache:'no-store',credentials:'include'});" +
                 "report.push('status:'+r.status);" +
-                "if(r.ok){var d=await r.json();window.DATA=d;if(typeof render==='function'){render(d);report.push('render:ok');}else{report.push('render:missing');}}" +
-                "}catch(e){report.push('status:error:'+e);}" +
+                "if(r.ok){var d=await r.json();window.DATA=d;if(typeof render==='function'){render(d);report.push('core:rendered');}else{report.push('core:renderer-missing');}}" +
+                "}catch(e){report.push('status:error');}" +
                 "try{" +
                 "var a=await fetch('/api/v3/overview',{cache:'no-store',credentials:'include'});" +
                 "report.push('v3:'+a.status);" +
-                "if(a.ok&&typeof renderV3==='function'){renderV3(await a.json());report.push('renderV3:ok');}" +
-                "}catch(e){report.push('v3:error:'+e);}" +
+                "if(a.ok&&typeof renderV3==='function'){renderV3(await a.json());report.push('v3:rendered');}" +
+                "}catch(e){report.push('v3:error');}" +
                 "try{" +
                 "var b=await fetch('/api/v3/events?limit=80',{cache:'no-store',credentials:'include'});" +
                 "report.push('events:'+b.status);" +
-                "if(b.ok&&typeof renderEventRows==='function'){renderEventRows(await b.json());report.push('eventsRender:ok');}" +
-                "}catch(e){report.push('events:error:'+e);}" +
+                "if(b.ok&&typeof renderEventRows==='function'){renderEventRows(await b.json());report.push('events:rendered');}" +
+                "}catch(e){report.push('events:error');}" +
                 "try{" +
                 "var c=await fetch('/api/v3/winter',{cache:'no-store',credentials:'include'});" +
                 "report.push('winter:'+c.status);" +
-                "if(c.ok&&typeof renderWinterBoard==='function'){renderWinterBoard(await c.json());report.push('winterRender:ok');}" +
-                "}catch(e){report.push('winter:error:'+e);}" +
-                "try{if(typeof refreshNeuralV4==='function'){await refreshNeuralV4();report.push('neural:ok');}else{report.push('neural:missing');}}catch(e){report.push('neural:error:'+e);}" +
-                "return report.join(' | ');" +
+                "if(c.ok&&typeof renderWinterBoard==='function'){renderWinterBoard(await c.json());report.push('winter:rendered');}" +
+                "}catch(e){report.push('winter:error');}" +
+                "try{if(typeof refreshNeuralV4==='function'){await refreshNeuralV4();report.push('neural:refreshed');}else{report.push('neural:missing');}}catch(e){report.push('neural:error');}" +
+                "root.setAttribute('data-tic-sync',report.join('|'));" +
+                "})().catch(function(){root.setAttribute('data-tic-sync','sync:error');});" +
+                "return 'STARTED';" +
                 "})()";
 
-        web.evaluateJavascript(js, value -> {
-            String report = value == null ? "" : value.replace("\\", "").replace("\"", "");
-            if (report.contains("render:ok") || report.contains("renderV3:ok") || report.contains("winterRender:ok")) {
-                status.setText(kind);
-                detail.setText(kind + " • DATA LIVE");
-                apply();
-                ui.postDelayed(() -> apply(), 300);
-                ui.postDelayed(() -> apply(), 1000);
-            } else {
-                status.setText("NO RENDER");
-                detail.setText(report.isEmpty() ? "Dashboard renderer did not respond" : report);
-            }
-        });
+        web.evaluateJavascript(js, null);
+        ui.postDelayed(this::checkDashboardSync, 900);
+    }
+
+    void checkDashboardSync() {
+        if (active == null || active.isEmpty()) return;
+
+        web.evaluateJavascript(
+                "(function(){return document.documentElement.getAttribute('data-tic-sync')||'UNKNOWN';})()",
+                value -> {
+                    String report = cleanJsValue(value);
+                    lastSyncReport = report;
+
+                    if ("RUNNING".equals(report) || "UNKNOWN".equals(report)) {
+                        ui.postDelayed(this::checkDashboardSync, 650);
+                        return;
+                    }
+
+                    boolean rendered = report.contains("core:rendered")
+                            || report.contains("v3:rendered")
+                            || report.contains("winter:rendered")
+                            || report.contains("events:rendered");
+
+                    dashboardReady = rendered;
+                    status.setText(kind);
+
+                    if (rendered) {
+                        detail.setText(kind + " • " + shortUrl(active) + " • LIVE");
+                    } else {
+                        detail.setText(kind + " • " + shortUrl(active) + " • API LIVE");
+                    }
+
+                    switchDashboardView(view);
+                    ui.postDelayed(this::applyCompanionCss, 250);
+                }
+        );
+    }
+
+    String cleanJsValue(String value) {
+        if (value == null) return "";
+        String out = value.trim();
+        if (out.length() >= 2 && out.startsWith("\"") && out.endsWith("\"")) {
+            out = out.substring(1, out.length() - 1);
+        }
+        return out.replace("\\\\", "\\").replace("\\\\"", "\"");
     }
 
     void openAnyway(String base, String k) {
@@ -627,8 +722,8 @@ public class MainActivity extends Activity {
                 "if(!window.__ticTimer)window.__ticTimer=setInterval(ticFixMap,1000);";
     }
 
-    void apply() {
-        if (active == null) return;
+    void applyCompanionCss() {
+        if (active == null || active.isEmpty()) return;
 
         String css = map ?
                 "var st=document.getElementById('ticMapStyle');if(st)st.remove();st=document.createElement('style');st.id='ticMapStyle';st.textContent='header.topbar,.neural-v4-hero,.neural-v4-kpis,.n6-governor,.neural-dev>.section-title,.n4-live-narrative,.n4-mission-strip,.n4-runtime-strip,.neural-progress-card,.n4-insight-strip,.n4-observatory-strip{display:none!important}main{padding:0!important;max-width:none!important;width:100%!important}.neural-dev{margin:0!important;padding:0!important;border:0!important}#n4MapShell{height:100vh!important;min-height:0!important;padding:0!important;margin:0!important;overflow:hidden!important}#n4NetworkMap{width:100%!important;height:100%!important;max-width:100%!important;max-height:100%!important;display:block!important}';document.head.appendChild(st);" :
@@ -636,7 +731,6 @@ public class MainActivity extends Activity {
 
         String js =
                 "(function(){" +
-                "var b=document.querySelector('.tab[data-view=\"" + view + "\"]');if(b)b.click();" +
                 css +
                 mapJs() +
                 (map
@@ -647,6 +741,10 @@ public class MainActivity extends Activity {
         web.evaluateJavascript(js, null);
     }
 
+    void apply() {
+        switchDashboardView(view);
+    }
+
     void diagnostics() {
         String message =
                 "ACTIVE\n" + kind + " • " + dash(active) +
@@ -654,6 +752,8 @@ public class MainActivity extends Activity {
                 "\n\nLOCAL\n" + dash(local) + "\n" + dl +
                 "\n\nTAILNET\n" + dash(tail) + "\n" + dt +
                 "\n\nPUBLIC / FUNNEL\n" + dash(pub) + "\n" + dpb +
+                "\n\nDASHBOARD\nview " + view.toUpperCase() + " • " + (dashboardReady ? "rendered" : "API connected") +
+                "\nSync: " + lastSyncReport +
                 "\n\nJAVASCRIPT\n" + (lastJsError.isEmpty() ? "no captured console errors" : lastJsError) +
                 "\n\nConnection order is Local → Tailnet → Public. Probes run in parallel and the most-private successful route wins.";
 
