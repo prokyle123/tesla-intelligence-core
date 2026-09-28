@@ -1,0 +1,65 @@
+name: companion-android
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'companion/android/**'
+      - '.github/workflows/companion-android.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: companion/android
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 35
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Build companion APK
+        run: gradle --no-daemon :app:assembleDebug
+
+      - name: Prepare release files
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk Tesla-Intelligence-Core-Companion-v0.2.0-debug.apk
+          sha256sum Tesla-Intelligence-Core-Companion-v0.2.0-debug.apk > Tesla-Intelligence-Core-Companion-v0.2.0-debug.apk.sha256
+          zip -qr Tesla-Intelligence-Core-Companion-v0.2.0-source.zip . -x '.gradle/*' 'app/build/*' '*.apk' '*.sha256' '*.zip'
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tesla-Intelligence-Core-Companion-v0.2.0
+          path: |
+            companion/android/Tesla-Intelligence-Core-Companion-v0.2.0-debug.apk
+            companion/android/Tesla-Intelligence-Core-Companion-v0.2.0-debug.apk.sha256
+            companion/android/Tesla-Intelligence-Core-Companion-v0.2.0-source.zip
+
+      - name: Attach companion build to current public release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload v0.8.27.6 \
+            Tesla-Intelligence-Core-Companion-v0.2.0-debug.apk \
+            Tesla-Intelligence-Core-Companion-v0.2.0-debug.apk.sha256 \
+            Tesla-Intelligence-Core-Companion-v0.2.0-source.zip \
+            --clobber \
+            -R "$GITHUB_REPOSITORY"
