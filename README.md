@@ -27,8 +27,54 @@ It started as a winter-readiness project and grew into a broader local vehicle-i
 > **Read-only by design.** Tesla Intelligence Core observes telemetry and builds predictions. It does **not** send driving, climate, charging, locking, or other control commands to the vehicle.
 
 <p align="center">
-  <img src="docs/images/dashboard-overview.png" alt="Tesla Intelligence Core dashboard" width="96%">
+  <a href="docs/images/dashboard-overview.png">
+    <img src="docs/images/dashboard-overview.png" alt="Tesla Intelligence Core dashboard" width="96%">
+  </a>
 </p>
+<p align="center"><sub><b>Main operations dashboard</b> — winter readiness, live thermal state, charging, learned departure context and forward pack-temperature outlook in one view.</sub></p>
+
+---
+
+## Visual tour
+
+### 🧠 Neural Command Atlas
+
+The Neural Engine is visualized as a live pipeline rather than a black box: rolling sequence history feeds normalized feature lanes, two GRU layers build temporal memory, a shared latent state captures vehicle context, and a multitask head produces future SOC / pack / cabin forecasts. Truth resolution and the governor sit in the same loop so model promotion can be audited.
+
+<p align="center">
+  <a href="docs/images/neural-command-atlas.svg">
+    <img src="docs/images/neural-command-atlas.svg" alt="Tesla Intelligence Core Neural Command Atlas" width="96%">
+  </a>
+</p>
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+### 🌡️ Pack-temperature forecasting
+
+Forecasts show the expected future pack temperature together with outside air, thermal margin and an estimate range — not just a single unexplained number.
+
+<a href="docs/images/temperature-forecasting.svg">
+  <img src="docs/images/temperature-forecasting.svg" alt="Future pack-temperature forecasting" width="100%">
+</a>
+
+</td>
+<td width="50%" valign="top">
+
+### 🕒 Learned departure planning
+
+The system learns repeated departure behavior from real drive history. A configured departure time is only a fading prior; observed behavior takes over as evidence builds.
+
+<a href="docs/images/departure-learning.png">
+  <img src="docs/images/departure-learning.png" alt="Learned departure planning" width="100%">
+</a>
+
+</td>
+</tr>
+</table>
+
+> **The important part is the connection between the views:** live telemetry becomes history, history becomes learned behavior, learned behavior becomes forecasts, and the readiness layer explains what those forecasts mean for the next trip.
 
 ---
 
@@ -70,9 +116,6 @@ The result is not just a graph dump. The main view produces a **Winter Readiness
 - Random / secondary trips remain useful without dragging the main routine around
 - Separate **schedule confidence** and **next-trip probability**
 
-<p align="center">
-  <img src="docs/images/departure-learning.png" alt="Learned departure planning" width="86%">
-</p>
 
 ### 🔋 Battery + charging intelligence
 - Pack / module temperature tracking
