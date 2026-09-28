@@ -8,7 +8,11 @@ import android.graphics.Color;
 import android.view.*;
 import android.webkit.*;
 import android.widget.*;
-import java.net.*;
+import java.net.URI;
+import java.net.Socket;
+import java.net.InetSocketAddress;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.concurrent.*;
 
 public class MainActivity extends Activity {
