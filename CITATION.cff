@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use Tesla Intelligence Core in research, testing, writing, or a derived project, please cite this repository."
+title: "Tesla Intelligence Core"
+version: "0.8.27.6"
+date-released: "2026-09-28"
+url: "https://github.com/prokyle123/tesla-intelligence-core"
+repository-code: "https://github.com/prokyle123/tesla-intelligence-core"
+license: "MIT"
+authors:
+  - name: "prokyle123"
+abstract: >-
+  A local-first, self-hosted Tesla telemetry and predictive intelligence system
+  for Raspberry Pi. It learns thermal behavior, charging behavior, recurring
+  departure patterns and trip context, and uses classical machine learning and
+  PyTorch GRU sequence models for multi-horizon vehicle forecasts, truth
+  validation and winter readiness.
+keywords:
+  - Tesla
+  - electric vehicle
+  - Raspberry Pi
+  - machine learning
+  - PyTorch
+  - battery thermal monitoring
+  - Level 1 charging
+  - winter driving
+  - telemetry
+  - time-series forecasting
