@@ -26,13 +26,15 @@ public final class ConnectorManager {
         public final String kind;
         public final String base;
         public final boolean ok;
+        public final boolean authRequired;
         public final String detail;
         public final int rank;
 
-        EndpointResult(String kind, String base, boolean ok, String detail, int rank) {
+        EndpointResult(String kind, String base, boolean ok, boolean authRequired, String detail, int rank) {
             this.kind = kind;
             this.base = base;
             this.ok = ok;
+            this.authRequired = authRequired;
             this.detail = detail;
             this.rank = rank;
         }
@@ -73,9 +75,9 @@ public final class ConnectorManager {
         tailnet = normalize(tailnet);
         pub = normalize(pub);
 
-        if (!local.isEmpty()) seeds.add(new EndpointResult("LOCAL", local, false, "pending", 0));
-        if (!tailnet.isEmpty()) seeds.add(new EndpointResult("TAILNET", tailnet, false, "pending", 1));
-        if (!pub.isEmpty()) seeds.add(new EndpointResult("PUBLIC", pub, false, "pending", 2));
+        if (!local.isEmpty()) seeds.add(new EndpointResult("LOCAL", local, false, false, "pending", 0));
+        if (!tailnet.isEmpty()) seeds.add(new EndpointResult("TAILNET", tailnet, false, false, "pending", 1));
+        if (!pub.isEmpty()) seeds.add(new EndpointResult("PUBLIC", pub, false, false, "pending", 2));
 
         if (seeds.isEmpty()) {
             listener.onComplete(null, Collections.emptyList());
@@ -92,7 +94,7 @@ public final class ConnectorManager {
                 completion.submit(() -> {
                     int timeout = seed.rank == 0 ? 2200 : (seed.rank == 1 ? 3200 : 5200);
                     Probe p = probe(seed.base, timeout);
-                    return new EndpointResult(seed.kind, seed.base, p.ok, p.detail, seed.rank);
+                    return new EndpointResult(seed.kind, seed.base, p.ok, p.authRequired, p.detail, seed.rank);
                 });
             }
 
@@ -133,7 +135,7 @@ public final class ConnectorManager {
                         break;
                     }
                 }
-                if (!already) results.add(new EndpointResult(seed.kind, seed.base, false, "probe timed out", seed.rank));
+                if (!already) results.add(new EndpointResult(seed.kind, seed.base, false, false, "probe timed out", seed.rank));
             }
 
             listener.onComplete(best, results);
@@ -220,45 +222,125 @@ public final class ConnectorManager {
 
     private static final class Probe {
         final boolean ok;
+        final boolean authRequired;
         final String detail;
-        Probe(boolean ok, String detail) {
+
+        Probe(boolean ok, boolean authRequired, String detail) {
             this.ok = ok;
+            this.authRequired = authRequired;
             this.detail = detail;
         }
     }
 
     private static Probe probe(String raw, int timeoutMs) {
         String base = normalize(raw);
-        if (base.isEmpty()) return new Probe(false, "endpoint blank");
+        if (base.isEmpty()) return new Probe(false, false, "endpoint blank");
 
-        String last = "no response";
-        String[] paths = {"/api/health", "/health", "/"};
+        HttpURLConnection c = null;
+        try {
+            c = (HttpURLConnection) new URL(base + "/api/v3/overview").openConnection();
+            c.setConnectTimeout(timeoutMs);
+            c.setReadTimeout(timeoutMs);
+            c.setUseCaches(false);
+            c.setInstanceFollowRedirects(false);
+            c.setRequestProperty("Accept", "application/json");
+            c.setRequestProperty("User-Agent", "TIC-Companion/0.3.1");
 
-        for (String path : paths) {
-            HttpURLConnection c = null;
-            try {
-                c = (HttpURLConnection) new URL(base + path).openConnection();
-                c.setConnectTimeout(timeoutMs);
-                c.setReadTimeout(timeoutMs);
-                c.setUseCaches(false);
-                c.setInstanceFollowRedirects(true);
-                c.setRequestProperty("Accept", "application/json,text/html,*/*");
-                c.setRequestProperty("User-Agent", "TIC-Companion/0.3.0");
-                int code = c.getResponseCode();
-                if (code >= 200 && code < 400) {
-                    return new Probe(true, "HTTP " + code + " " + path);
+            int code = c.getResponseCode();
+            String body = readSmallBody(c);
+
+            if (code == 200 && body != null && body.trim().startsWith("{")) {
+                String lower = body.toLowerCase(Locale.US);
+                if (lower.contains("\"readiness\"") || lower.contains("\"events\"") || lower.contains("\"version\"")) {
+                    return new Probe(true, false, "DATA OK • /api/v3/overview");
                 }
-                last = "HTTP " + code + " " + path;
-            } catch (Exception e) {
-                last = e.getClass().getSimpleName() + ": " + safeMessage(e);
-            } finally {
-                if (c != null) c.disconnect();
+                return new Probe(false, false, "HTTP 200 but response was not recognized as Tesla Intelligence Core data");
             }
-        }
 
-        Probe tcp = tcp(base, Math.min(timeoutMs, 1800));
-        if (tcp.ok) return new Probe(true, tcp.detail + " • HTTP probe inconclusive");
-        return new Probe(false, last + " • " + tcp.detail);
+            if (code == 401) {
+                String lower = body == null ? "" : body.toLowerCase(Locale.US);
+                if (lower.contains("pin authentication required") || lower.contains("authentication required")) {
+                    return new Probe(true, true, "PIN LOGIN REQUIRED • /api/v3/overview returned 401");
+                }
+                return new Probe(false, false, "HTTP 401 from dashboard API");
+            }
+
+            if (code == 302 || code == 303 || code == 307 || code == 308) {
+                String location = c.getHeaderField("Location");
+                if (location != null && location.toLowerCase(Locale.US).contains("auth")) {
+                    return new Probe(true, true, "LOGIN REQUIRED • redirected to " + location);
+                }
+            }
+
+            Probe root = probeRoot(base, timeoutMs);
+            if (root.authRequired) return root;
+            if (root.ok) return new Probe(false, false, "Web page answered, but dashboard data API did not: HTTP " + code);
+            return new Probe(false, false, "Dashboard API unavailable: HTTP " + code + " • " + root.detail);
+        } catch (Exception e) {
+            Probe root = probeRoot(base, Math.min(timeoutMs, 2200));
+            if (root.authRequired) return root;
+            return new Probe(false, false, e.getClass().getSimpleName() + ": " + safeMessage(e) + " • " + root.detail);
+        } finally {
+            if (c != null) c.disconnect();
+        }
+    }
+
+    private static Probe probeRoot(String base, int timeoutMs) {
+        HttpURLConnection c = null;
+        try {
+            c = (HttpURLConnection) new URL(base + "/").openConnection();
+            c.setConnectTimeout(timeoutMs);
+            c.setReadTimeout(timeoutMs);
+            c.setUseCaches(false);
+            c.setInstanceFollowRedirects(true);
+            c.setRequestProperty("User-Agent", "TIC-Companion/0.3.1");
+            int code = c.getResponseCode();
+            String body = readSmallBody(c);
+            String lower = body == null ? "" : body.toLowerCase(Locale.US);
+
+            if (code >= 200 && code < 400) {
+                if (lower.contains("ghost // secure funnel")
+                        || lower.contains("enter the ghost pin")
+                        || lower.contains("public funnel gateway")
+                        || lower.contains("__ghost_auth/login")) {
+                    return new Probe(true, true, "PIN LOGIN PAGE");
+                }
+
+                if (lower.contains("tesla intelligence core")
+                        || lower.contains("ghost winter readiness")
+                        || lower.contains("winter readiness board")) {
+                    return new Probe(true, false, "Dashboard HTML reachable");
+                }
+
+                return new Probe(true, false, "HTTP " + code + " /");
+            }
+
+            return new Probe(false, false, "HTTP " + code + " /");
+        } catch (Exception e) {
+            Probe t = tcp(base, Math.min(timeoutMs, 1500));
+            return new Probe(false, false, e.getClass().getSimpleName() + ": " + safeMessage(e) + " • " + t.detail);
+        } finally {
+            if (c != null) c.disconnect();
+        }
+    }
+
+    private static String readSmallBody(HttpURLConnection c) {
+        InputStream in = null;
+        try {
+            int code = c.getResponseCode();
+            in = code >= 400 ? c.getErrorStream() : c.getInputStream();
+            if (in == null) return "";
+            BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+            StringBuilder body = new StringBuilder();
+            char[] buf = new char[1024];
+            int n;
+            while ((n = reader.read(buf)) > 0 && body.length() < 16384) body.append(buf, 0, n);
+            return body.toString();
+        } catch (Exception ignored) {
+            return "";
+        } finally {
+            try { if (in != null) in.close(); } catch (Exception ignored) {}
+        }
     }
 
     private static Probe tcp(String base, int timeoutMs) {
@@ -267,13 +349,13 @@ public final class ConnectorManager {
             URI u = new URI(normalize(base));
             String host = u.getHost();
             int port = u.getPort();
-            if (host == null) return new Probe(false, "invalid URL");
+            if (host == null) return new Probe(false, false, "invalid URL");
             if (port < 0) port = "https".equalsIgnoreCase(u.getScheme()) ? 443 : 80;
             socket = new Socket();
             socket.connect(new InetSocketAddress(host, port), timeoutMs);
-            return new Probe(true, "TCP " + host + ":" + port + " connected");
+            return new Probe(true, false, "TCP " + host + ":" + port + " connected");
         } catch (Exception e) {
-            return new Probe(false, e.getClass().getSimpleName() + ": " + safeMessage(e));
+            return new Probe(false, false, e.getClass().getSimpleName() + ": " + safeMessage(e));
         } finally {
             try { if (socket != null) socket.close(); } catch (Exception ignored) {}
         }
