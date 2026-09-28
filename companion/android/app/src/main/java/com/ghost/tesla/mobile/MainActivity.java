@@ -15,7 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends Activity {
-    static final String VER = "0.3.1";
+    static final String VER = "0.3.2";
 
     WebView web;
     TextView status;
@@ -37,6 +37,7 @@ public class MainActivity extends Activity {
     String dl = "not tested";
     String dt = "not tested";
     String dpb = "not tested";
+    String lastJsError = "";
 
     boolean map = false;
     boolean firstRunScanActive = false;
@@ -256,6 +257,18 @@ public class MainActivity extends Activity {
                     status.setText("LOGIN");
                     detail.setText("PIN gateway • enter PIN");
                 }
+            }
+
+            @Override public boolean onConsoleMessage(ConsoleMessage message) {
+                if (message != null && message.messageLevel() == ConsoleMessage.MessageLevel.ERROR) {
+                    lastJsError = "L" + message.lineNumber() + " • " + message.message();
+                    ui.post(() -> {
+                        if (!"LOGIN".contentEquals(status.getText())) {
+                            detail.setText("Dashboard JS • " + lastJsError);
+                        }
+                    });
+                }
+                return true;
             }
         });
 
@@ -506,10 +519,8 @@ public class MainActivity extends Activity {
 
                     if ("DATA_OK".equals(state)) {
                         status.setText(kind);
-                        detail.setText(kind + " • DATA OK • " + shortUrl(active));
-                        apply();
-                        ui.postDelayed(() -> apply(), 350);
-                        ui.postDelayed(() -> apply(), 1200);
+                        detail.setText(kind + " • DATA OK • syncing views…");
+                        forceDashboardRefresh();
                         return;
                     }
 
@@ -529,6 +540,49 @@ public class MainActivity extends Activity {
                     detail.setText(kind + " • dashboard API " + state);
                 }
         ), 850);
+    }
+
+    void forceDashboardRefresh() {
+        String js =
+                "(async function(){" +
+                "var report=[];" +
+                "try{" +
+                "var r=await fetch('/api/status',{cache:'no-store',credentials:'include'});" +
+                "report.push('status:'+r.status);" +
+                "if(r.ok){var d=await r.json();window.DATA=d;if(typeof render==='function'){render(d);report.push('render:ok');}else{report.push('render:missing');}}" +
+                "}catch(e){report.push('status:error:'+e);}" +
+                "try{" +
+                "var a=await fetch('/api/v3/overview',{cache:'no-store',credentials:'include'});" +
+                "report.push('v3:'+a.status);" +
+                "if(a.ok&&typeof renderV3==='function'){renderV3(await a.json());report.push('renderV3:ok');}" +
+                "}catch(e){report.push('v3:error:'+e);}" +
+                "try{" +
+                "var b=await fetch('/api/v3/events?limit=80',{cache:'no-store',credentials:'include'});" +
+                "report.push('events:'+b.status);" +
+                "if(b.ok&&typeof renderEventRows==='function'){renderEventRows(await b.json());report.push('eventsRender:ok');}" +
+                "}catch(e){report.push('events:error:'+e);}" +
+                "try{" +
+                "var c=await fetch('/api/v3/winter',{cache:'no-store',credentials:'include'});" +
+                "report.push('winter:'+c.status);" +
+                "if(c.ok&&typeof renderWinterBoard==='function'){renderWinterBoard(await c.json());report.push('winterRender:ok');}" +
+                "}catch(e){report.push('winter:error:'+e);}" +
+                "try{if(typeof refreshNeuralV4==='function'){await refreshNeuralV4();report.push('neural:ok');}else{report.push('neural:missing');}}catch(e){report.push('neural:error:'+e);}" +
+                "return report.join(' | ');" +
+                "})()";
+
+        web.evaluateJavascript(js, value -> {
+            String report = value == null ? "" : value.replace("\\", "").replace("\"", "");
+            if (report.contains("render:ok") || report.contains("renderV3:ok") || report.contains("winterRender:ok")) {
+                status.setText(kind);
+                detail.setText(kind + " • DATA LIVE");
+                apply();
+                ui.postDelayed(() -> apply(), 300);
+                ui.postDelayed(() -> apply(), 1000);
+            } else {
+                status.setText("NO RENDER");
+                detail.setText(report.isEmpty() ? "Dashboard renderer did not respond" : report);
+            }
+        });
     }
 
     void openAnyway(String base, String k) {
@@ -600,6 +654,7 @@ public class MainActivity extends Activity {
                 "\n\nLOCAL\n" + dash(local) + "\n" + dl +
                 "\n\nTAILNET\n" + dash(tail) + "\n" + dt +
                 "\n\nPUBLIC / FUNNEL\n" + dash(pub) + "\n" + dpb +
+                "\n\nJAVASCRIPT\n" + (lastJsError.isEmpty() ? "no captured console errors" : lastJsError) +
                 "\n\nConnection order is Local → Tailnet → Public. Probes run in parallel and the most-private successful route wins.";
 
         AlertDialog.Builder b = new AlertDialog.Builder(this)
