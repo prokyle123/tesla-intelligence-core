@@ -31,21 +31,7 @@ jobs:
           gradle-version: '8.9'
 
       - name: Build companion APK
-        shell: bash
-        run: |
-          set +e
-          gradle --no-daemon :app:assembleDebug 2>&1 | tee build.log
-          code=${PIPESTATUS[0]}
-          if [ "$code" -ne 0 ]; then
-            tail -250 build.log > ../../companion-build-error.txt
-            cd ../..
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add companion-build-error.txt
-            git commit -m "Capture Android companion build failure" || true
-            git push origin HEAD:main || true
-            exit "$code"
-          fi
+        run: gradle --no-daemon :app:assembleDebug
 
       - name: Prepare release files
         run: |
@@ -72,3 +58,26 @@ jobs:
             Tesla-Intelligence-Core-Companion-v0.2.0-source.zip \
             --clobber \
             -R "$GITHUB_REPOSITORY"
+
+      - name: Update release notes for companion
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view v0.8.27.6 -R "$GITHUB_REPOSITORY" --json body -q .body > /tmp/release-body.md
+          if ! grep -q "Android Companion v0.2.0" /tmp/release-body.md; then
+            cat >> /tmp/release-body.md <<'EOF'
+
+          ## Android Companion v0.2.0
+
+          The release now also includes the Tesla Intelligence Core Android companion:
+
+          - Local LAN -> private Tailnet -> optional public HTTPS failover
+          - current Winter Readiness / Neural Engine / Truth Lab / Thermal History views
+          - AI Lab, Models, Data Quality, Sources, Events, Production and History navigation
+          - full-screen Neural Atlas with the S25/aspect-ratio fixes preserved
+          - Tesla in-car browser guidance for the optional Funnel -> PIN gateway -> dashboard route
+
+          See the repository README and `docs/TESLA_BROWSER.md` for setup and security notes.
+          EOF
+            gh release edit v0.8.27.6 -R "$GITHUB_REPOSITORY" --notes-file /tmp/release-body.md
+          fi
