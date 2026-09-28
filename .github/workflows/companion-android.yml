@@ -31,7 +31,21 @@ jobs:
           gradle-version: '8.9'
 
       - name: Build companion APK
-        run: gradle --no-daemon :app:assembleDebug
+        shell: bash
+        run: |
+          set +e
+          gradle --no-daemon :app:assembleDebug 2>&1 | tee build.log
+          code=${PIPESTATUS[0]}
+          if [ "$code" -ne 0 ]; then
+            tail -250 build.log > ../../companion-build-error.txt
+            cd ../..
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add companion-build-error.txt
+            git commit -m "Capture Android companion build failure" || true
+            git push origin HEAD:main || true
+            exit "$code"
+          fi
 
       - name: Prepare release files
         run: |
