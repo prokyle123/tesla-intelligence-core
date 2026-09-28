@@ -33,6 +33,14 @@ This release turns the internal development patch chain into a fresh-installable
 - Starlink optional telemetry.
 - PIN-protected Tailscale Funnel gateway.
 
+### Companion / in-car access
+- Android Companion v0.2.0 source is included under `companion/android`.
+- Public APK, checksum and source ZIP are attached to the v0.8.27.6 GitHub release.
+- Companion supports Local LAN → private Tailnet → optional public HTTPS failover.
+- Current dashboard views are available from the companion, including AI Lab, Models, Data Quality, Sources, Events, Neural Engine, Truth Lab, Thermal History, Production and History.
+- Dedicated Tesla in-car browser guide documents the tested HTTPS Funnel → PIN gateway → dashboard path.
+- Fresh public companion installs no longer contain developer-specific IP/Tailscale defaults.
+
 ### Public repository
 - Interactive fresh installer.
 - Runtime config/data kept outside the source tree.
