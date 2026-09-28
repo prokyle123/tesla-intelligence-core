@@ -33,6 +33,19 @@ public class MainActivity extends Activity {
         local=norm(prefs.getString("local",prefs.getString("primary","")));
         tail=norm(prefs.getString("private",prefs.getString("backup","")));
         pub=norm(prefs.getString("public",""));
+
+        // Optional non-persistent endpoint overrides are useful for testing,
+        // demos and automated screenshots without baking addresses into the APK.
+        Intent launch=getIntent();
+        if(launch!=null){
+            String x=launch.getStringExtra("tic_local");
+            if(x!=null&&!x.trim().isEmpty()) local=norm(x);
+            x=launch.getStringExtra("tic_tailnet");
+            if(x!=null&&!x.trim().isEmpty()) tail=norm(x);
+            x=launch.getStringExtra("tic_public");
+            if(x!=null&&!x.trim().isEmpty()) pub=norm(x);
+        }
+
         build();
         if(!any()){ welcome(); ui.postDelayed(()->settings(true),250); } else resolve();
     }
