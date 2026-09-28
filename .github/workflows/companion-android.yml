@@ -31,26 +31,7 @@ jobs:
           gradle-version: '8.9'
 
       - name: Build companion APK
-        run: |
-          set +e
-          gradle --no-daemon :app:assembleDebug > build-output.txt 2>&1
-          rc=$?
-          cat build-output.txt
-          if [ "$rc" -ne 0 ]; then
-            cp build-output.txt ../../docs/companion-build-error.txt
-          fi
-          exit "$rc"
-
-      - name: Publish compiler diagnostics
-        if: failure()
-        working-directory: .
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/companion-build-error.txt
-          git commit -m "Capture Companion compiler diagnostics" || exit 0
-          git pull --rebase origin main
-          git push origin HEAD:main
+        run: gradle --no-daemon :app:assembleDebug
 
       - name: Prepare release files
         run: |
@@ -90,10 +71,12 @@ jobs:
 
           The release now also includes the Tesla Intelligence Core Android companion:
 
-          - Local LAN -> private Tailnet -> optional public HTTPS failover
-          - current Winter Readiness / Events / Neural Engine / Truth Lab / Thermal History views
-          - AI Lab, Models, Data Quality, Sources, Events, Production and History navigation
-          - full-screen Neural Atlas with the S25/aspect-ratio fixes preserved
+          - Connection Center with local-LAN auto-discovery on the default dashboard port
+          - Local / private Tailnet / public HTTPS probes run in parallel with Local preferred
+          - public PIN/login gateway detection plus manual WebView-open fallback
+          - Android status-bar, cutout, navigation-bar and keyboard safe-area fixes
+          - READY / EVENTS / NEURAL / TRUTH / THERMAL quick navigation
+          - AI Lab, Models, Data Quality, Sources, Production, History and full-screen Neural Atlas
           - Tesla in-car browser guidance for the optional Funnel -> PIN gateway -> dashboard route
 
           See the repository README and `docs/TESLA_BROWSER.md` for setup and security notes.
