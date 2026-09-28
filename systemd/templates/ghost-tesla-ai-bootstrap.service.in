@@ -1,0 +1,15 @@
+[Unit]
+Description=GHOST Tesla AI Historical Bootstrap + Retrain
+After=network-online.target ghost-tesla-ai-web.service ghost-tesla-ai-collector.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=__GHOST_USER__
+Group=__GHOST_USER__
+WorkingDirectory=/opt/ghost-tesla-ai
+Environment=PYTHONPATH=/opt/ghost-tesla-ai
+ExecStart=/opt/ghost-tesla-ai/venv/bin/python -m ghost_tesla_ai.backfill --days 30 --interval 300 --train-after
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=6

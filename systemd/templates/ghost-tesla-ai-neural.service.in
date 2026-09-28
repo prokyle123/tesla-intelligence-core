@@ -1,0 +1,21 @@
+[Unit]
+Description=GHOST Tesla AI PyTorch Neural Challenger Training
+After=network-online.target ghost-tesla-ai-web.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=__GHOST_USER__
+Group=__GHOST_USER__
+WorkingDirectory=/opt/ghost-tesla-ai
+Environment=PYTHONPATH=/opt/ghost-tesla-ai
+Environment=GHOST_TORCH_THREADS=4
+ExecStart=/opt/ghost-tesla-ai/venv/bin/python -m ghost_tesla_ai.neural_v4 --train
+StandardOutput=append:/var/lib/ghost-tesla-ai/neural-v4-train.log
+StandardError=append:/var/lib/ghost-tesla-ai/neural-v4-train.log
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=6
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,19 @@
+[Unit]
+Description=GHOST Tesla Learning Engine Web
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__GHOST_USER__
+Group=__GHOST_USER__
+WorkingDirectory=/opt/ghost-tesla-ai
+Environment=PYTHONPATH=/opt/ghost-tesla-ai
+ExecStart=/opt/ghost-tesla-ai/venv/bin/python -m ghost_tesla_ai.server
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

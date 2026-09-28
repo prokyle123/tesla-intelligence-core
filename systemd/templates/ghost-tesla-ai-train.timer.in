@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily GHOST Tesla model training
+
+[Timer]
+OnCalendar=*-*-* 03:20:00
+Persistent=true
+RandomizedDelaySec=600
+
+[Install]
+WantedBy=timers.target

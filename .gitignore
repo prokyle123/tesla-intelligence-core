@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# Runtime data / models / secrets
+*.sqlite3
+*.db
+models/
+*.joblib
+*.pt
+*.pth
+*.token
+*.env
+.env
+funnel_pin.json
+ecoflow_app.json
+*.log
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local release output
+dist/
+release/

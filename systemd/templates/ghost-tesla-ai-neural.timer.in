@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily GHOST Tesla AI PyTorch Neural Challenger Training
+
+[Timer]
+OnCalendar=*-*-* 04:35:00
+Persistent=true
+RandomizedDelaySec=900
+Unit=ghost-tesla-ai-neural.service
+
+[Install]
+WantedBy=timers.target

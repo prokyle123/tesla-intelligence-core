@@ -1,0 +1,21 @@
+[Unit]
+Description=GHOST Tesla Public Funnel PIN Gateway
+After=network-online.target tailscaled.service ghost-tesla-ai-web.service
+Wants=network-online.target tailscaled.service
+Requires=ghost-tesla-ai-web.service
+
+[Service]
+Type=simple
+User=__GHOST_USER__
+Group=__GHOST_USER__
+WorkingDirectory=/opt/ghost-tesla-ai
+Environment=PYTHONPATH=/opt/ghost-tesla-ai
+Environment=GHOST_FUNNEL_PIN_FILE=/var/lib/ghost-tesla-ai/funnel_pin.json
+ExecStart=/opt/ghost-tesla-ai/venv/bin/python -m ghost_tesla_ai.funnel_gateway
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,16 @@
+[Unit]
+Description=GHOST Tesla AI Event Intelligence Cycle
+After=network-online.target ghost-tesla-ai-web.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=__GHOST_USER__
+Group=__GHOST_USER__
+WorkingDirectory=/opt/ghost-tesla-ai
+Environment=PYTHONPATH=/opt/ghost-tesla-ai
+ExecStart=/opt/ghost-tesla-ai/venv/bin/python -m ghost_tesla_ai.cli intelligence
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=6
+TimeoutStartSec=10min

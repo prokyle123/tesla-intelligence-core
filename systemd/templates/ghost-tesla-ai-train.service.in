@@ -1,0 +1,13 @@
+[Unit]
+Description=GHOST Tesla Learning Engine Trainer
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=__GHOST_USER__
+Group=__GHOST_USER__
+WorkingDirectory=/opt/ghost-tesla-ai
+Environment=PYTHONPATH=/opt/ghost-tesla-ai
+ExecStart=/opt/ghost-tesla-ai/venv/bin/python -m ghost_tesla_ai.trainer --model all
+Nice=10
+IOSchedulingClass=idle
