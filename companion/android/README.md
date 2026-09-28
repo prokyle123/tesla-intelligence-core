@@ -1,10 +1,15 @@
-# Tesla Intelligence Core Companion — Android v0.2.0
+# Tesla Intelligence Core Companion — Android v0.2.1
 
 Android companion for the Tesla Intelligence Core Raspberry Pi dashboard.
 
 The package remains `com.ghost.tesla.mobile` for continuity with the original GHOST companion builds.
 
-## v0.2.0
+## v0.2.1
+
+- Adds **READY** and **EVENTS** as first-class quick-navigation buttons.
+- Keeps Neural Engine, Truth Lab and Thermal History one tap away.
+- Keeps the **MORE** sheet for AI Lab, Models, Data Quality, Sources, Production, History, full Neural Atlas, Tesla-browser access and diagnostics.
+- Preserves Local → Tailnet → Public HTTPS failover and the PIN-gateway WebView session.
 
 - Rebrands the shell as **Tesla Intelligence Core Companion**.
 - Removes developer-specific IP addresses from fresh installs.
