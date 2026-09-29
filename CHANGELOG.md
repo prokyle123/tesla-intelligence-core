@@ -34,12 +34,18 @@ This release turns the internal development patch chain into a fresh-installable
 - PIN-protected Tailscale Funnel gateway.
 
 ### Companion / in-car access
-- Android Companion v0.2.0 source is included under `companion/android`.
+- Android Companion v0.4.0 source is included under `companion/android`.
 - Public APK, checksum and source ZIP are attached to the v0.8.27.6 GitHub release.
-- Companion supports Local LAN → private Tailnet → optional public HTTPS failover.
-- Current dashboard views are available from the companion, including AI Lab, Models, Data Quality, Sources, Events, Neural Engine, Truth Lab, Thermal History, Production and History.
+- Companion supports Local LAN → private Tailnet → optional public HTTPS/PIN failover.
+- Connection Center can discover the Pi on the local network and verifies the real dashboard API instead of trusting an HTTP 200 page.
+- Public PIN-gateway pages are recognized as authentication, then re-verified after login.
+- Native READY / EVENTS / NEURAL / TRUTH / THERMAL navigation now switches dashboard views directly with a DOM fallback.
+- Selected native navigation is highlighted and the phone header uses a two-row safe-area-aware layout.
+- Fixed the false `NO RENDER` / `{}` state caused by treating an asynchronous WebView Promise as the finished render result.
+- Dashboard synchronization now treats API connectivity and WebView rendering as separate states, with per-route and JavaScript diagnostics.
+- Current dashboard views include AI Lab, Models, Data Quality, Sources, Events, Neural Engine, Truth Lab, Thermal History, Production and History.
 - Dedicated Tesla in-car browser guide documents the tested HTTPS Funnel → PIN gateway → dashboard path.
-- Fresh public companion installs no longer contain developer-specific IP/Tailscale defaults.
+- Fresh public companion installs contain no developer-specific IP/Tailscale defaults.
 
 ### Public repository
 - Interactive fresh installer.
