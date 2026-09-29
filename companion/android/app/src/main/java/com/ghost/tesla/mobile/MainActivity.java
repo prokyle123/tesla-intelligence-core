@@ -18,7 +18,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class MainActivity extends Activity {
-    static final String VER = "0.7.0";
+    static final String VER = "0.7.1";
 
     WebView web;
     TextView status;
@@ -307,7 +307,25 @@ public class MainActivity extends Activity {
                     detail.setText("PIN gateway • enter PIN");
                     return;
                 }
+                ensureCompanionWebNav();
                 verifyWebViewData();
+            }
+
+            @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest request) {
+                Uri u = request == null ? null : request.getUrl();
+                if (u != null && "tic".equalsIgnoreCase(u.getScheme())) {
+                    handleCompanionLink(u.toString());
+                    return true;
+                }
+                return false;
+            }
+
+            @Override public boolean shouldOverrideUrlLoading(WebView v, String url) {
+                if (url != null && url.toLowerCase().startsWith("tic://")) {
+                    handleCompanionLink(url);
+                    return true;
+                }
+                return false;
             }
 
             @Override public void onReceivedError(WebView v, WebResourceRequest request, WebResourceError error) {
@@ -437,6 +455,119 @@ public class MainActivity extends Activity {
             String url = viewUrl("neural4", "");
             if (!url.isEmpty()) web.loadUrl(url);
         }
+    }
+
+    void ensureCompanionWebNav() {
+        String js =
+                "(function(){" +
+                "if(document.getElementById('ticCompanionNav')||document.getElementById('ticInjectedNav'))return 'EXISTS';" +
+                "var st=document.createElement('style');st.id='ticInjectedNavStyle';" +
+                "st.textContent='body{padding-bottom:108px!important}.navrow{display:none!important}#ticInjectedNav{position:fixed;left:0;right:0;bottom:0;z-index:2147483646;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;padding:6px 7px 8px;background:rgba(4,16,24,.98);border-top:1px solid #255069;box-shadow:0 -10px 28px rgba(0,0,0,.30)}#ticInjectedNav a{min-height:43px;display:flex;align-items:center;justify-content:center;text-decoration:none;border:1px solid #255069;border-radius:9px;background:#071923;color:#bfe0ef;font:900 10px system-ui;letter-spacing:.25px;text-transform:uppercase;touch-action:manipulation;-webkit-tap-highlight-color:rgba(63,212,255,.20);user-select:none}#ticInjectedNav a.tic-active{background:linear-gradient(180deg,#245d79,#163f58);border-color:#3fd4ff;color:#fff}#ticInjectedNav a:active{transform:scale(.97);background:#0d4860}';" +
+                "document.head.appendChild(st);" +
+                "var n=document.createElement('nav');n.id='ticInjectedNav';n.setAttribute('aria-label','Companion navigation');" +
+                "n.innerHTML='<a data-key=\\\"home\\\" href=\\\"tic://view/home\\\">Home</a><a data-key=\\\"ready\\\" href=\\\"tic://view/ready\\\">Ready</a><a data-key=\\\"events\\\" href=\\\"tic://view/events\\\">Events</a><a data-key=\\\"neural\\\" href=\\\"tic://view/neural\\\">Neural</a><a data-key=\\\"truth\\\" href=\\\"tic://view/truth\\\">Truth</a><a data-key=\\\"thermal\\\" href=\\\"tic://view/thermal\\\">Thermal</a><a data-key=\\\"more\\\" href=\\\"tic://more\\\">More</a>';" +
+                "document.body.appendChild(n);" +
+                "return 'INJECTED';" +
+                "})()";
+
+        web.evaluateJavascript(js, value -> setWebNavActive(navSelection));
+    }
+
+    void setWebNavActive(String key) {
+        if (key == null) key = "";
+        String safe = key.replace("'", "");
+        String js =
+                "(function(){" +
+                "var n=document.getElementById('ticInjectedNav');if(!n)return;" +
+                "n.querySelectorAll('a').forEach(function(a){a.classList.toggle('tic-active',a.getAttribute('data-key')==='" + safe + "');});" +
+                "})()";
+        web.evaluateJavascript(js, null);
+    }
+
+    void handleCompanionLink(String raw) {
+        Uri u;
+        try { u = Uri.parse(raw); } catch (Exception e) { return; }
+        if (u == null || !"tic".equalsIgnoreCase(u.getScheme())) return;
+
+        String host = u.getHost() == null ? "" : u.getHost().toLowerCase();
+        String path = u.getPath() == null ? "" : u.getPath().replaceFirst("^/", "").toLowerCase();
+
+        if ("more".equals(host)) {
+            detail.setText(kind + " • opening menu…");
+            more();
+            return;
+        }
+
+        if (!"view".equals(host)) return;
+
+        String key = path;
+        String target;
+        String focus = "";
+
+        switch (key) {
+            case "home":
+                target = "morning";
+                break;
+            case "ready":
+                target = "morning";
+                focus = "readiness";
+                break;
+            case "events":
+                target = "events";
+                break;
+            case "neural":
+                target = "neural4";
+                break;
+            case "truth":
+                target = "truth";
+                break;
+            case "thermal":
+                target = "thermal";
+                break;
+            default:
+                return;
+        }
+
+        navSelection = key;
+        view = target;
+        map = false;
+        setWebNavActive(key);
+
+        String label = "ready".equals(key) ? "WINTER READINESS" : key.toUpperCase();
+        status.setText(kind);
+        detail.setText(kind + " • " + label);
+
+        switchCurrentWebView(target, focus);
+    }
+
+    void switchCurrentWebView(String target, String focus) {
+        String safeTarget = target == null ? "morning" : target.replace("'", "");
+        String safeFocus = focus == null ? "" : focus.replace("'", "");
+
+        String js =
+                "(function(){" +
+                "var n='" + safeTarget + "';" +
+                "try{" +
+                "if(typeof switchView==='function'){switchView(n);}" +
+                "else{" +
+                "var t=document.querySelector('.tab[data-view=\\\"'+n+'\\\"]');" +
+                "document.querySelectorAll('.tab').forEach(function(x){x.classList.toggle('active',x===t);});" +
+                "document.querySelectorAll('.view').forEach(function(v){v.classList.toggle('active',v.id==='view-'+n);});" +
+                "}" +
+                ("readiness".equals(safeFocus)
+                        ? "setTimeout(function(){var e=document.querySelector('.winter-ready-hero');if(e)e.scrollIntoView({block:'start'});},80);"
+                        : "window.scrollTo(0,0);") +
+                "return 'OK';" +
+                "}catch(e){return 'ERROR:'+e;}" +
+                "})()";
+
+        web.evaluateJavascript(js, value -> {
+            String result = cleanJsValue(value);
+            if (result.startsWith("ERROR:")) {
+                lastJsError = "nav • " + result;
+                detail.setText(kind + " • navigation error");
+            }
+        });
     }
 
     void firstRunDiscovery() {
@@ -668,7 +799,8 @@ public class MainActivity extends Activity {
                         detail.setText(kind + " • " + shortUrl(active) + " • API LIVE");
                     }
 
-                    updateNativeNav();
+                    ensureCompanionWebNav();
+                    setWebNavActive(navSelection);
                     ui.postDelayed(this::applyCompanionCss, 250);
                 }
         );
@@ -1003,8 +1135,7 @@ public class MainActivity extends Activity {
             navSelection = "neural";
             updateNativeNav();
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
-            String url = viewUrl("neural4", "");
-            if (!url.isEmpty()) web.loadUrl(url);
+            switchCurrentWebView("neural4", "");
             return;
         }
         if (web.canGoBack()) web.goBack();
