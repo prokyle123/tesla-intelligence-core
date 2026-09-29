@@ -19,7 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class MainActivity extends Activity {
-    static final String VER = "0.9.3";
+    static final String VER = "0.9.4";
 
     WebView web;
     TextView status;
@@ -410,7 +410,7 @@ public class MainActivity extends Activity {
     }
 
     void updateNativeNav() {
-        // v0.9.3 uses the dashboard-owned swipeable companion bar only.
+        // v0.9.4 uses the dashboard-owned swipeable companion bar only.
     }
 
     void more() {
@@ -1193,7 +1193,7 @@ public class MainActivity extends Activity {
         TextView intro = new TextView(this);
         intro.setText(
                 "Android background monitoring checks Tesla Intelligence Core about every 15 minutes when the OS allows it. " +
-                "It uses the saved Pi routes and only posts alerts when something meaningful changes."
+                "It uses the saved Pi routes, keeps one silent Winter Status notification updated, and posts alert notifications only when something meaningful changes."
         );
         intro.setTextColor(Color.DKGRAY);
         intro.setTextSize(12);

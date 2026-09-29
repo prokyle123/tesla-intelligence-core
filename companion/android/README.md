@@ -1,6 +1,23 @@
-# Tesla Intelligence Core Companion — Android v0.9.1
+# Tesla Intelligence Core Companion — Android v0.9.4
 
 Android companion for the Tesla Intelligence Core Raspberry Pi dashboard.
+
+## What changed in v0.9.4
+
+### Persistent Winter Status notification
+
+When Background Monitoring is enabled, the companion now keeps one silent, ongoing notification in the Android notification shade.
+
+Collapsed view:
+
+```text
+GHOST Winter • 82/100 READY
+Pack 47°F • 6h 41°F • SOC 78%
+```
+
+Expanded view adds current-to-6-hour outside temperature, battery-heater or preconditioning state, and the last successful update time. The notification refreshes after every successful background check, retains the last good winter values if the Pi becomes unreachable, and changes its title to `OFFLINE` while the connection is unavailable.
+
+The status notification uses its own low-importance channel, does not vibrate or make a sound on periodic refresh, opens the Winter Readiness view when tapped, and disappears when Background Monitoring is disabled.
 
 The package remains `com.ghost.tesla.mobile` for continuity with earlier GHOST companion builds.
 

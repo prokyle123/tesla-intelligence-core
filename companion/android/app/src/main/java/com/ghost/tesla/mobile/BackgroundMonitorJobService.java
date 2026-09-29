@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.webkit.CookieManager;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -88,7 +89,7 @@ public class BackgroundMonitorJobService extends JobService {
         c.setConnectTimeout(7000);
         c.setReadTimeout(9000);
         c.setRequestProperty("Accept", "application/json");
-        c.setRequestProperty("User-Agent", "TIC-Companion-Background/0.9.3");
+        c.setRequestProperty("User-Agent", "TIC-Companion-Background/0.9.4");
         c.setInstanceFollowRedirects(false);
 
         try {
@@ -125,6 +126,7 @@ public class BackgroundMonitorJobService extends JobService {
                 .putString("last_monitor_status", "OFFLINE")
                 .putString("last_monitor_error", error);
         e.apply();
+        NotificationCenter.updateStatusFromCache(context);
 
         if (manual) {
             NotificationCenter.post(context, 1100, "Background check failed", error, "morning");
@@ -159,6 +161,19 @@ public class BackgroundMonitorJobService extends JobService {
         double moduleSpreadF = current.optDouble("module_spread_f", Double.NaN);
         double outsideF = current.optDouble("outside_f", Double.NaN);
 
+        double pack6hF = Double.NaN;
+        double outside6hF = Double.NaN;
+        JSONArray forecast = w.optJSONArray("forecast");
+        if (forecast != null) {
+            for (int i = 0; i < forecast.length(); i++) {
+                JSONObject row = forecast.optJSONObject(i);
+                if (row == null || row.optInt("hours", -1) != 6) continue;
+                pack6hF = row.optDouble("pack_f", Double.NaN);
+                outside6hF = row.optDouble("outside_f", Double.NaN);
+                break;
+            }
+        }
+
         double departureSoc = departure.optDouble("departure_soc", Double.NaN);
         double arrivalSoc = departure.optDouble("arrival_soc", Double.NaN);
         double departurePackF = departure.optDouble("departure_pack_f", Double.NaN);
@@ -166,14 +181,20 @@ public class BackgroundMonitorJobService extends JobService {
         String preconditionKey = jsonValue(departure.opt("precondition_start_ts"));
         int preconditionMinutes = departure.optInt("precondition_minutes", 0);
         boolean heaterOn = current.optBoolean("heater_on", false);
+        boolean preconditioning = current.optBoolean("preconditioning", false);
+        long dataAt = System.currentTimeMillis();
 
         SharedPreferences.Editor e = p.edit()
                 .putInt("monitor_fail_count", 0)
                 .putBoolean("monitor_offline_alerted", false)
-                .putLong("last_monitor_at", System.currentTimeMillis())
+                .putLong("last_monitor_at", dataAt)
+                .putLong("last_monitor_data_at", dataAt)
                 .putString("last_monitor_status", "OK")
+                .putString("last_monitor_state", state)
                 .putString("last_monitor_error", "")
-                .putString("last_monitor_url", base);
+                .putString("last_monitor_url", base)
+                .putBoolean("last_monitor_heater_on", heaterOn)
+                .putBoolean("last_monitor_preconditioning", preconditioning);
         if (!Double.isNaN(score)) e.putFloat("last_monitor_score", (float) score);
         if (!Double.isNaN(currentSoc)) e.putFloat("last_monitor_current_soc", (float) currentSoc);
         if (!Double.isNaN(departureSoc)) e.putFloat("last_monitor_departure_soc", (float) departureSoc);
@@ -182,7 +203,16 @@ public class BackgroundMonitorJobService extends JobService {
         if (!Double.isNaN(departurePackF)) e.putFloat("last_monitor_departure_pack_f", (float) departurePackF);
         if (!Double.isNaN(moduleSpreadF)) e.putFloat("last_monitor_module_spread_f", (float) moduleSpreadF);
         if (!Double.isNaN(outsideF)) e.putFloat("last_monitor_outside_f", (float) outsideF);
+        if (!Double.isNaN(pack6hF)) e.putFloat("last_monitor_pack_6h_f", (float) pack6hF);
+        else e.remove("last_monitor_pack_6h_f");
+        if (!Double.isNaN(outside6hF)) e.putFloat("last_monitor_outside_6h_f", (float) outside6hF);
+        else e.remove("last_monitor_outside_6h_f");
         e.apply();
+
+        NotificationCenter.updateStatus(
+                context, "OK", score, state, currentSoc, packF, pack6hF,
+                outsideF, outside6hF, heaterOn, preconditioning, dataAt
+        );
 
         if (wasOffline && p.getBoolean("alert_connection", true)) {
             NotificationCenter.post(
