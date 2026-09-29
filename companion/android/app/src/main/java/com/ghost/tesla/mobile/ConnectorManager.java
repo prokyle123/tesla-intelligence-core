@@ -244,7 +244,7 @@ public final class ConnectorManager {
             c.setUseCaches(false);
             c.setInstanceFollowRedirects(false);
             c.setRequestProperty("Accept", "application/json");
-            c.setRequestProperty("User-Agent", "TIC-Companion/0.4.0");
+            c.setRequestProperty("User-Agent", "TIC-Companion/0.5.0");
 
             int code = c.getResponseCode();
             String body = readSmallBody(c);
@@ -293,7 +293,7 @@ public final class ConnectorManager {
             c.setReadTimeout(timeoutMs);
             c.setUseCaches(false);
             c.setInstanceFollowRedirects(true);
-            c.setRequestProperty("User-Agent", "TIC-Companion/0.4.0");
+            c.setRequestProperty("User-Agent", "TIC-Companion/0.5.0");
             int code = c.getResponseCode();
             String body = readSmallBody(c);
             String lower = body == null ? "" : body.toLowerCase(Locale.US);
@@ -370,7 +370,7 @@ public final class ConnectorManager {
             c.setReadTimeout(Math.max(500, timeoutMs + 250));
             c.setUseCaches(false);
             c.setInstanceFollowRedirects(true);
-            c.setRequestProperty("User-Agent", "TIC-Companion-Scanner/0.4.0");
+            c.setRequestProperty("User-Agent", "TIC-Companion-Scanner/0.5.0");
             int code = c.getResponseCode();
             if (code < 200 || code >= 400) return false;
 
