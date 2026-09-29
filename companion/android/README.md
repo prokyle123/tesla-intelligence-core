@@ -1,94 +1,84 @@
-# Tesla Intelligence Core Companion — Android v0.5.0
+# Tesla Intelligence Core Companion — Android v0.9.1
 
 Android companion for the Tesla Intelligence Core Raspberry Pi dashboard.
 
-The package remains `com.ghost.tesla.mobile` for continuity with the original GHOST companion builds.
+The package remains `com.ghost.tesla.mobile` for continuity with earlier GHOST companion builds.
 
-## v0.5.0
+## What changed in v0.9.1
 
-v0.5.0 removes injected-JavaScript navigation from the critical path. Native tabs now navigate with normal dashboard URLs such as `/?view=events`, and the dashboard itself selects the requested view on load.
+### One bottom navigation bar
 
-### Native navigation that actually controls the dashboard
+The duplicate Android-native navigation bar has been removed.
 
-The bottom companion bar now uses URL-driven navigation instead of simulating or injecting clicks into the dashboard.
+The companion now uses the dashboard-owned navigation only:
 
 ```text
 HOME · READY · EVENTS · NEURAL · TRUTH · THERMAL · MORE
 ```
 
-The companion calls the dashboard's `switchView()` function directly and falls back to manipulating the active view in the DOM if that function is unavailable.
+It is a single horizontally swipeable row. The app explicitly reserves the Android status/cutout area at the top and the navigation/gesture area at the bottom, so the tab row does not sit underneath Home / Back / Recents.
 
-The selected native tab is highlighted, so a tap gives immediate visual feedback.
+**HOME** opens the top of the winter-readiness dashboard.
 
-**MORE** includes:
+**READY** opens the same Home view and jumps directly to the Winter Readiness hero.
 
-- AI Lab
-- Models
-- Data Quality
-- Sources
-- Production
-- History
-- full-screen Neural Atlas
-- Connection Center
-- Tesla Browser Access
-- connection diagnostics
+**MORE** exposes the secondary dashboard views plus Notifications, Connection Center, Tesla Browser Access and diagnostics.
 
-### HOME vs READY
+### Background monitoring
 
-The bottom bar now includes both:
+v0.9.1 adds `BackgroundMonitorJobService`, scheduled through Android `JobScheduler`.
 
-- **HOME** — opens the top of the Home dashboard.
-- **READY** — opens Home and jumps directly to the Winter Readiness hero.
+The OS wakes the monitor approximately every 15 minutes when scheduling and networking permit. The job:
 
-The bottom bar is horizontally scrollable so all seven actions stay large enough to tap reliably.
+1. reads the saved Local / Tailnet / Public routes;
+2. prefers the last-known-good route first;
+3. queries `/api/v3/winter`;
+4. evaluates alert conditions;
+5. stores the latest monitor result;
+6. exits again.
 
-### Clean connection header
+It does **not** keep a permanent always-awake loop running.
 
-The old single-row header was too cramped on phone-width screens.
+The schedule is persisted across reboot/package replacement.
 
-v0.5.0 uses a two-row layout:
+### Notification Center
+
+Open:
 
 ```text
-TESLA INTELLIGENCE CORE                 TAILNET
-100.x.x.x:8766 • LIVE            RETRY   SETUP
+MORE → Notifications
 ```
 
-The connection-state button is reserved for meaningful states such as:
+Available alert types:
 
-- `LOCAL`
-- `TAILNET`
-- `PUBLIC`
-- `LOGIN`
-- `VERIFY`
-- `OFFLINE`
+- connection lost / restored;
+- Winter Readiness below a configurable threshold;
+- readiness recovery;
+- warm-up / preconditioning recommendation;
+- projected arrival SOC below a configurable threshold;
+- projected arrival SOC recovery;
+- optional battery-heater activation.
 
-The app no longer turns an asynchronous JavaScript Promise into a fake `NO RENDER` / `{}` connection state.
-
-### API connection and dashboard rendering are separate checks
-
-The companion first proves that Tesla Intelligence Core is actually returning data from:
+Defaults:
 
 ```text
-/api/v3/overview
+Winter Readiness alert: below 70
+Projected arrival SOC: below 20%
+Battery-heater alert: off
 ```
 
-After that, it independently synchronizes the loaded dashboard views from:
+The Notification Center also includes:
 
-```text
-/api/status
-/api/v3/overview
-/api/v3/events
-/api/v3/winter
-/api/v4/neural/...
-```
+- **Send Test Notification**
+- **Run Background Check Now**
+- last background-check timestamp
+- last background-check status/error
 
-That distinction matters: a working network connection is not the same thing as a successfully rendered dashboard.
-
-If a core endpoint has a problem, the companion can still keep the other dashboard sections alive instead of turning the entire app into a blank page.
+Android 13+ requires the normal notification runtime permission.
 
 ### Connection Center
 
-The Connection Center supports three routes:
+The companion still supports:
 
 ```text
 Local LAN
@@ -98,77 +88,20 @@ Private Tailscale
 Public HTTPS / PIN gateway
 ```
 
-Features include:
+The connector verifies the real Tesla Intelligence Core API rather than trusting a generic HTTP 200 page.
 
-- **Auto-Find Pi on Local Network**
-- scan of the current local /24 for dashboard port `8766`
-- verification that a discovered host is actually Tesla Intelligence Core
-- Local / Tailnet / Public probes run in parallel
-- Local is preferred over Tailnet; Tailnet is preferred over Public
-- remembered last successful route
-- per-route diagnostics
-- endpoint testing before saving
-- manual **Open Public URL Anyway** fallback
-- public PIN/login gateway recognition
-- WebView session-cookie support after PIN login
+The public PIN gateway is recognized as authentication and WebView keeps the gateway session cookie after login.
 
-### PIN gateway behavior
+### Android safe areas
 
-A Funnel login page returning HTTP 200 is **not** treated as dashboard data.
+The activity window keeps Android system bars visible and explicitly applies:
 
-The companion verifies the actual dashboard API. If the public route requires authentication, it changes to:
+- status-bar inset;
+- display-cutout inset;
+- navigation-bar inset;
+- mandatory-gesture inset.
 
-```text
-LOGIN
-PIN gateway • enter PIN
-```
-
-After a successful PIN login, the WebView redirects back to the dashboard and the companion verifies the API again.
-
-Do not put the PIN in source code, the GitHub repository or support logs.
-
-### Android system UI
-
-v0.5.0 keeps the app clear of modern Android system UI:
-
-- status-bar / display-cutout insets
-- bottom navigation-bar insets
-- visible Android system controls instead of immersive mode
-- safe-area reapplication when focus returns
-- `adjustResize` for the setup keyboard
-- phone-width two-row companion header
-
-### Endpoint examples
-
-Any endpoint can be left blank.
-
-```text
-Local:
-http://192.168.x.x:8766
-
-Private Tailnet:
-http://100.x.x.x:8766
-
-Public / Funnel:
-https://your-public-hostname.example/
-```
-
-The public endpoint should terminate at the PIN gateway rather than intentionally exposing the raw dashboard.
-
-## Tesla in-car browser
-
-On the setup this project was developed with, the Tesla browser would not load the Pi's local/private dashboard URL. A working route was:
-
-```text
-Tesla browser
-  -> public HTTPS Tailscale Funnel URL
-  -> PIN gateway
-  -> Tesla Intelligence Core dashboard
-```
-
-If the Pi has Internet access, Funnel is correctly configured, and the car has Internet access, this provides an Internet-reachable dashboard URL for the Tesla browser without exposing the raw dashboard directly.
-
-Vehicle software, networking and installations can vary. See [the full Tesla browser guide](../../docs/TESLA_BROWSER.md).
+The WebView therefore ends above the Android navigation/gesture area instead of drawing companion controls beneath it.
 
 ## Build locally on Windows
 
@@ -178,36 +111,31 @@ With Android Platform Tools installed and USB debugging enabled:
 powershell -ExecutionPolicy Bypass -File .\Build-And-Install.ps1
 ```
 
-The helper:
+The helper builds the current source, updates the physical USB phone with `adb install -r`, and launches the companion.
 
-1. finds the physical USB Android device;
-2. downloads Gradle 8.9 if needed;
-3. builds the current source;
-4. installs with `adb install -r`;
-5. launches the app;
-6. prints the installed package version.
-
-A locally built APK normally keeps the same local Android debug signing key on that PC, which is useful when updating an existing locally built companion without losing saved endpoints.
+A locally built APK normally reuses that PC's Android debug signing key, which is useful when updating an existing locally built companion without losing its saved endpoints.
 
 ## Public APK
 
-The repository workflow builds a public debug-signed APK and attaches it to the current GitHub release.
+The GitHub workflow attaches a public debug-signed APK, checksum and source archive to the current Tesla Intelligence Core release.
 
-A public debug-signed build is useful for sideloading/testing, but Android signatures can differ from APKs built on another machine. If an older local build has a different signature, Android will reject an in-place update.
+A public debug-signed build may not update an APK that was built with another machine's debug key. Android will report `INSTALL_FAILED_UPDATE_INCOMPATIBLE` when signatures differ.
 
-A protected dedicated release-signing key is still the appropriate next step before treating the APK as a long-term production distribution channel.
+## Background-monitor limitations
 
-## Diagnostics
+Android JobScheduler timing is approximate rather than exact. The 15-minute interval is a minimum periodic cadence, and Android may defer work for battery/network reasons.
 
-Tap the connection-state button in the top-right of the companion header.
+The background monitor can use Local or private Tailnet HTTP routes directly. A public PIN-protected route requires a valid app/WebView gateway session; if that session is unavailable, the monitor falls through to the other configured routes or reports the route unreachable.
 
-Diagnostics include:
+## Tesla in-car browser
 
-- active route;
-- last known good route;
-- Local / Tailnet / Public probe results;
-- current dashboard view;
-- dashboard synchronization report;
-- captured WebView JavaScript errors.
+The tested in-car route remains:
 
-This is intended to make a blank or partially rendered dashboard diagnosable without guessing whether the problem is networking, authentication, API data or the WebView renderer.
+```text
+Tesla browser
+  → HTTPS Tailscale Funnel
+  → PIN gateway
+  → Tesla Intelligence Core dashboard
+```
+
+See [the Tesla browser guide](../../docs/TESLA_BROWSER.md).
