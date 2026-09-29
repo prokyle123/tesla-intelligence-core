@@ -34,12 +34,13 @@ This release turns the internal development patch chain into a fresh-installable
 - PIN-protected Tailscale Funnel gateway.
 
 ### Companion / in-car access
-- Android Companion v0.4.0 source is included under `companion/android`.
+- Android Companion v0.5.0 source is included under `companion/android`.
 - Public APK, checksum and source ZIP are attached to the v0.8.27.6 GitHub release.
 - Companion supports Local LAN → private Tailnet → optional public HTTPS/PIN failover.
 - Connection Center can discover the Pi on the local network and verifies the real dashboard API instead of trusting an HTTP 200 page.
 - Public PIN-gateway pages are recognized as authentication, then re-verified after login.
-- Native READY / EVENTS / NEURAL / TRUTH / THERMAL navigation now switches dashboard views directly with a DOM fallback.
+- Native HOME / READY / EVENTS / NEURAL / TRUTH / THERMAL navigation now uses URL-driven dashboard views, removing injected-JavaScript tab switching from the critical path.
+- HOME opens the top of the Home view; READY jumps directly to the Winter Readiness hero.
 - Selected native navigation is highlighted and the phone header uses a two-row safe-area-aware layout.
 - Fixed the false `NO RENDER` / `{}` state caused by treating an asynchronous WebView Promise as the finished render result.
 - Dashboard synchronization now treats API connectivity and WebView rendering as separate states, with per-route and JavaScript diagnostics.
