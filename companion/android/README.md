@@ -1,19 +1,19 @@
-# Tesla Intelligence Core Companion — Android v0.4.0
+# Tesla Intelligence Core Companion — Android v0.5.0
 
 Android companion for the Tesla Intelligence Core Raspberry Pi dashboard.
 
 The package remains `com.ghost.tesla.mobile` for continuity with the original GHOST companion builds.
 
-## v0.4.0
+## v0.5.0
 
-v0.4.0 is a companion-shell cleanup release focused on **navigation, connection state, Android safe areas and reliable dashboard rendering**.
+v0.5.0 removes injected-JavaScript navigation from the critical path. Native tabs now navigate with normal dashboard URLs such as `/?view=events`, and the dashboard itself selects the requested view on load.
 
 ### Native navigation that actually controls the dashboard
 
-The bottom companion bar now switches dashboard sections directly instead of simulating clicks on the dashboard's web tabs.
+The bottom companion bar now uses URL-driven navigation instead of simulating or injecting clicks into the dashboard.
 
 ```text
-READY · EVENTS · NEURAL · TRUTH · THERMAL · MORE
+HOME · READY · EVENTS · NEURAL · TRUTH · THERMAL · MORE
 ```
 
 The companion calls the dashboard's `switchView()` function directly and falls back to manipulating the active view in the DOM if that function is unavailable.
@@ -33,11 +33,20 @@ The selected native tab is highlighted, so a tap gives immediate visual feedback
 - Tesla Browser Access
 - connection diagnostics
 
+### HOME vs READY
+
+The bottom bar now includes both:
+
+- **HOME** — opens the top of the Home dashboard.
+- **READY** — opens Home and jumps directly to the Winter Readiness hero.
+
+The bottom bar is horizontally scrollable so all seven actions stay large enough to tap reliably.
+
 ### Clean connection header
 
 The old single-row header was too cramped on phone-width screens.
 
-v0.4.0 uses a two-row layout:
+v0.5.0 uses a two-row layout:
 
 ```text
 TESLA INTELLIGENCE CORE                 TAILNET
@@ -120,7 +129,7 @@ Do not put the PIN in source code, the GitHub repository or support logs.
 
 ### Android system UI
 
-v0.4.0 keeps the app clear of modern Android system UI:
+v0.5.0 keeps the app clear of modern Android system UI:
 
 - status-bar / display-cutout insets
 - bottom navigation-bar insets
