@@ -88,7 +88,7 @@ public class BackgroundMonitorJobService extends JobService {
         c.setConnectTimeout(7000);
         c.setReadTimeout(9000);
         c.setRequestProperty("Accept", "application/json");
-        c.setRequestProperty("User-Agent", "TIC-Companion-Background/0.9.2");
+        c.setRequestProperty("User-Agent", "TIC-Companion-Background/0.9.3");
         c.setInstanceFollowRedirects(false);
 
         try {
