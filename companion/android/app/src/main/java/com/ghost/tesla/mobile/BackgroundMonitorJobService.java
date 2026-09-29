@@ -153,7 +153,16 @@ public class BackgroundMonitorJobService extends JobService {
         double score = w.optDouble("score", Double.NaN);
         String state = w.optString("state", "readiness");
         String action = w.optString("action", "Winter readiness data is available.");
+
+        double currentSoc = current.optDouble("soc", Double.NaN);
+        double packF = current.optDouble("pack_f", Double.NaN);
+        double moduleSpreadF = current.optDouble("module_spread_f", Double.NaN);
+        double outsideF = current.optDouble("outside_f", Double.NaN);
+
+        double departureSoc = departure.optDouble("departure_soc", Double.NaN);
         double arrivalSoc = departure.optDouble("arrival_soc", Double.NaN);
+        double departurePackF = departure.optDouble("departure_pack_f", Double.NaN);
+
         String preconditionKey = jsonValue(departure.opt("precondition_start_ts"));
         int preconditionMinutes = departure.optInt("precondition_minutes", 0);
         boolean heaterOn = current.optBoolean("heater_on", false);
@@ -166,7 +175,13 @@ public class BackgroundMonitorJobService extends JobService {
                 .putString("last_monitor_error", "")
                 .putString("last_monitor_url", base);
         if (!Double.isNaN(score)) e.putFloat("last_monitor_score", (float) score);
+        if (!Double.isNaN(currentSoc)) e.putFloat("last_monitor_current_soc", (float) currentSoc);
+        if (!Double.isNaN(departureSoc)) e.putFloat("last_monitor_departure_soc", (float) departureSoc);
         if (!Double.isNaN(arrivalSoc)) e.putFloat("last_monitor_arrival_soc", (float) arrivalSoc);
+        if (!Double.isNaN(packF)) e.putFloat("last_monitor_pack_f", (float) packF);
+        if (!Double.isNaN(departurePackF)) e.putFloat("last_monitor_departure_pack_f", (float) departurePackF);
+        if (!Double.isNaN(moduleSpreadF)) e.putFloat("last_monitor_module_spread_f", (float) moduleSpreadF);
+        if (!Double.isNaN(outsideF)) e.putFloat("last_monitor_outside_f", (float) outsideF);
         e.apply();
 
         if (wasOffline && p.getBoolean("alert_connection", true)) {
@@ -211,30 +226,75 @@ public class BackgroundMonitorJobService extends JobService {
             p.edit().putBoolean("monitor_readiness_low", low).apply();
         }
 
-        if (p.getBoolean("alert_arrival_soc", true) && !Double.isNaN(arrivalSoc)) {
-            int threshold = p.getInt("arrival_soc_threshold", 20);
-            boolean low = arrivalSoc < threshold;
-            boolean wasLow = p.getBoolean("monitor_arrival_low", false);
+        thresholdLowPercent(
+                context, p, "alert_current_soc", "current_soc_threshold",
+                "monitor_current_soc_low", currentSoc, 20,
+                1120, 1121,
+                "Current SOC is low",
+                "Current SOC recovered",
+                "Current battery SOC",
+                "morning"
+        );
 
-            if (low && !wasLow) {
-                NotificationCenter.post(
-                        context,
-                        1120,
-                        "Projected arrival SOC is low",
-                        "Projected arrival is " + Math.round(arrivalSoc) + "%, below your " + threshold + "% alert level.",
-                        "morning"
-                );
-            } else if (!low && wasLow) {
-                NotificationCenter.post(
-                        context,
-                        1121,
-                        "Projected arrival SOC recovered",
-                        "Projected arrival is back to " + Math.round(arrivalSoc) + "%.",
-                        "morning"
-                );
-            }
-            p.edit().putBoolean("monitor_arrival_low", low).apply();
-        }
+        thresholdLowPercent(
+                context, p, "alert_departure_soc", "departure_soc_threshold",
+                "monitor_departure_soc_low", departureSoc, 70,
+                1122, 1123,
+                "Projected departure SOC is low",
+                "Projected departure SOC recovered",
+                "Projected departure SOC",
+                "morning"
+        );
+
+        thresholdLowPercent(
+                context, p, "alert_arrival_soc", "arrival_soc_threshold",
+                "monitor_arrival_low", arrivalSoc, 20,
+                1124, 1125,
+                "Projected arrival SOC is low",
+                "Projected arrival SOC recovered",
+                "Projected arrival SOC",
+                "morning"
+        );
+
+        thresholdLowTemp(
+                context, p, "alert_pack_temp", "pack_temp_threshold_f",
+                "monitor_pack_temp_low", packF, 40,
+                1150, 1151,
+                "Battery pack is cold",
+                "Battery pack temperature recovered",
+                "Current pack temperature",
+                "thermal"
+        );
+
+        thresholdLowTemp(
+                context, p, "alert_departure_pack", "departure_pack_threshold_f",
+                "monitor_departure_pack_low", departurePackF, 45,
+                1152, 1153,
+                "Projected departure pack temperature is low",
+                "Projected departure pack temperature recovered",
+                "Projected departure pack temperature",
+                "morning"
+        );
+
+        thresholdHighTemp(
+                context, p, "alert_module_spread", "module_spread_threshold_f",
+                "monitor_module_spread_high", moduleSpreadF, 8,
+                1160, 1161,
+                "Battery module spread is high",
+                "Battery module spread recovered",
+                "Current module temperature spread",
+                "thermal"
+        );
+
+        thresholdLowTemp(
+                context, p, "alert_outside_temp", "outside_temp_threshold_f",
+                "monitor_outside_temp_low", outsideF, 20,
+                1170, 1171,
+                "Outside temperature crossed your cold limit",
+                "Outside temperature recovered",
+                "Outside temperature",
+                "morning"
+        );
 
         if (p.getBoolean("alert_warmup", true)) {
             String last = p.getString("monitor_last_precondition", "");
@@ -260,6 +320,93 @@ public class BackgroundMonitorJobService extends JobService {
             }
             p.edit().putBoolean("monitor_heater_on", heaterOn).apply();
         }
+    }
+
+    private static void thresholdLowPercent(
+            Context context, SharedPreferences p,
+            String enabledKey, String thresholdKey, String stateKey,
+            double value, int defaultThreshold,
+            int alertId, int recoveryId,
+            String alertTitle, String recoveryTitle,
+            String metricLabel, String view
+    ) {
+        if (!p.getBoolean(enabledKey, false) || Double.isNaN(value)) return;
+        int threshold = p.getInt(thresholdKey, defaultThreshold);
+        boolean active = value < threshold;
+        boolean previous = p.getBoolean(stateKey, false);
+
+        if (active && !previous) {
+            NotificationCenter.post(
+                    context, alertId, alertTitle,
+                    metricLabel + " is " + Math.round(value) + "%, below your " + threshold + "% limit.",
+                    view
+            );
+        } else if (!active && previous) {
+            NotificationCenter.post(
+                    context, recoveryId, recoveryTitle,
+                    metricLabel + " is back to " + Math.round(value) + "%.",
+                    view
+            );
+        }
+        p.edit().putBoolean(stateKey, active).apply();
+    }
+
+    private static void thresholdLowTemp(
+            Context context, SharedPreferences p,
+            String enabledKey, String thresholdKey, String stateKey,
+            double value, int defaultThreshold,
+            int alertId, int recoveryId,
+            String alertTitle, String recoveryTitle,
+            String metricLabel, String view
+    ) {
+        if (!p.getBoolean(enabledKey, false) || Double.isNaN(value)) return;
+        int threshold = p.getInt(thresholdKey, defaultThreshold);
+        boolean active = value < threshold;
+        boolean previous = p.getBoolean(stateKey, false);
+
+        if (active && !previous) {
+            NotificationCenter.post(
+                    context, alertId, alertTitle,
+                    metricLabel + " is " + Math.round(value) + "°F, below your " + threshold + "°F limit.",
+                    view
+            );
+        } else if (!active && previous) {
+            NotificationCenter.post(
+                    context, recoveryId, recoveryTitle,
+                    metricLabel + " is back to " + Math.round(value) + "°F.",
+                    view
+            );
+        }
+        p.edit().putBoolean(stateKey, active).apply();
+    }
+
+    private static void thresholdHighTemp(
+            Context context, SharedPreferences p,
+            String enabledKey, String thresholdKey, String stateKey,
+            double value, int defaultThreshold,
+            int alertId, int recoveryId,
+            String alertTitle, String recoveryTitle,
+            String metricLabel, String view
+    ) {
+        if (!p.getBoolean(enabledKey, false) || Double.isNaN(value)) return;
+        int threshold = p.getInt(thresholdKey, defaultThreshold);
+        boolean active = value > threshold;
+        boolean previous = p.getBoolean(stateKey, false);
+
+        if (active && !previous) {
+            NotificationCenter.post(
+                    context, alertId, alertTitle,
+                    metricLabel + " is " + Math.round(value) + "°F, above your " + threshold + "°F limit.",
+                    view
+            );
+        } else if (!active && previous) {
+            NotificationCenter.post(
+                    context, recoveryId, recoveryTitle,
+                    metricLabel + " is back to " + Math.round(value) + "°F.",
+                    view
+            );
+        }
+        p.edit().putBoolean(stateKey, active).apply();
     }
 
     private static String jsonValue(Object value) {
