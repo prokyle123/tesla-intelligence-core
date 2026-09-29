@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $Root
 
-$Version = '0.8.1'
+$Version = '0.9.0'
 $Package = 'com.ghost.tesla.mobile'
 
 Write-Host "============================================================"
@@ -73,4 +73,4 @@ Write-Host "Installed package:" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "Installed + launched: Tesla Intelligence Core Companion v$Version" -ForegroundColor Green
 Write-Host "Expected connection state after startup: LOCAL / TAILNET / PUBLIC with LIVE or API LIVE detail."
-Write-Host "Bottom navigation: READY / EVENTS / NEURAL / TRUTH / THERMAL / MORE."
+Write-Host "Bottom navigation: one swipeable dashboard row — HOME / READY / EVENTS / NEURAL / TRUTH / THERMAL / MORE."
