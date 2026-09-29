@@ -35,27 +35,27 @@ jobs:
 
       - name: Prepare release files
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk Tesla-Intelligence-Core-Companion-v0.7.1-debug.apk
-          sha256sum Tesla-Intelligence-Core-Companion-v0.7.1-debug.apk > Tesla-Intelligence-Core-Companion-v0.7.1-debug.apk.sha256
-          zip -qr Tesla-Intelligence-Core-Companion-v0.7.1-source.zip . -x '.gradle/*' 'app/build/*' '*.apk' '*.sha256' '*.zip'
+          cp app/build/outputs/apk/debug/app-debug.apk Tesla-Intelligence-Core-Companion-v0.8.0-debug.apk
+          sha256sum Tesla-Intelligence-Core-Companion-v0.8.0-debug.apk > Tesla-Intelligence-Core-Companion-v0.8.0-debug.apk.sha256
+          zip -qr Tesla-Intelligence-Core-Companion-v0.8.0-source.zip . -x '.gradle/*' 'app/build/*' '*.apk' '*.sha256' '*.zip'
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Tesla-Intelligence-Core-Companion-v0.7.1
+          name: Tesla-Intelligence-Core-Companion-v0.8.0
           path: |
-            companion/android/Tesla-Intelligence-Core-Companion-v0.7.1-debug.apk
-            companion/android/Tesla-Intelligence-Core-Companion-v0.7.1-debug.apk.sha256
-            companion/android/Tesla-Intelligence-Core-Companion-v0.7.1-source.zip
+            companion/android/Tesla-Intelligence-Core-Companion-v0.8.0-debug.apk
+            companion/android/Tesla-Intelligence-Core-Companion-v0.8.0-debug.apk.sha256
+            companion/android/Tesla-Intelligence-Core-Companion-v0.8.0-source.zip
 
       - name: Attach companion build to current public release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release upload v0.8.27.6 \
-            Tesla-Intelligence-Core-Companion-v0.7.1-debug.apk \
-            Tesla-Intelligence-Core-Companion-v0.7.1-debug.apk.sha256 \
-            Tesla-Intelligence-Core-Companion-v0.7.1-source.zip \
+            Tesla-Intelligence-Core-Companion-v0.8.0-debug.apk \
+            Tesla-Intelligence-Core-Companion-v0.8.0-debug.apk.sha256 \
+            Tesla-Intelligence-Core-Companion-v0.8.0-source.zip \
             --clobber \
             -R "$GITHUB_REPOSITORY"
 
@@ -64,10 +64,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release view v0.8.27.6 -R "$GITHUB_REPOSITORY" --json body -q .body > /tmp/release-body.md
-          if ! grep -q "Android Companion v0.7.1" /tmp/release-body.md; then
+          if ! grep -q "Android Companion v0.8.0" /tmp/release-body.md; then
             cat >> /tmp/release-body.md <<'EOF'
 
-          ## Android Companion v0.7.1
+          ## Android Companion v0.8.0
 
           The release now also includes the Tesla Intelligence Core Android companion:
 
