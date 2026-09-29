@@ -18,7 +18,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class MainActivity extends Activity {
-    static final String VER = "0.8.0";
+    static final String VER = "0.8.1";
 
     WebView web;
     TextView status;
@@ -325,6 +325,27 @@ public class MainActivity extends Activity {
         navPanel.setFocusable(true);
         if (Build.VERSION.SDK_INT >= 21) navPanel.setElevation(d(24));
 
+        if (Build.VERSION.SDK_INT >= 21) {
+            navPanel.setOnApplyWindowInsetsListener((v, insets) -> {
+                int bottomInset;
+                if (Build.VERSION.SDK_INT >= 30) {
+                    Insets navInsets = insets.getInsets(WindowInsets.Type.navigationBars());
+                    Insets gestureInsets = insets.getInsets(WindowInsets.Type.mandatorySystemGestures());
+                    bottomInset = Math.max(navInsets.bottom, gestureInsets.bottom);
+                } else {
+                    bottomInset = insets.getSystemWindowInsetBottom();
+                }
+
+                v.setPadding(d(4), d(3), d(4), d(3) + bottomInset);
+                ViewGroup.LayoutParams lp = v.getLayoutParams();
+                if (lp != null) {
+                    lp.height = d(102) + bottomInset;
+                    v.setLayoutParams(lp);
+                }
+                return insets;
+            });
+        }
+
         LinearLayout row1 = new LinearLayout(this);
         row1.setOrientation(LinearLayout.HORIZONTAL);
         LinearLayout row2 = new LinearLayout(this);
@@ -369,6 +390,7 @@ public class MainActivity extends Activity {
 
         setContentView(root);
         bars();
+        navPanel.requestApplyInsets();
     }
 
     String navKeyForView(String target) {
@@ -574,25 +596,42 @@ public class MainActivity extends Activity {
         String js =
                 "(function(){" +
                 "var n='" + safeTarget + "';" +
+                "var id='view-'+n;" +
+                "var target=document.getElementById(id);" +
+                "if(!target)return 'MISSING:'+id;" +
                 "try{" +
-                "if(typeof switchView==='function'){switchView(n);}" +
-                "else{" +
-                "var t=document.querySelector('.tab[data-view=\\\"'+n+'\\\"]');" +
-                "document.querySelectorAll('.tab').forEach(function(x){x.classList.toggle('active',x===t);});" +
-                "document.querySelectorAll('.view').forEach(function(v){v.classList.toggle('active',v.id==='view-'+n);});" +
-                "}" +
+                "document.querySelectorAll('.view').forEach(function(v){" +
+                "v.classList.toggle('active',v===target);" +
+                "v.style.setProperty('display',v===target?'block':'none','important');" +
+                "});" +
+                "document.querySelectorAll('.tab').forEach(function(t){" +
+                "t.classList.toggle('active',t.getAttribute('data-view')===n);" +
+                "});" +
+                "target.style.setProperty('display','block','important');" +
+                "target.style.setProperty('visibility','visible','important');" +
+                "target.style.setProperty('opacity','1','important');" +
                 ("readiness".equals(safeFocus)
-                        ? "setTimeout(function(){var e=document.querySelector('.winter-ready-hero');if(e)e.scrollIntoView({block:'start'});},80);"
-                        : "window.scrollTo(0,0);") +
-                "return 'OK';" +
+                        ? "setTimeout(function(){var e=document.querySelector('.winter-ready-hero');if(e)e.scrollIntoView({block:'start',behavior:'auto'});},50);"
+                        : "window.scrollTo({top:0,left:0,behavior:'auto'});") +
+                "var cs=getComputedStyle(target);" +
+                "var visible=(cs.display!=='none'&&cs.visibility!=='hidden'&&target.offsetHeight>0);" +
+                "return (visible?'VISIBLE:':'HIDDEN:')+id+':'+Math.round(target.offsetHeight);" +
                 "}catch(e){return 'ERROR:'+e;}" +
                 "})()";
 
         web.evaluateJavascript(js, value -> {
             String result = cleanJsValue(value);
-            if (result.startsWith("ERROR:")) {
+            lastSyncReport = "NAV " + result;
+
+            if (result.startsWith("VISIBLE:")) {
+                status.setText(kind);
+                String label = "readiness".equals(safeFocus)
+                        ? "WINTER READINESS"
+                        : ("morning".equals(safeTarget) ? "HOME" : safeTarget.toUpperCase());
+                detail.setText(kind + " • " + label + " • VISIBLE");
+            } else {
                 lastJsError = "nav • " + result;
-                detail.setText(kind + " • navigation error");
+                detail.setText(kind + " • " + result);
             }
         });
     }
@@ -1167,10 +1206,15 @@ public class MainActivity extends Activity {
             float bottom = top + navPanel.getHeight();
 
             if (rawX >= left && rawX < right && rawY >= top && rawY < bottom) {
+                float localX = rawX - left;
+                float localY = rawY - top;
+                float usableBottom = navPanel.getHeight() - navPanel.getPaddingBottom();
+
+                // The reserved system navigation / gesture inset is not a companion button.
+                if (localY >= usableBottom) return true;
+
                 if (ev.getActionMasked() == MotionEvent.ACTION_UP) {
-                    float localX = rawX - left;
-                    float localY = rawY - top;
-                    boolean topRow = localY < navPanel.getHeight() / 2f;
+                    boolean topRow = localY < usableBottom / 2f;
 
                     String key;
                     if (topRow) {
