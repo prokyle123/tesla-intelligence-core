@@ -262,7 +262,65 @@ main{padding:14px 12px 30px;max-width:none;width:100%;margin:0 auto}.view{displa
 
 .n4-runtime-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:10px 0 0}.n4-runtime-chip{border:1px solid #20485d;border-radius:10px;background:#061821;padding:8px 10px;min-height:48px}.n4-runtime-chip span{display:block;color:#79a8bc;font-size:8px;font-weight:900;letter-spacing:.4px}.n4-runtime-chip b{display:block;margin-top:3px;font-size:12px}.n4-runtime-chip small{display:block;color:#688fa3;font-size:8px;margin-top:2px}.n4-runtime-chip.good{border-color:#1f6e59}.n4-runtime-chip.good b{color:#61efb7}.n4-runtime-chip.warn{border-color:#7d6840}.n4-runtime-chip.warn b{color:#ffd078}.n4-runtime-chip.bad{border-color:#743f45}.n4-runtime-chip.bad b{color:#ff9393}@media(max-width:1100px){.n4-runtime-strip{grid-template-columns:1fr 1fr}}
 
+
+/* Android Companion: link-based navigation. No click handlers required. */
+#ticCompanionNav,#ticCompanionMore{display:none}
+html.tic-companion body{padding-bottom:108px}
+html.tic-companion .topbar .navrow{display:none!important}
+html.tic-companion #ticCompanionNav{
+  position:fixed;left:0;right:0;bottom:0;z-index:10000;
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;
+  padding:6px 7px 8px;background:rgba(4,16,24,.98);
+  border-top:1px solid #255069;box-shadow:0 -10px 28px rgba(0,0,0,.30);
+}
+#ticCompanionNav a{
+  min-height:43px;display:flex;align-items:center;justify-content:center;
+  text-decoration:none;border:1px solid #255069;border-radius:9px;
+  background:#071923;color:#bfe0ef;font-size:10px;font-weight:900;
+  letter-spacing:.25px;text-transform:uppercase;touch-action:manipulation;
+  -webkit-tap-highlight-color:rgba(63,212,255,.20);user-select:none
+}
+#ticCompanionNav a:active{transform:scale(.97);background:#0d4860}
+html.tic-view-morning:not(.tic-focus-readiness) #ticNavHome,
+html.tic-focus-readiness #ticNavReady,
+html.tic-view-events #ticNavEvents,
+html.tic-view-neural4 #ticNavNeural,
+html.tic-view-truth #ticNavTruth,
+html.tic-view-thermal #ticNavThermal,
+html.tic-companion-more #ticNavMore{
+  background:linear-gradient(180deg,#245d79,#163f58);
+  border-color:#3fd4ff;color:#fff;box-shadow:inset 0 0 0 1px rgba(63,212,255,.15)
+}
+html.tic-companion.tic-companion-more #ticCompanionMore{
+  position:fixed;display:block;z-index:9999;left:10px;right:10px;
+  bottom:112px;padding:12px;background:#071923;border:1px solid #285e77;
+  border-radius:14px;box-shadow:0 18px 45px rgba(0,0,0,.45)
+}
+#ticCompanionMore h3{margin:0 0 9px;font-size:13px}
+#ticCompanionMoreGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+#ticCompanionMore a{
+  display:flex;align-items:center;justify-content:center;min-height:42px;
+  border:1px solid #255069;border-radius:9px;background:#0a2230;
+  color:#dff6ff;text-decoration:none;font-size:10px;font-weight:850;
+  text-transform:uppercase;touch-action:manipulation
+}
 </style>
+<script>
+(function(){
+  try{
+    var q=new URLSearchParams(location.search||'');
+    if(q.get('companion')==='1'){
+      document.documentElement.classList.add('tic-companion');
+      var raw=(q.get('view')||'morning').toLowerCase();
+      var aliases={home:'morning',ready:'morning',neural:'neural4'};
+      var v=aliases[raw]||raw;
+      document.documentElement.classList.add('tic-view-'+v.replace(/[^a-z0-9_-]/g,''));
+      if((q.get('focus')||'').toLowerCase()==='readiness')document.documentElement.classList.add('tic-focus-readiness');
+      if(q.get('menu')==='1')document.documentElement.classList.add('tic-companion-more');
+    }
+  }catch(e){}
+})();
+</script>
 </head>
 <body>
 <!-- WINTER-READINESS-V032 -->
@@ -1407,5 +1465,27 @@ setInterval(refresh,5000);
 setInterval(refreshNeuralV4,2000);
 </script>
 <!-- DEPARTURE-LEARNING-V0827 SCORE-EXPLAIN-V08272 -->
+
+<section id="ticCompanionMore" aria-label="More dashboard views">
+  <h3>More Tesla Intelligence Core views</h3>
+  <div id="ticCompanionMoreGrid">
+    <a href="/?companion=1&view=overview">AI Lab</a>
+    <a href="/?companion=1&view=models">Models</a>
+    <a href="/?companion=1&view=quality">Data Quality</a>
+    <a href="/?companion=1&view=sources">Sources</a>
+    <a href="/?companion=1&view=production">Production</a>
+    <a href="/?companion=1&view=history">History</a>
+  </div>
+</section>
+
+<nav id="ticCompanionNav" aria-label="Companion navigation">
+  <a id="ticNavHome" href="/?companion=1&view=morning">Home</a>
+  <a id="ticNavReady" href="/?companion=1&view=morning&focus=readiness">Ready</a>
+  <a id="ticNavEvents" href="/?companion=1&view=events">Events</a>
+  <a id="ticNavNeural" href="/?companion=1&view=neural4">Neural</a>
+  <a id="ticNavTruth" href="/?companion=1&view=truth">Truth</a>
+  <a id="ticNavThermal" href="/?companion=1&view=thermal">Thermal</a>
+  <a id="ticNavMore" href="/?companion=1&view=morning&menu=1">More</a>
+</nav>
 </body>
 </html>
