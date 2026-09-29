@@ -33,7 +33,7 @@
 ![TeslaMate](https://img.shields.io/badge/source-TeslaMate-0ea5e9)
 ![Local first](https://img.shields.io/badge/data-local--first-2ea44f)
 ![Predictive](https://img.shields.io/badge/focus-predictive%20analytics-8b5cf6)
-![Android companion](https://img.shields.io/badge/Android-companion%20v0.4.0-3DDC84?logo=android&logoColor=white)
+![Android companion](https://img.shields.io/badge/Android-companion%20v0.5.0-3DDC84?logo=android&logoColor=white)
 ![Tesla browser](https://img.shields.io/badge/in--car%20browser-PIN%20Funnel-43D8FF)
 
 **[Quick install](#quick-start) · [Visual tour](#visual-tour) · [Use cases](docs/USE_CASES.md) · [How it works](#how-it-works) · [Documentation](#documentation) · [Latest release](https://github.com/prokyle123/tesla-intelligence-core/releases/latest)**
@@ -170,7 +170,7 @@ Tesla Intelligence Core is not limited to a desktop browser.
 
 The Android companion keeps the Pi dashboard as the source of truth while adding a phone-native shell for **discovery, connection management, fast navigation, diagnostics and remote access**.
 
-**Companion v0.4.0 is the navigation + reliability cleanup release.**
+**Companion v0.5.0 is the navigation + reliability cleanup release.**
 
 The Connection Center can automatically discover a Pi on the local network and supports three routes:
 
@@ -192,7 +192,7 @@ That means a PIN gateway is recognized as authentication — not falsely reporte
 READY · EVENTS · NEURAL · TRUTH · THERMAL · MORE
 ```
 
-The native buttons now switch the dashboard view directly, with a DOM fallback if the dashboard's own tab listeners are unavailable. The selected section is visibly highlighted.
+The native buttons now use normal dashboard URLs such as `/?view=events` instead of injected JavaScript. The dashboard reads the requested view on load, and the selected native section is visibly highlighted. **HOME** opens the top of the Home dashboard; **READY** jumps directly to the Winter Readiness hero.
 
 **MORE** exposes AI Lab, Models, Data Quality, Sources, Production, History, full-screen Neural Atlas, Connection Center, Tesla Browser Access and diagnostics.
 
@@ -208,16 +208,16 @@ v0.4.0 also removes the old false `NO RENDER` / `{}` state that could appear whe
 
 After the data API is verified, the companion independently synchronizes the dashboard's core, V3, Events, Winter Readiness and Neural views. A problem in one endpoint no longer has to make the entire app appear disconnected.
 
-**[Download Android Companion v0.4.0](https://github.com/prokyle123/tesla-intelligence-core/releases/download/v0.8.27.6/Tesla-Intelligence-Core-Companion-v0.4.0-debug.apk)** · **[Source + local installer](companion/android)**
+**[Download Android Companion v0.5.0](https://github.com/prokyle123/tesla-intelligence-core/releases/download/v0.8.27.6/Tesla-Intelligence-Core-Companion-v0.5.0-debug.apk)** · **[Source + local installer](companion/android)**
 
 The companion also handles Android status-bar, display-cutout and navigation-bar safe areas, keeps the app above disappearing system controls, and resizes setup around the keyboard.
 
 <p align="center">
-  <img src="docs/images/companion/companion-v040-home.png" alt="Tesla Intelligence Core Companion v0.4.0 home / readiness view" width="42%">
+  <img src="docs/images/companion/companion-v050-home.png" alt="Tesla Intelligence Core Companion v0.5.0 home / readiness view" width="42%">
   &nbsp;&nbsp;
-  <img src="docs/images/companion/companion-v040-neural.png" alt="Tesla Intelligence Core Companion v0.4.0 Neural Engine view" width="42%">
+  <img src="docs/images/companion/companion-v050-neural.png" alt="Tesla Intelligence Core Companion v0.5.0 Neural Engine view" width="42%">
 </p>
-<p align="center"><sub><b>Companion v0.4.0</b> — smart route selection, direct native view switching, safe-area aware layout and dashboard/API diagnostics.</sub></p>
+<p align="center"><sub><b>Companion v0.5.0</b> — smart route selection, direct native view switching, safe-area aware layout and dashboard/API diagnostics.</sub></p>
 
 > [!NOTE]
 > The current public companion APK is a debug-signed sideload build. An older copy built on another machine may have a different Android signature and require one uninstall before installing the GitHub build. Locally rebuilding on the same PC normally reuses that PC's Android debug key and preserves an existing local installation.
