@@ -367,7 +367,20 @@ public class MainActivity extends Activity {
     }
 
     void select(String target) {
-        navigateTo(navKeyForView(target), target, "");
+        navSelection = navKeyForView(target);
+        view = target;
+        map = false;
+        updateNativeNav();
+
+        if (active == null || active.isEmpty()) {
+            detail.setText("Connect to the dashboard first");
+            return;
+        }
+
+        status.setText(kind);
+        detail.setText(kind + " • " + target.toUpperCase());
+        setWebNavActive(navSelection);
+        switchCurrentWebView(target, "");
     }
 
     void navigateTo(String key, String target, String focus) {
@@ -448,12 +461,13 @@ public class MainActivity extends Activity {
         navSelection = "neural";
         map = true;
         updateNativeNav();
+        setWebNavActive("neural");
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
 
         if (active != null && !active.isEmpty()) {
             dashboardReady = false;
-            String url = viewUrl("neural4", "");
-            if (!url.isEmpty()) web.loadUrl(url);
+            switchCurrentWebView("neural4", "");
+            ui.postDelayed(this::applyCompanionCss, 180);
         }
     }
 
