@@ -19,7 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class MainActivity extends Activity {
-    static final String VER = "0.9.2";
+    static final String VER = "0.9.3";
 
     WebView web;
     TextView status;
@@ -410,7 +410,7 @@ public class MainActivity extends Activity {
     }
 
     void updateNativeNav() {
-        // v0.9.0 uses the dashboard-owned swipeable companion bar only.
+        // v0.9.3 uses the dashboard-owned swipeable companion bar only.
     }
 
     void more() {
@@ -736,9 +736,10 @@ public class MainActivity extends Activity {
                     String state = value == null ? "UNKNOWN" : value.replace("\\", "").replace("\"", "").trim();
 
                     if ("DATA_OK".equals(state)) {
+                        dashboardReady = true;
                         status.setText(kind);
-                        detail.setText(kind + " • " + shortUrl(active) + " • API OK");
-                        forceDashboardRefresh();
+                        detail.setText(kind + " • " + shortUrl(active) + " • LIVE");
+                        ui.postDelayed(this::applyCompanionCss, 120);
                         return;
                     }
 
@@ -895,10 +896,9 @@ public class MainActivity extends Activity {
         String js =
                 "(function(){" +
                 css +
-                mapJs() +
                 (map
-                        ? "setTimeout(function(){ticFixMap();var m=document.getElementById('n4MapShell');if(m)m.scrollIntoView({block:'start'});},120);"
-                        : "setTimeout(ticFixMap,120);") +
+                        ? mapJs() + "setTimeout(function(){ticFixMap();var m=document.getElementById('n4MapShell');if(m)m.scrollIntoView({block:'start'});},120);"
+                        : "") +
                 "})()";
 
         web.evaluateJavascript(js, null);
