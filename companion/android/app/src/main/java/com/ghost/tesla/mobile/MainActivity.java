@@ -18,7 +18,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class MainActivity extends Activity {
-    static final String VER = "0.5.0";
+    static final String VER = "0.6.0";
 
     WebView web;
     TextView status;
@@ -320,31 +320,42 @@ public class MainActivity extends Activity {
 
         root.addView(web, new LinearLayout.LayoutParams(-1, 0, 1));
 
-        HorizontalScrollView navScroll = new HorizontalScrollView(this);
-        navScroll.setHorizontalScrollBarEnabled(false);
-        navScroll.setFillViewport(false);
-        navScroll.setBackgroundColor(Color.rgb(5, 24, 34));
-        navScroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        LinearLayout navWrap = new LinearLayout(this);
+        navWrap.setOrientation(LinearLayout.VERTICAL);
+        navWrap.setBackgroundColor(Color.rgb(5, 24, 34));
+        navWrap.setPadding(d(4), d(3), d(4), d(3));
 
-        LinearLayout nav = new LinearLayout(this);
-        nav.setOrientation(LinearLayout.HORIZONTAL);
-        nav.setBackgroundColor(Color.rgb(5, 24, 34));
+        LinearLayout navRow1 = new LinearLayout(this);
+        navRow1.setOrientation(LinearLayout.HORIZONTAL);
+        navRow1.setGravity(Gravity.CENTER);
+
+        LinearLayout navRow2 = new LinearLayout(this);
+        navRow2.setOrientation(LinearLayout.HORIZONTAL);
+        navRow2.setGravity(Gravity.CENTER);
 
         String[][] items = {
-                {"HOME", "home", "morning", ""},
-                {"READY", "ready", "morning", "readiness"},
-                {"EVENTS", "events", "events", ""},
-                {"NEURAL", "neural", "neural4", ""},
-                {"TRUTH", "truth", "truth", ""},
-                {"THERMAL", "thermal", "thermal", ""},
-                {"MORE", "more", "more", ""}
+                {"HOME", "home", "morning", "", "1"},
+                {"READY", "ready", "morning", "readiness", "1"},
+                {"EVENTS", "events", "events", "", "1"},
+                {"NEURAL", "neural", "neural4", "", "1"},
+                {"TRUTH", "truth", "truth", "", "2"},
+                {"THERMAL", "thermal", "thermal", "", "2"},
+                {"MORE", "more", "more", "", "2"}
         };
 
         for (String[] it : items) {
-            TextView x = button(it[0]);
+            Button x = new Button(this);
+            x.setText(it[0]);
+            x.setAllCaps(false);
             x.setTextSize(10);
-            x.setPadding(d(8), 0, d(8), 0);
-            x.setMinWidth(d(74));
+            x.setTextColor(Color.rgb(220, 246, 255));
+            x.setGravity(Gravity.CENTER);
+            x.setPadding(d(4), 0, d(4), 0);
+            x.setMinHeight(d(42));
+            x.setMinimumHeight(d(42));
+            x.setMinWidth(0);
+            x.setMinimumWidth(0);
+            x.setBackgroundColor(Color.rgb(7, 30, 42));
             x.setContentDescription(it[0] + " dashboard section");
             x.setClickable(true);
             x.setFocusable(true);
@@ -352,23 +363,28 @@ public class MainActivity extends Activity {
             if (!"more".equals(it[1])) navButtons.put(it[1], x);
 
             x.setOnClickListener(v -> {
+                v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
                 bars();
+
                 if ("more".equals(it[1])) {
+                    detail.setText(kind + " • opening menu…");
                     more();
                 } else {
+                    detail.setText(kind + " • tap " + it[0]);
                     navigateTo(it[1], it[2], it[3]);
                 }
             });
 
-            nav.addView(x, new LinearLayout.LayoutParams(d(82), d(52)));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, d(44), 1);
+            lp.setMargins(d(2), d(2), d(2), d(2));
+            if ("1".equals(it[4])) navRow1.addView(x, lp);
+            else navRow2.addView(x, lp);
         }
 
-        navScroll.addView(nav, new HorizontalScrollView.LayoutParams(
-                HorizontalScrollView.LayoutParams.WRAP_CONTENT,
-                HorizontalScrollView.LayoutParams.MATCH_PARENT
-        ));
+        navWrap.addView(navRow1, new LinearLayout.LayoutParams(-1, d(48)));
+        navWrap.addView(navRow2, new LinearLayout.LayoutParams(-1, d(48)));
 
-        root.addView(navScroll, new LinearLayout.LayoutParams(-1, d(52)));
+        root.addView(navWrap, new LinearLayout.LayoutParams(-1, d(102)));
         updateNativeNav();
         setContentView(root);
         bars();
@@ -414,21 +430,28 @@ public class MainActivity extends Activity {
 
         dashboardReady = false;
         status.setText(kind);
-        detail.setText(kind + " • opening " + ("morning".equals(target) && "readiness".equals(focus)
+
+        String label = "morning".equals(target) && "readiness".equals(focus)
                 ? "WINTER READINESS"
-                : target.toUpperCase()));
+                : ("morning".equals(target) ? "HOME" : target.toUpperCase());
+
+        detail.setText(kind + " • OPENING " + label);
 
         String url = viewUrl(target, focus);
-        if (!url.isEmpty()) web.loadUrl(url);
+        if (!url.isEmpty()) {
+            web.stopLoading();
+            web.loadUrl(url);
+        }
     }
 
     void updateNativeNav() {
         for (Map.Entry<String, TextView> e : navButtons.entrySet()) {
             boolean selected = e.getKey().equals(navSelection) && !map;
             TextView b = e.getValue();
-            b.setBackgroundColor(selected ? Color.rgb(13, 72, 96) : Color.rgb(7, 30, 42));
+            b.setBackgroundColor(selected ? Color.rgb(13, 92, 122) : Color.rgb(7, 30, 42));
             b.setTextColor(selected ? Color.WHITE : Color.rgb(177, 222, 238));
             b.setTypeface(null, selected ? 1 : 0);
+            b.setAlpha(selected ? 1.0f : 0.88f);
         }
     }
 
