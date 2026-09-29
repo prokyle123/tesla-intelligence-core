@@ -1,5 +1,6 @@
 package com.ghost.tesla.mobile;
 
+import android.Manifest;
 import android.app.*;
 import android.os.*;
 import android.content.*;
@@ -18,13 +19,12 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class MainActivity extends Activity {
-    static final String VER = "0.8.1";
+    static final String VER = "0.9.0";
 
     WebView web;
     TextView status;
     TextView detail;
     LinearLayout root;
-    LinearLayout navPanel;
     SharedPreferences prefs;
     ConnectorManager connector;
     final Handler ui = new Handler(Looper.getMainLooper());
@@ -45,7 +45,6 @@ public class MainActivity extends Activity {
     String lastJsError = "";
     String lastSyncReport = "not run";
     boolean dashboardReady = false;
-    final Map<String, TextView> navButtons = new LinkedHashMap<>();
 
     boolean map = false;
     boolean firstRunScanActive = false;
@@ -75,8 +74,12 @@ public class MainActivity extends Activity {
         }
         navSelection = navKeyForView(view);
 
+        NotificationCenter.ensureChannels(this);
+        NotificationCenter.schedule(this);
+
         build();
         bars();
+        requestNotificationPermissionIfNeeded();
 
         if (launch != null && launch.getBooleanExtra("tic_settings", false)) {
             welcome("Connection Center requested.");
@@ -317,80 +320,8 @@ public class MainActivity extends Activity {
 
         root.addView(web, new LinearLayout.LayoutParams(-1, 0, 1));
 
-        navPanel = new LinearLayout(this);
-        navPanel.setOrientation(LinearLayout.VERTICAL);
-        navPanel.setBackgroundColor(Color.rgb(5, 24, 34));
-        navPanel.setPadding(d(4), d(3), d(4), d(3));
-        navPanel.setClickable(true);
-        navPanel.setFocusable(true);
-        if (Build.VERSION.SDK_INT >= 21) navPanel.setElevation(d(24));
-
-        if (Build.VERSION.SDK_INT >= 21) {
-            navPanel.setOnApplyWindowInsetsListener((v, insets) -> {
-                int bottomInset;
-                if (Build.VERSION.SDK_INT >= 30) {
-                    Insets navInsets = insets.getInsets(WindowInsets.Type.navigationBars());
-                    Insets gestureInsets = insets.getInsets(WindowInsets.Type.mandatorySystemGestures());
-                    bottomInset = Math.max(navInsets.bottom, gestureInsets.bottom);
-                } else {
-                    bottomInset = insets.getSystemWindowInsetBottom();
-                }
-
-                v.setPadding(d(4), d(3), d(4), d(3) + bottomInset);
-                ViewGroup.LayoutParams lp = v.getLayoutParams();
-                if (lp != null) {
-                    lp.height = d(102) + bottomInset;
-                    v.setLayoutParams(lp);
-                }
-                return insets;
-            });
-        }
-
-        LinearLayout row1 = new LinearLayout(this);
-        row1.setOrientation(LinearLayout.HORIZONTAL);
-        LinearLayout row2 = new LinearLayout(this);
-        row2.setOrientation(LinearLayout.HORIZONTAL);
-
-        String[][] navItems = {
-                {"HOME", "home", "1"},
-                {"READY", "ready", "1"},
-                {"EVENTS", "events", "1"},
-                {"NEURAL", "neural", "1"},
-                {"TRUTH", "truth", "2"},
-                {"THERMAL", "thermal", "2"},
-                {"MORE", "more", "2"}
-        };
-
-        for (String[] item : navItems) {
-            Button b = new Button(this);
-            b.setText(item[0]);
-            b.setAllCaps(false);
-            b.setTextSize(10);
-            b.setTextColor(Color.rgb(220, 246, 255));
-            b.setBackgroundColor(Color.rgb(7, 30, 42));
-            b.setMinWidth(0);
-            b.setMinimumWidth(0);
-            b.setMinHeight(0);
-            b.setMinimumHeight(0);
-            b.setPadding(d(3), 0, d(3), 0);
-            b.setClickable(false); // Activity-level hit testing handles taps before children/WebView.
-            b.setFocusable(false);
-            if (!"more".equals(item[1])) navButtons.put(item[1], b);
-
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, d(44), 1);
-            lp.setMargins(d(2), d(2), d(2), d(2));
-            if ("1".equals(item[2])) row1.addView(b, lp);
-            else row2.addView(b, lp);
-        }
-
-        navPanel.addView(row1, new LinearLayout.LayoutParams(-1, d(48)));
-        navPanel.addView(row2, new LinearLayout.LayoutParams(-1, d(48)));
-        root.addView(navPanel, new LinearLayout.LayoutParams(-1, d(102)));
-        updateNativeNav();
-
         setContentView(root);
         bars();
-        navPanel.requestApplyInsets();
     }
 
     String navKeyForView(String target) {
@@ -460,14 +391,7 @@ public class MainActivity extends Activity {
     }
 
     void updateNativeNav() {
-        for (Map.Entry<String, TextView> e : navButtons.entrySet()) {
-            boolean selected = e.getKey().equals(navSelection) && !map;
-            TextView b = e.getValue();
-            b.setBackgroundColor(selected ? Color.rgb(13, 92, 122) : Color.rgb(7, 30, 42));
-            b.setTextColor(selected ? Color.WHITE : Color.rgb(177, 222, 238));
-            b.setTypeface(null, selected ? 1 : 0);
-            b.setAlpha(selected ? 1.0f : 0.90f);
-        }
+        // v0.9.0 uses the dashboard-owned swipeable companion bar only.
     }
 
     void more() {
@@ -479,6 +403,7 @@ public class MainActivity extends Activity {
                 "PRODUCTION",
                 "HISTORY",
                 "NEURAL MAP",
+                "NOTIFICATION CENTER",
                 "CONNECTION CENTER",
                 "TESLA BROWSER ACCESS",
                 "CONNECTION DIAGNOSTICS"
@@ -491,6 +416,7 @@ public class MainActivity extends Activity {
                 "production",
                 "history",
                 "map",
+                "notifications",
                 "setup",
                 "browser",
                 "diag"
@@ -501,6 +427,7 @@ public class MainActivity extends Activity {
                 .setItems(labels, (dialog, which) -> {
                     String action = acts[which];
                     if ("map".equals(action)) openMap();
+                    else if ("notifications".equals(action)) notificationSettings();
                     else if ("setup".equals(action)) settings(false);
                     else if ("browser".equals(action)) browserInfo();
                     else if ("diag".equals(action)) diagnostics();
@@ -544,6 +471,22 @@ public class MainActivity extends Activity {
         if ("more".equals(host)) {
             detail.setText(kind + " • opening menu…");
             more();
+            return;
+        }
+        if ("notifications".equals(host)) {
+            notificationSettings();
+            return;
+        }
+        if ("setup".equals(host)) {
+            settings(false);
+            return;
+        }
+        if ("browser".equals(host)) {
+            browserInfo();
+            return;
+        }
+        if ("diag".equals(host)) {
+            diagnostics();
             return;
         }
 
@@ -927,8 +870,8 @@ public class MainActivity extends Activity {
         if (active == null || active.isEmpty()) return;
 
         String css = map ?
-                "var st=document.getElementById('ticMapStyle');if(st)st.remove();st=document.createElement('style');st.id='ticMapStyle';st.textContent='header.topbar,.neural-v4-hero,.neural-v4-kpis,.n6-governor,.neural-dev>.section-title,.n4-live-narrative,.n4-mission-strip,.n4-runtime-strip,.neural-progress-card,.n4-insight-strip,.n4-observatory-strip{display:none!important}main{padding:0!important;max-width:none!important;width:100%!important}.neural-dev{margin:0!important;padding:0!important;border:0!important}#n4MapShell{height:100vh!important;min-height:0!important;padding:0!important;margin:0!important;overflow:hidden!important}#n4NetworkMap{width:100%!important;height:100%!important;max-width:100%!important;max-height:100%!important;display:block!important}';document.head.appendChild(st);" :
-                "var st=document.getElementById('ticMapStyle');if(st)st.remove();st=document.createElement('style');st.id='ticMapStyle';st.textContent='.navrow,#ticCompanionNav,#ticInjectedNav,#ticCompanionMore{display:none!important}body{padding-bottom:0!important}#n4MapShell{height:auto!important;min-height:0!important}#n4NetworkMap{width:100%!important;height:auto!important;max-width:100%!important;display:block!important}';document.head.appendChild(st);";
+                "var st=document.getElementById('ticMapStyle');if(st)st.remove();st=document.createElement('style');st.id='ticMapStyle';st.textContent='header.topbar,#ticCompanionNav,#ticCompanionMore,.neural-v4-hero,.neural-v4-kpis,.n6-governor,.neural-dev>.section-title,.n4-live-narrative,.n4-mission-strip,.n4-runtime-strip,.neural-progress-card,.n4-insight-strip,.n4-observatory-strip{display:none!important}body{padding-bottom:0!important}main{padding:0!important;max-width:none!important;width:100%!important}.neural-dev{margin:0!important;padding:0!important;border:0!important}#n4MapShell{height:100vh!important;min-height:0!important;padding:0!important;margin:0!important;overflow:hidden!important}#n4NetworkMap{width:100%!important;height:100%!important;max-width:100%!important;max-height:100%!important;display:block!important}';document.head.appendChild(st);" :
+                "var st=document.getElementById('ticMapStyle');if(st)st.remove();st=document.createElement('style');st.id='ticMapStyle';st.textContent='.navrow,#ticInjectedNav{display:none!important}#n4MapShell{height:auto!important;min-height:0!important}#n4NetworkMap{width:100%!important;height:auto!important;max-width:100%!important;display:block!important}';document.head.appendChild(st);";
 
         String js =
                 "(function(){" +
@@ -1163,6 +1106,7 @@ public class MainActivity extends Activity {
                 .remove("primary")
                 .remove("backup")
                 .apply();
+        NotificationCenter.schedule(this);
     }
 
     void browserInfo() {
@@ -1194,102 +1138,175 @@ public class MainActivity extends Activity {
         b.show();
     }
 
-    @Override public boolean dispatchTouchEvent(MotionEvent ev) {
-        if (navPanel != null && navPanel.getVisibility() == View.VISIBLE) {
-            int[] loc = new int[2];
-            navPanel.getLocationOnScreen(loc);
-            float rawX = ev.getRawX();
-            float rawY = ev.getRawY();
-            float left = loc[0];
-            float top = loc[1];
-            float right = left + navPanel.getWidth();
-            float bottom = top + navPanel.getHeight();
-
-            if (rawX >= left && rawX < right && rawY >= top && rawY < bottom) {
-                float localX = rawX - left;
-                float localY = rawY - top;
-                float usableBottom = navPanel.getHeight() - navPanel.getPaddingBottom();
-
-                // The reserved system navigation / gesture inset is not a companion button.
-                if (localY >= usableBottom) return true;
-
-                if (ev.getActionMasked() == MotionEvent.ACTION_UP) {
-                    boolean topRow = localY < usableBottom / 2f;
-
-                    String key;
-                    if (topRow) {
-                        int col = Math.max(0, Math.min(3, (int) (localX / Math.max(1f, navPanel.getWidth() / 4f))));
-                        key = new String[]{"home", "ready", "events", "neural"}[col];
-                    } else {
-                        int col = Math.max(0, Math.min(2, (int) (localX / Math.max(1f, navPanel.getWidth() / 3f))));
-                        key = new String[]{"truth", "thermal", "more"}[col];
-                    }
-
-                    navPanel.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
-                    handleNativeNavKey(key);
-                }
-                return true;
-            }
-        }
-        return super.dispatchTouchEvent(ev);
+    void requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT < 33 || NotificationCenter.hasPermission(this)) return;
+        if (prefs.getBoolean("notification_permission_asked", false)) return;
+        prefs.edit().putBoolean("notification_permission_asked", true).apply();
+        requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 904);
     }
 
-    void handleNativeNavKey(String key) {
-        if (key == null) return;
+    int intValue(EditText e, int fallback, int min, int max) {
+        try {
+            int v = Integer.parseInt(e.getText().toString().trim());
+            return Math.max(min, Math.min(max, v));
+        } catch (Exception ignored) {
+            return fallback;
+        }
+    }
 
-        switch (key) {
-            case "home":
-                navSelection = "home";
-                view = "morning";
-                map = false;
-                updateNativeNav();
-                detail.setText(kind + " • HOME");
-                switchCurrentWebView("morning", "");
-                break;
-            case "ready":
-                navSelection = "ready";
-                view = "morning";
-                map = false;
-                updateNativeNav();
-                detail.setText(kind + " • WINTER READINESS");
-                switchCurrentWebView("morning", "readiness");
-                break;
-            case "events":
-                navSelection = "events";
-                view = "events";
-                map = false;
-                updateNativeNav();
-                detail.setText(kind + " • EVENTS");
-                switchCurrentWebView("events", "");
-                break;
-            case "neural":
-                navSelection = "neural";
-                view = "neural4";
-                map = false;
-                updateNativeNav();
-                detail.setText(kind + " • NEURAL");
-                switchCurrentWebView("neural4", "");
-                break;
-            case "truth":
-                navSelection = "truth";
-                view = "truth";
-                map = false;
-                updateNativeNav();
-                detail.setText(kind + " • TRUTH");
-                switchCurrentWebView("truth", "");
-                break;
-            case "thermal":
-                navSelection = "thermal";
-                view = "thermal";
-                map = false;
-                updateNativeNav();
-                detail.setText(kind + " • THERMAL");
-                switchCurrentWebView("thermal", "");
-                break;
-            case "more":
-                detail.setText(kind + " • MORE");
-                more();
-                break;
+    String monitorTime(long ts) {
+        if (ts <= 0) return "not checked yet";
+        return new java.text.SimpleDateFormat("MMM d, h:mm a", java.util.Locale.getDefault())
+                .format(new java.util.Date(ts));
+    }
+
+    void notificationSettings() {
+        if (Build.VERSION.SDK_INT >= 33 && !NotificationCenter.hasPermission(this)) {
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 904);
+        }
+
+        ScrollView scroll = new ScrollView(this);
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(d(18), d(8), d(18), d(16));
+        scroll.addView(box);
+
+        TextView intro = new TextView(this);
+        intro.setText(
+                "Android background monitoring checks Tesla Intelligence Core about every 15 minutes when the OS allows it. " +
+                "It uses the saved Pi routes and only posts alerts when something meaningful changes."
+        );
+        intro.setTextColor(Color.DKGRAY);
+        intro.setTextSize(12);
+        box.addView(intro);
+
+        CheckBox master = new CheckBox(this);
+        master.setText("Background monitoring + notifications");
+        master.setChecked(prefs.getBoolean("notifications_enabled", true));
+        box.addView(master);
+
+        CheckBox connection = new CheckBox(this);
+        connection.setText("Connection lost / restored");
+        connection.setChecked(prefs.getBoolean("alert_connection", true));
+        box.addView(connection);
+
+        CheckBox readiness = new CheckBox(this);
+        readiness.setText("Winter readiness threshold");
+        readiness.setChecked(prefs.getBoolean("alert_readiness", true));
+        box.addView(readiness);
+
+        EditText readinessThreshold = field("Readiness alert below", String.valueOf(prefs.getInt("readiness_threshold", 70)));
+        readinessThreshold.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        box.addView(readinessThreshold);
+
+        CheckBox warmup = new CheckBox(this);
+        warmup.setText("Warm-up / preconditioning recommendation");
+        warmup.setChecked(prefs.getBoolean("alert_warmup", true));
+        box.addView(warmup);
+
+        CheckBox arrival = new CheckBox(this);
+        arrival.setText("Projected arrival SOC threshold");
+        arrival.setChecked(prefs.getBoolean("alert_arrival_soc", true));
+        box.addView(arrival);
+
+        EditText arrivalThreshold = field("Arrival SOC alert below %", String.valueOf(prefs.getInt("arrival_soc_threshold", 20)));
+        arrivalThreshold.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        box.addView(arrivalThreshold);
+
+        CheckBox heater = new CheckBox(this);
+        heater.setText("Battery heater turns on");
+        heater.setChecked(prefs.getBoolean("alert_heater", false));
+        box.addView(heater);
+
+        long last = prefs.getLong("last_monitor_at", 0L);
+        TextView state = new TextView(this);
+        state.setText(
+                "Last background check: " + monitorTime(last) +
+                "\nStatus: " + prefs.getString("last_monitor_status", "not checked") +
+                (prefs.getString("last_monitor_error", "").isEmpty() ? "" : "\n" + prefs.getString("last_monitor_error", ""))
+        );
+        state.setTextColor(Color.DKGRAY);
+        state.setTextSize(11);
+        state.setPadding(0, d(10), 0, d(4));
+        box.addView(state);
+
+        TextView testNotification = actionButton("SEND TEST NOTIFICATION");
+        box.addView(testNotification);
+
+        TextView checkNow = actionButton("RUN BACKGROUND CHECK NOW");
+        box.addView(checkNow);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Notification Center")
+                .setView(scroll)
+                .setPositiveButton("SAVE", null)
+                .setNegativeButton("CANCEL", null)
+                .create();
+
+        dialog.setOnShowListener(x -> {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+                prefs.edit()
+                        .putBoolean("notifications_enabled", master.isChecked())
+                        .putBoolean("alert_connection", connection.isChecked())
+                        .putBoolean("alert_readiness", readiness.isChecked())
+                        .putInt("readiness_threshold", intValue(readinessThreshold, 70, 1, 100))
+                        .putBoolean("alert_warmup", warmup.isChecked())
+                        .putBoolean("alert_arrival_soc", arrival.isChecked())
+                        .putInt("arrival_soc_threshold", intValue(arrivalThreshold, 20, 1, 100))
+                        .putBoolean("alert_heater", heater.isChecked())
+                        .apply();
+
+                if (master.isChecked()) NotificationCenter.schedule(this);
+                else NotificationCenter.cancelSchedule(this);
+
+                dialog.dismiss();
+                Toast.makeText(this, master.isChecked() ? "Background monitoring enabled" : "Background monitoring disabled", Toast.LENGTH_SHORT).show();
+            });
+
+            testNotification.setOnClickListener(v -> {
+                if (Build.VERSION.SDK_INT >= 33 && !NotificationCenter.hasPermission(this)) {
+                    requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 904);
+                    Toast.makeText(this, "Allow notifications, then tap Test again", Toast.LENGTH_SHORT).show();
+                } else {
+                    NotificationCenter.test(this);
+                }
+            });
+
+            checkNow.setOnClickListener(v -> {
+                if (Build.VERSION.SDK_INT >= 33 && !NotificationCenter.hasPermission(this)) {
+                    requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 904);
+                }
+                NotificationCenter.runCheckNow(this);
+                Toast.makeText(this, "Background check started", Toast.LENGTH_SHORT).show();
+            });
+        });
+
+        dialog.show();
+    }
+
+    @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == 904) {
+            if (NotificationCenter.hasPermission(this)) {
+                NotificationCenter.ensureChannels(this);
+                NotificationCenter.schedule(this);
+                Toast.makeText(this, "Tesla Intelligence notifications enabled", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, "Notifications are blocked by Android", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    @Override protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        if (intent == null) return;
+        String target = intent.getStringExtra("tic_view");
+        if (target != null && !target.trim().isEmpty() && active != null && !active.isEmpty()) {
+            view = target.trim();
+            navSelection = navKeyForView(view);
+            String url = viewUrl(view, "");
+            if (!url.isEmpty()) web.loadUrl(url);
         }
     }
 
