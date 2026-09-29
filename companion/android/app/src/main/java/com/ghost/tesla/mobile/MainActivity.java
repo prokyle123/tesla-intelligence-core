@@ -18,7 +18,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class MainActivity extends Activity {
-    static final String VER = "0.4.0";
+    static final String VER = "0.5.0";
 
     WebView web;
     TextView status;
@@ -34,6 +34,7 @@ public class MainActivity extends Activity {
     String active = null;
     String kind = "OFFLINE";
     String view = "morning";
+    String navSelection = "home";
     String lastGoodKind = "";
     String lastGoodUrl = "";
 
@@ -71,6 +72,7 @@ public class MainActivity extends Activity {
             x = launch.getStringExtra("tic_view");
             if (x != null && !x.trim().isEmpty()) view = x.trim();
         }
+        navSelection = navKeyForView(view);
 
         build();
         bars();
@@ -318,86 +320,116 @@ public class MainActivity extends Activity {
 
         root.addView(web, new LinearLayout.LayoutParams(-1, 0, 1));
 
+        HorizontalScrollView navScroll = new HorizontalScrollView(this);
+        navScroll.setHorizontalScrollBarEnabled(false);
+        navScroll.setFillViewport(false);
+        navScroll.setBackgroundColor(Color.rgb(5, 24, 34));
+        navScroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
+
         LinearLayout nav = new LinearLayout(this);
+        nav.setOrientation(LinearLayout.HORIZONTAL);
         nav.setBackgroundColor(Color.rgb(5, 24, 34));
 
         String[][] items = {
-                {"READY", "morning"},
-                {"EVENTS", "events"},
-                {"NEURAL", "neural4"},
-                {"TRUTH", "truth"},
-                {"THERMAL", "thermal"},
-                {"MORE", "more"}
+                {"HOME", "home", "morning", ""},
+                {"READY", "ready", "morning", "readiness"},
+                {"EVENTS", "events", "events", ""},
+                {"NEURAL", "neural", "neural4", ""},
+                {"TRUTH", "truth", "truth", ""},
+                {"THERMAL", "thermal", "thermal", ""},
+                {"MORE", "more", "more", ""}
         };
 
         for (String[] it : items) {
             TextView x = button(it[0]);
             x.setTextSize(10);
-            x.setPadding(0, 0, 0, 0);
+            x.setPadding(d(8), 0, d(8), 0);
+            x.setMinWidth(d(74));
             x.setContentDescription(it[0] + " dashboard section");
+            x.setClickable(true);
+            x.setFocusable(true);
+
             if (!"more".equals(it[1])) navButtons.put(it[1], x);
+
             x.setOnClickListener(v -> {
                 bars();
-                if ("more".equals(it[1])) more();
-                else select(it[1]);
+                if ("more".equals(it[1])) {
+                    more();
+                } else {
+                    navigateTo(it[1], it[2], it[3]);
+                }
             });
-            nav.addView(x, new LinearLayout.LayoutParams(0, d(50), 1));
+
+            nav.addView(x, new LinearLayout.LayoutParams(d(82), d(52)));
         }
 
-        root.addView(nav, new LinearLayout.LayoutParams(-1, d(50)));
+        navScroll.addView(nav, new HorizontalScrollView.LayoutParams(
+                HorizontalScrollView.LayoutParams.WRAP_CONTENT,
+                HorizontalScrollView.LayoutParams.MATCH_PARENT
+        ));
+
+        root.addView(navScroll, new LinearLayout.LayoutParams(-1, d(52)));
         updateNativeNav();
         setContentView(root);
         bars();
         root.requestApplyInsets();
     }
 
-    void select(String x) {
-        view = x;
+    String navKeyForView(String target) {
+        if ("morning".equals(target) || "home".equals(target)) return "home";
+        if ("events".equals(target)) return "events";
+        if ("neural4".equals(target) || "neural".equals(target)) return "neural";
+        if ("truth".equals(target)) return "truth";
+        if ("thermal".equals(target)) return "thermal";
+        return "more";
+    }
+
+    String viewUrl(String target, String focus) {
+        String base = ConnectorManager.normalize(active);
+        if (base.isEmpty()) return "";
+        StringBuilder u = new StringBuilder(base)
+                .append("/?view=")
+                .append(Uri.encode(target == null || target.isEmpty() ? "morning" : target));
+        if (focus != null && !focus.isEmpty()) {
+            u.append("&focus=").append(Uri.encode(focus));
+        }
+        return u.toString();
+    }
+
+    void select(String target) {
+        navigateTo(navKeyForView(target), target, "");
+    }
+
+    void navigateTo(String key, String target, String focus) {
+        navSelection = key;
+        view = target;
         map = false;
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
         updateNativeNav();
-        switchDashboardView(x);
+
+        if (active == null || active.isEmpty()) {
+            detail.setText("Connect to the dashboard first");
+            return;
+        }
+
+        dashboardReady = false;
+        status.setText(kind);
+        detail.setText(kind + " • opening " + ("morning".equals(target) && "readiness".equals(focus)
+                ? "WINTER READINESS"
+                : target.toUpperCase()));
+
+        String url = viewUrl(target, focus);
+        if (!url.isEmpty()) web.loadUrl(url);
     }
 
     void updateNativeNav() {
         for (Map.Entry<String, TextView> e : navButtons.entrySet()) {
-            boolean selected = e.getKey().equals(view) && !map;
+            boolean selected = e.getKey().equals(navSelection) && !map;
             TextView b = e.getValue();
             b.setBackgroundColor(selected ? Color.rgb(13, 72, 96) : Color.rgb(7, 30, 42));
             b.setTextColor(selected ? Color.WHITE : Color.rgb(177, 222, 238));
             b.setTypeface(null, selected ? 1 : 0);
         }
-    }
-
-    void switchDashboardView(String target) {
-        if (active == null || active.isEmpty()) return;
-
-        String js =
-                "(function(){" +
-                "var n='" + target + "';" +
-                "try{" +
-                "if(typeof switchView==='function'){switchView(n);}" +
-                "else{" +
-                "var t=document.querySelector('.tab[data-view=\"'+n+'\"]');" +
-                "document.querySelectorAll('.tab').forEach(function(x){x.classList.toggle('active',x===t);});" +
-                "document.querySelectorAll('.view').forEach(function(v){v.classList.toggle('active',v.id==='view-'+n);});" +
-                "window.scrollTo(0,0);" +
-                "}" +
-                "var v=document.getElementById('view-'+n);" +
-                "return v&&v.classList.contains('active')?'OK:'+n:'MISSING:'+n;" +
-                "}catch(e){return 'ERROR:'+e;}" +
-                "})()";
-
-        web.evaluateJavascript(js, value -> {
-            String result = cleanJsValue(value);
-            if (result.startsWith("OK:")) {
-                detail.setText(kind + " • " + shortUrl(active) + " • " + target.toUpperCase());
-                applyCompanionCss();
-            } else if (result.startsWith("ERROR:") || result.startsWith("MISSING:")) {
-                lastJsError = "view switch • " + result;
-                detail.setText(kind + " • view switch issue");
-            }
-        });
     }
 
     void more() {
@@ -442,11 +474,16 @@ public class MainActivity extends Activity {
 
     void openMap() {
         view = "neural4";
+        navSelection = "neural";
         map = true;
         updateNativeNav();
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
-        switchDashboardView("neural4");
-        ui.postDelayed(this::applyCompanionCss, 250);
+
+        if (active != null && !active.isEmpty()) {
+            dashboardReady = false;
+            String url = viewUrl("neural4", "");
+            if (!url.isEmpty()) web.loadUrl(url);
+        }
     }
 
     void firstRunDiscovery() {
@@ -546,7 +583,9 @@ public class MainActivity extends Activity {
         dashboardReady = false;
         status.setText("VERIFY");
         detail.setText(k + " • checking dashboard data…");
-        web.loadUrl(active + "/");
+        String focus = "ready".equals(navSelection) ? "readiness" : "";
+        String url = viewUrl(view, focus);
+        web.loadUrl(url.isEmpty() ? active + "/" : url);
     }
 
     void loadAuth(String base) {
@@ -674,7 +713,7 @@ public class MainActivity extends Activity {
                         detail.setText(kind + " • " + shortUrl(active) + " • API LIVE");
                     }
 
-                    switchDashboardView(view);
+                    updateNativeNav();
                     ui.postDelayed(this::applyCompanionCss, 250);
                 }
         );
@@ -736,7 +775,7 @@ public class MainActivity extends Activity {
 
         String css = map ?
                 "var st=document.getElementById('ticMapStyle');if(st)st.remove();st=document.createElement('style');st.id='ticMapStyle';st.textContent='header.topbar,.neural-v4-hero,.neural-v4-kpis,.n6-governor,.neural-dev>.section-title,.n4-live-narrative,.n4-mission-strip,.n4-runtime-strip,.neural-progress-card,.n4-insight-strip,.n4-observatory-strip{display:none!important}main{padding:0!important;max-width:none!important;width:100%!important}.neural-dev{margin:0!important;padding:0!important;border:0!important}#n4MapShell{height:100vh!important;min-height:0!important;padding:0!important;margin:0!important;overflow:hidden!important}#n4NetworkMap{width:100%!important;height:100%!important;max-width:100%!important;max-height:100%!important;display:block!important}';document.head.appendChild(st);" :
-                "var st=document.getElementById('ticMapStyle');if(st)st.remove();st=document.createElement('style');st.id='ticMapStyle';st.textContent='#n4MapShell{height:auto!important;min-height:0!important}#n4NetworkMap{width:100%!important;height:auto!important;max-width:100%!important;display:block!important}';document.head.appendChild(st);";
+                "var st=document.getElementById('ticMapStyle');if(st)st.remove();st=document.createElement('style');st.id='ticMapStyle';st.textContent='header .navrow{display:none!important}#n4MapShell{height:auto!important;min-height:0!important}#n4NetworkMap{width:100%!important;height:auto!important;max-width:100%!important;display:block!important}';document.head.appendChild(st);";
 
         String js =
                 "(function(){" +
@@ -751,7 +790,7 @@ public class MainActivity extends Activity {
     }
 
     void apply() {
-        switchDashboardView(view);
+        applyCompanionCss();
     }
 
     void diagnostics() {
@@ -1006,8 +1045,11 @@ public class MainActivity extends Activity {
         bars();
         if (map) {
             map = false;
+            navSelection = "neural";
+            updateNativeNav();
             setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
-            apply();
+            String url = viewUrl("neural4", "");
+            if (!url.isEmpty()) web.loadUrl(url);
             return;
         }
         if (web.canGoBack()) web.goBack();
