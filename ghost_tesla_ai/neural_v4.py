@@ -21,7 +21,7 @@ from .backends.torch_gru import TorchGRUBackend
 from .features import V3_FEATURES, feature_map, row_to_features
 
 MODEL_NAME = 'winter_multitask_gru'
-FEATURE_VERSION = 'v4-sequence-2-departure'
+FEATURE_VERSION = 'v4-sequence-3-departure-6h'
 LOCK = config.DATA_DIR / 'neural-v4.lock'
 
 # One network learns the related winter tasks together. Targets stay in their
@@ -32,6 +32,7 @@ TARGETS = [
     {'name': 'cabin_60m', 'field': 'inside_temp_c', 'horizon_min': 60, 'unit': 'C', 'label': 'Cabin +60 min'},
     {'name': 'soc_180m', 'field': 'battery_level', 'horizon_min': 180, 'unit': '%', 'label': 'SOC +3 hr'},
     {'name': 'pack_180m', 'field': 'battery_temp_c', 'horizon_min': 180, 'unit': 'C', 'label': 'Pack +3 hr'},
+    {'name': 'pack_360m', 'field': 'battery_temp_c', 'horizon_min': 360, 'unit': 'C', 'label': 'Pack +6 hr'},
 ]
 BASELINE_MODELS = {
     'soc_60m': 'soc_60m',
@@ -39,6 +40,7 @@ BASELINE_MODELS = {
     'cabin_60m': 'cabin_temp_60m',
     'soc_180m': 'soc_180m',
     'pack_180m': 'pack_temp_180m',
+    'pack_360m': 'pack_temp_360m',
 }
 
 # The v4 model sees the same rich contextual values used by v3, but as a
@@ -442,15 +444,16 @@ def _neural_baseline_same_holdout(data, split, generation):
             run=con.execute('SELECT * FROM neural_v4_runs WHERE generation=? ORDER BY id DESC LIMIT 1',(int(generation),)).fetchone()
         if not run or not run['artifact_path'] or not Path(run['artifact_path']).exists():return {}
         payload=TorchGRUBackend.load(run['artifact_path'])
-        backend=TorchGRUBackend(input_size=len(payload['input_features']),output_size=len(payload['targets']),hidden_size=int(payload['hidden_size']),layers=int(payload['layers']),dropout=float(payload['dropout']))
+        payload_targets=list(payload.get('targets') or [])
+        backend=TorchGRUBackend(input_size=len(payload['input_features']),output_size=len(payload_targets),hidden_size=int(payload['hidden_size']),layers=int(payload['layers']),dropout=float(payload['dropout']))
         model=backend.create();model.load_state_dict(payload['state_dict']);model.eval()
         old_features=list(payload.get('input_features') or [])
         if old_features == list(INPUT_FEATURES):
             Xte=data['X'][split:]
         else:
-            # Rebuild the identical holdout timestamps using the production artifact's
-            # own feature contract. This is what lets the pre-v0.8.27 GRU remain a
-            # valid baseline after the new schedule inputs are added.
+            # Rebuild identical holdout timestamps with the served artifact's own
+            # feature contract. A five-head production GRU can therefore remain
+            # the baseline while a challenger adds the new six-hour head.
             seqs=[]
             for idx in data['source_indices'][split:]:
                 seq,_=_sequence_at(data['rows'],data['times'],idx,max_hold_minutes=20,input_features=old_features,schedule_state=data.get('schedule_state'),schedule_cache=data.get('schedule_cache'))
@@ -463,9 +466,13 @@ def _neural_baseline_same_holdout(data, split, generation):
         with torch.no_grad():pn=model(torch.from_numpy(Xn)).cpu().numpy()
         ymean=np.asarray(payload['y_mean'],dtype=np.float32);ystd=np.asarray(payload['y_std'],dtype=np.float32)
         pp=pn*ystd[None,:]+ymean[None,:]
+        current_index={t['name']:i for i,t in enumerate(TARGETS)}
         out={}
-        for i,target in enumerate(TARGETS):
-            out[target['name']]={'available':True,'generation':int(generation),'backend':'pytorch_gru','mae':float(mean_absolute_error(data['Y'][split:,i],pp[:,i])),'source':'neural_production'}
+        for old_i,target in enumerate(payload_targets):
+            name=target.get('name')
+            cur_i=current_index.get(name)
+            if cur_i is None or old_i>=pp.shape[1]:continue
+            out[name]={'available':True,'generation':int(generation),'backend':'pytorch_gru','mae':float(mean_absolute_error(data['Y'][split:,cur_i],pp[:,old_i])),'source':'neural_production'}
         return out
     except Exception as e:
         return {'_error':f'{type(e).__name__}: {e}'}
@@ -615,7 +622,9 @@ def train():
         if served_neural is not None:
             neural_baseline=_neural_baseline_same_holdout(data,split,served_neural)
             if neural_baseline and '_error' not in neural_baseline:
-                baseline=neural_baseline
+                # Overlay only heads the served generation actually owns. New
+                # heads retain their tree champion as the safe comparison.
+                baseline.update(neural_baseline)
         for target in TARGETS:
             name = target['name']
             b = baseline.get(name) or {}

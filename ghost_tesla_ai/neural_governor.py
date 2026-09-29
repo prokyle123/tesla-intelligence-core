@@ -6,7 +6,7 @@ import time
 from . import config, db
 from .neural_audit import metrics as truth_metrics
 
-CRITICAL_HEADS = {'soc_60m','pack_60m','soc_180m','pack_180m'}
+CRITICAL_HEADS = {'soc_60m','pack_60m','soc_180m','pack_180m','pack_360m'}
 STAGES = ('TRAINED','SHADOW','TRUTH_QUALIFIED','CANARY','PRODUCTION','ROLLED_BACK','RETIRED')
 
 
@@ -82,9 +82,18 @@ def production_generation():
     return None if not r else int(r['generation'])
 
 
+def _generation_target_names(generation):
+    if generation is None:return set()
+    run=_run(generation)
+    if not run:return set()
+    targets=_json(run['targets_json'],[])
+    return {str(t.get('name')) for t in targets if isinstance(t,dict) and t.get('name')}
+
+
 def _holdout_gate(run):
     if not run:return {'ready':False,'pass':False,'reason':'No neural generation.'}
     metrics=_json(run['metrics_json'],{})
+    expected=max(5,len(metrics))
     head_rows=[]; passed=0; critical_ok=True; baselines=0
     for name,m in metrics.items():
         imp=m.get('improvement_pct')
@@ -95,17 +104,20 @@ def _holdout_gate(run):
         if ok:passed+=1
         if name in CRITICAL_HEADS and not ok:critical_ok=False
         head_rows.append({'name':name,'improvement_pct':imp,'baseline_available':available,'pass':ok})
-    ready=baselines>=len(metrics) and len(metrics)>=5
+    ready=baselines>=expected and len(metrics)>=expected
     passed_gate=bool(ready and passed>=config.NEURAL_HOLDOUT_MIN_HEADS and critical_ok)
-    reason=(f'Holdout passed: {passed}/5 heads clear the champion gate.' if passed_gate else
-            ('Waiting for all five production baselines on the same blocked holdout.' if not ready else f'Holdout blocked: {passed}/5 heads pass; all critical heads must win.'))
-    return {'ready':ready,'pass':passed_gate,'passed_heads':passed,'critical_ok':critical_ok,'heads':head_rows,'reason':reason}
+    reason=(f'Holdout passed: {passed}/{expected} heads clear the champion gate.' if passed_gate else
+            (f'Waiting for all {expected} production baselines on the same blocked holdout.' if not ready else f'Holdout blocked: {passed}/{expected} heads pass; all critical heads must win.'))
+    return {'ready':ready,'pass':passed_gate,'passed_heads':passed,'expected_heads':expected,'critical_ok':critical_ok,'heads':head_rows,'reason':reason}
 
 
 def _truth_gate(generation,since=None,min_per_head=None,min_improvement=None):
     min_per_head=int(min_per_head if min_per_head is not None else config.NEURAL_TRUTH_MIN_RESOLVED_PER_HEAD)
     min_improvement=float(min_improvement if min_improvement is not None else config.NEURAL_TRUTH_MIN_IMPROVEMENT)
+    expected_names=_generation_target_names(generation)
     rows=truth_metrics(generation=generation,since=since)
+    if expected_names:rows=[r for r in rows if r.get('name') in expected_names]
+    expected=max(5,len(expected_names) or len(rows))
     passed=0; critical_ok=True; evidence_ok=True; comparable_total=0
     for r in rows:
         n=int(r.get('comparable') or 0); comparable_total+=n
@@ -115,15 +127,17 @@ def _truth_gate(generation,since=None,min_per_head=None,min_improvement=None):
         r['gate_pass']=ok
         if ok:passed+=1
         if r.get('name') in CRITICAL_HEADS and not ok:critical_ok=False
-    ready=bool(len(rows)>=5 and evidence_ok)
+    ready=bool(len(rows)>=expected and evidence_ok)
     gate=bool(ready and passed>=config.NEURAL_HOLDOUT_MIN_HEADS and critical_ok)
-    reason=(f'Live Truth passed: {passed}/5 heads beat the served production baseline.' if gate else
-            (f'Collecting live Truth: need {min_per_head} baseline-comparable outcomes per head.' if not ready else f'Live Truth blocked: {passed}/5 heads pass; critical heads must improve.'))
-    return {'ready':ready,'pass':gate,'passed_heads':passed,'critical_ok':critical_ok,'comparable_total':comparable_total,'min_per_head':min_per_head,'min_improvement_pct':round(min_improvement*100,2),'heads':rows,'reason':reason}
+    reason=(f'Live Truth passed: {passed}/{expected} heads beat the served production baseline.' if gate else
+            (f'Collecting live Truth: need {min_per_head} baseline-comparable outcomes per head.' if not ready else f'Live Truth blocked: {passed}/{expected} heads pass; critical heads must improve.'))
+    return {'ready':ready,'pass':gate,'passed_heads':passed,'expected_heads':expected,'critical_ok':critical_ok,'comparable_total':comparable_total,'min_per_head':min_per_head,'min_improvement_pct':round(min_improvement*100,2),'heads':rows,'reason':reason}
 
 
 def _rollback_gate(generation,since):
     rows=truth_metrics(generation=generation,since=since)
+    expected_names=_generation_target_names(generation)
+    if expected_names:rows=[r for r in rows if r.get('name') in expected_names]
     ready=True; regressions=[]; mean_imps=[]
     for r in rows:
         if int(r.get('comparable') or 0)<config.NEURAL_ROLLBACK_MIN_NEW_PER_HEAD:

@@ -140,6 +140,12 @@ public final class NotificationCenter {
                 p.getFloat("last_monitor_outside_6h_f", Float.NaN),
                 p.getBoolean("last_monitor_heater_on", false),
                 p.getBoolean("last_monitor_preconditioning", false),
+                p.getLong("last_monitor_precondition_start_ms", 0L),
+                p.getInt("last_monitor_precondition_minutes", 0),
+                p.getString("last_monitor_precondition_source", ""),
+                p.getString("last_monitor_precondition_confidence", ""),
+                p.getFloat("last_monitor_precondition_expected_pack_f", Float.NaN),
+                p.getFloat("last_monitor_precondition_target_pack_f", Float.NaN),
                 p.getLong("last_monitor_data_at", p.getLong("last_monitor_at", 0L))
         );
     }
@@ -156,6 +162,12 @@ public final class NotificationCenter {
             double outside6hF,
             boolean heaterOn,
             boolean preconditioning,
+            long preconditionStartMs,
+            int preconditionMinutes,
+            String preconditionSource,
+            String preconditionConfidence,
+            double preconditionExpectedPackF,
+            double preconditionTargetPackF,
             long updatedAt
     ) {
         if (!hasPermission(context)) return;
@@ -204,6 +216,20 @@ public final class NotificationCenter {
         } else {
             style.addLine("Battery " + temp(packF) + " → " + temp(pack6hF) + " in 6h");
             style.addLine("SOC " + percent(currentSoc) + " • Outside " + temp(outsideF) + " → " + temp(outside6hF));
+        }
+
+        if (preconditionMinutes > 0) {
+            String when = preconditionStartMs > 0
+                    ? new SimpleDateFormat("h:mm a", Locale.getDefault()).format(new Date(preconditionStartMs))
+                    : "departure";
+            String warm = "Warm-up ~" + preconditionMinutes + " min • start " + when;
+            if (!Double.isNaN(preconditionExpectedPackF) && !Double.isNaN(preconditionTargetPackF)) {
+                warm += " • " + temp(preconditionExpectedPackF) + " → " + temp(preconditionTargetPackF);
+            }
+            style.addLine(warm);
+            String source = preconditionSource == null ? "" : preconditionSource.trim();
+            String conf = preconditionConfidence == null ? "" : preconditionConfidence.trim();
+            if (!source.isEmpty()) style.addLine(source + (conf.isEmpty() ? "" : " • " + conf.toUpperCase(Locale.US) + " confidence"));
         }
 
         String activity;

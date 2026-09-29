@@ -19,7 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class MainActivity extends Activity {
-    static final String VER = "0.9.4";
+    static final String VER = "0.9.5";
 
     WebView web;
     TextView status;
@@ -410,7 +410,7 @@ public class MainActivity extends Activity {
     }
 
     void updateNativeNav() {
-        // v0.9.4 uses the dashboard-owned swipeable companion bar only.
+        // v0.9.5 uses the dashboard-owned swipeable companion bar only.
     }
 
     void more() {

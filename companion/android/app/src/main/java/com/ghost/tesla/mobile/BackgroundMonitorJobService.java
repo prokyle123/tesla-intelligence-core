@@ -89,7 +89,7 @@ public class BackgroundMonitorJobService extends JobService {
         c.setConnectTimeout(7000);
         c.setReadTimeout(9000);
         c.setRequestProperty("Accept", "application/json");
-        c.setRequestProperty("User-Agent", "TIC-Companion-Background/0.9.4");
+        c.setRequestProperty("User-Agent", "TIC-Companion-Background/0.9.5");
         c.setInstanceFollowRedirects(false);
 
         try {
@@ -179,7 +179,12 @@ public class BackgroundMonitorJobService extends JobService {
         double departurePackF = departure.optDouble("departure_pack_f", Double.NaN);
 
         String preconditionKey = jsonValue(departure.opt("precondition_start_ts"));
+        double preconditionStartTs = departure.optDouble("precondition_start_ts", Double.NaN);
         int preconditionMinutes = departure.optInt("precondition_minutes", 0);
+        String preconditionSource = departure.optString("precondition_source_label", departure.optString("precondition_source", ""));
+        String preconditionConfidence = departure.optString("precondition_confidence", "");
+        double preconditionExpectedPackF = departure.optDouble("precondition_expected_pack_f", Double.NaN);
+        double preconditionTargetPackF = departure.optDouble("precondition_target_pack_f", Double.NaN);
         boolean heaterOn = current.optBoolean("heater_on", false);
         boolean preconditioning = current.optBoolean("preconditioning", false);
         long dataAt = System.currentTimeMillis();
@@ -207,11 +212,23 @@ public class BackgroundMonitorJobService extends JobService {
         else e.remove("last_monitor_pack_6h_f");
         if (!Double.isNaN(outside6hF)) e.putFloat("last_monitor_outside_6h_f", (float) outside6hF);
         else e.remove("last_monitor_outside_6h_f");
+        if (!Double.isNaN(preconditionStartTs)) e.putLong("last_monitor_precondition_start_ms", (long) (preconditionStartTs * 1000.0));
+        else e.remove("last_monitor_precondition_start_ms");
+        e.putInt("last_monitor_precondition_minutes", Math.max(0, preconditionMinutes));
+        e.putString("last_monitor_precondition_source", preconditionSource == null ? "" : preconditionSource);
+        e.putString("last_monitor_precondition_confidence", preconditionConfidence == null ? "" : preconditionConfidence);
+        if (!Double.isNaN(preconditionExpectedPackF)) e.putFloat("last_monitor_precondition_expected_pack_f", (float) preconditionExpectedPackF);
+        else e.remove("last_monitor_precondition_expected_pack_f");
+        if (!Double.isNaN(preconditionTargetPackF)) e.putFloat("last_monitor_precondition_target_pack_f", (float) preconditionTargetPackF);
+        else e.remove("last_monitor_precondition_target_pack_f");
         e.apply();
 
         NotificationCenter.updateStatus(
                 context, "OK", score, state, currentSoc, packF, pack6hF,
-                outsideF, outside6hF, heaterOn, preconditioning, dataAt
+                outsideF, outside6hF, heaterOn, preconditioning,
+                Double.isNaN(preconditionStartTs) ? 0L : (long) (preconditionStartTs * 1000.0),
+                preconditionMinutes, preconditionSource, preconditionConfidence,
+                preconditionExpectedPackF, preconditionTargetPackF, dataAt
         );
 
         if (wasOffline && p.getBoolean("alert_connection", true)) {
@@ -330,7 +347,9 @@ public class BackgroundMonitorJobService extends JobService {
             String last = p.getString("monitor_last_precondition", "");
             if (!preconditionKey.isEmpty() && !preconditionKey.equals(last)) {
                 String msg = preconditionMinutes > 0
-                        ? "GHOST recommends about " + preconditionMinutes + " minutes of warm-up before the learned departure."
+                        ? "GHOST recommends about " + preconditionMinutes + " minutes of warm-up before the learned departure." +
+                          ((!Double.isNaN(preconditionExpectedPackF) && !Double.isNaN(preconditionTargetPackF))
+                                  ? " Expected pack " + Math.round(preconditionExpectedPackF) + "°F → " + Math.round(preconditionTargetPackF) + "°F." : "")
                         : "GHOST now recommends battery warm-up before the learned departure.";
                 NotificationCenter.post(context, 1130, "Warm-up recommended", msg, "morning");
             }

@@ -1,6 +1,16 @@
-# Tesla Intelligence Core Companion — Android v0.9.4
+# Tesla Intelligence Core Companion — Android v0.9.5
 
 Android companion for the Tesla Intelligence Core Raspberry Pi dashboard.
+
+## What changed in v0.9.5
+
+### Learned warm-up planning + governed six-hour pack prediction
+
+The companion now consumes GHOST's learned preconditioning plan from `/api/v3/winter`. When warm-up is recommended, the persistent notification can show the recommended start time, estimated minutes, expected pack temperature before heating, target pack temperature, model source and confidence.
+
+The Pi now has a true **+6 hour pack-temperature model horizon**. A tree champion is trained first as the safe baseline; the new neural +6h head stays behind the same holdout → live Truth → canary → production governor used by the other neural targets. Until it proves itself, the existing learned thermal-retention forecast remains the 6-hour fallback.
+
+The warm-up duration model learns from real preconditioning events on this car. It requires at least 40 eligible events and its first promoted generation must perform at least as well as the observed heat-rate fallback on a chronological holdout. If it is unavailable or not good enough, GHOST keeps using the existing learned heat-rate calculation.
 
 ## What changed in v0.9.4
 

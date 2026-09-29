@@ -10,6 +10,7 @@ NEURAL_TARGET_TO_MODEL = {
     'cabin_60m':'cabin_temp_60m',
     'soc_180m':'soc_180m',
     'pack_180m':'pack_temp_180m',
+    'pack_360m':'pack_temp_360m',
 }
 
 

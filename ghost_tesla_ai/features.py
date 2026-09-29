@@ -28,6 +28,7 @@ MODEL_SPECS = {
  'cabin_temp_60m': {'target':'inside_temp_c','horizon':60,'unit':'C','label':'Cabin temp +60 min','regime':None},
  'pack_temp_60m': {'target':'battery_temp_c','horizon':60,'unit':'C','label':'Pack temp +60 min','regime':None},
  'pack_temp_180m': {'target':'battery_temp_c','horizon':180,'unit':'C','label':'Pack temp +3 hr','regime':None},
+ 'pack_temp_360m': {'target':'battery_temp_c','horizon':360,'unit':'C','label':'Pack temp +6 hr','regime':None},
  'cold_pack_60m': {'target':'battery_temp_c','horizon':60,'unit':'C','label':'Cold-soak pack +60 min','regime':'cold_soak','min_rows':60},
  'charge_soc_60m': {'target':'battery_level','horizon':60,'unit':'%','label':'L1 charge SOC +60 min','regime':'l1_charging','min_rows':60},
  'precondition_pack_30m': {'target':'battery_temp_c','horizon':30,'unit':'C','label':'Precondition pack +30 min','regime':'preconditioning','min_rows':40},

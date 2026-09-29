@@ -9,6 +9,7 @@ TARGET_TO_TREE = {
     'cabin_60m':'cabin_temp_60m',
     'soc_180m':'soc_180m',
     'pack_180m':'pack_temp_180m',
+    'pack_360m':'pack_temp_360m',
 }
 
 
@@ -19,10 +20,13 @@ def _f(v):
 
 
 def _baseline_map(challenger_generation=None):
-    # When an older neural generation is already in production, a new challenger
-    # is scored against that actually-served neural generation. The production
-    # generation itself keeps a tree baseline so rollback always has a known-safe
-    # fallback comparison.
+    # Begin with tree champions, then overlay only targets actually served by an
+    # older production neural generation. New heads always keep a safe baseline.
+    try:
+        from .predict import tree_predictions
+        out={p.get('model'):p for p in tree_predictions() if p and not p.get('error')}
+    except Exception:
+        out={}
     try:
         from .neural_governor import production_generation
         prod=production_generation()
@@ -30,19 +34,13 @@ def _baseline_map(challenger_generation=None):
             from .neural_v4 import forecast_for_generation
             pf=forecast_for_generation(prod)
             if pf.get('status')=='ready':
-                m={}
                 for p in pf.get('predictions',[]):
                     model_name=TARGET_TO_TREE.get(p.get('name'))
                     if model_name:
-                        m[model_name]={'model':f'neural:{p.get("name")}', 'value':p.get('value'), 'generation':int(prod), 'source_backend':'neural_production'}
-                if m:return m
+                        out[model_name]={'model':f'neural:{p.get("name")}', 'value':p.get('value'), 'generation':int(prod), 'source_backend':'neural_production'}
     except Exception:
         pass
-    try:
-        from .predict import tree_predictions
-        return {p.get('model'):p for p in tree_predictions() if p and not p.get('error')}
-    except Exception:
-        return {}
+    return out
 
 
 def _capture_forecast(f):

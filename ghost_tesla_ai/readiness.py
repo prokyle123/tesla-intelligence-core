@@ -91,8 +91,19 @@ def current_readiness(now:float|None=None):
     except Exception:
         trip_prediction={}
     heat_rate=_f(dyn.get('precondition_heat_f_hr'))
-    if dep is not None and pred_pack_f is not None and pred_pack_f<target_pack_f and heat_rate is not None and heat_rate>0.5:
-        pre_min=min(90,max(0,(target_pack_f-pred_pack_f)/heat_rate*60)); pre_start=dep-pre_min*60
+    precondition_prediction={}; precondition_basis=None
+    if dep is not None and pred_pack_f is not None and pred_pack_f<target_pack_f:
+        try:
+            from .event_models import current_precondition_prediction
+            wall_kw=_f(latest['charge_input_kw'])
+            if wall_kw is None:wall_kw=_f(latest['charger_power_kw'])
+            precondition_prediction=current_precondition_prediction(pred_pack_f,target_pack_f,_c2f(out_c),bool(latest['plugged_in']),wall_kw,pred_soc,dep)
+        except Exception:precondition_prediction={}
+        model_minutes=_f(precondition_prediction.get('minutes'))
+        if model_minutes is not None and model_minutes>0:
+            pre_min=min(90,max(1,model_minutes));pre_start=dep-pre_min*60;precondition_basis='learned preconditioning-duration model'
+        elif heat_rate is not None and heat_rate>0.5:
+            pre_min=min(90,max(0,(target_pack_f-pred_pack_f)/heat_rate*60));pre_start=dep-pre_min*60;precondition_basis='observed pack-heating rate'
     confidence=_confidence(profile,dyn)
     if departure_learning:
         confidence=int(round((confidence*0.65)+((departure_learning.get('confidence') or 0)*0.35)))
@@ -111,7 +122,7 @@ def current_readiness(now:float|None=None):
     if pred_pack_f is not None and pred_pack_f<target_pack_f and heat_rate is None:
         reasons.append('Pack is below the warm-pack policy target, but GHOST has not learned enough preconditioning heat-rate evidence yet.')
         if status=='READY':status='WATCH'
-    if pre_start is not None:reasons.append('A preconditioning start time is derived from your observed pack-heating rate.')
+    if pre_start is not None:reasons.append(f'A preconditioning start time is derived from your {precondition_basis or "observed warm-up history"}.')
     if not reasons:reasons.append('Current learned charge, thermal and commute margins look normal.')
     charge_target_time=None
     if charging and charge_rate and cur_soc is not None and charge_rate>0 and target_soc>cur_soc:
@@ -125,6 +136,7 @@ def current_readiness(now:float|None=None):
       'current_pack_f':None if cur_pack_f is None else round(cur_pack_f,1),'predicted_departure_pack_f':None if pred_pack_f is None else round(pred_pack_f,1),
       'outside_f':None if out_c is None else round(_c2f(out_c),1),'target_pack_f':target_pack_f,
       'suggested_precondition_start_ts':pre_start,'suggested_precondition_minutes':None if pre_min is None else round(pre_min),
+      'precondition_basis':precondition_basis,'precondition_prediction':precondition_prediction,
       'charge_target_soc':target_soc,'charge_target_ts':charge_target_time,'charging_now':charging,
       'thermal_basis':thermal_basis,'soc_basis':soc_basis,'reasons':reasons,
       'routine':profile,'dynamics':dyn,'events':summary,'trip_prediction':trip_prediction,
