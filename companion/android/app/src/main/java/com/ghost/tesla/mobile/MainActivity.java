@@ -19,7 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class MainActivity extends Activity {
-    static final String VER = "0.9.1";
+    static final String VER = "0.9.2";
 
     WebView web;
     TextView status;
