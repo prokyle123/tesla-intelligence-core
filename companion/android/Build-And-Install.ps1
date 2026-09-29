@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $Root
 
-$Version = '0.4.0'
+$Version = '0.5.0'
 $Package = 'com.ghost.tesla.mobile'
 
 Write-Host "============================================================"
