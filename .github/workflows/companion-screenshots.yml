@@ -104,25 +104,25 @@ jobs:
             adb shell am force-stop com.ghost.tesla.mobile
             adb shell am start -n com.ghost.tesla.mobile/.MainActivity --es tic_local http://10.0.2.2:8766 --es tic_view morning
             sleep 9
-            adb exec-out screencap -p > docs/images/companion/companion-v040-home.png
+            adb exec-out screencap -p > docs/images/companion/companion-v050-home.png
 
             adb shell am force-stop com.ghost.tesla.mobile
             adb shell am start -n com.ghost.tesla.mobile/.MainActivity --es tic_local http://10.0.2.2:8766 --es tic_view neural4
             sleep 7
-            adb exec-out screencap -p > docs/images/companion/companion-v040-neural.png
+            adb exec-out screencap -p > docs/images/companion/companion-v050-neural.png
 
             adb shell am force-stop com.ghost.tesla.mobile
             adb shell pm clear com.ghost.tesla.mobile
             adb shell am start -n com.ghost.tesla.mobile/.MainActivity --ez tic_settings true
             sleep 3
-            adb exec-out screencap -p > docs/images/companion/companion-v040-connector.png
+            adb exec-out screencap -p > docs/images/companion/companion-v050-connector.png
 
       - name: Commit screenshots
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add             docs/images/companion/companion-v040-home.png             docs/images/companion/companion-v040-neural.png             docs/images/companion/companion-v040-connector.png
+          git add             docs/images/companion/companion-v050-home.png             docs/images/companion/companion-v050-neural.png             docs/images/companion/companion-v050-connector.png
           git diff --cached --quiet && exit 0
-          git commit -m "Add Companion v0.4.0 emulator screenshots"
+          git commit -m "Add Companion v0.5.0 emulator screenshots"
           git pull --rebase origin main
           git push origin HEAD:main
