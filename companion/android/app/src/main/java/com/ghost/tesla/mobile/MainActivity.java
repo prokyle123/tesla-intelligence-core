@@ -200,44 +200,53 @@ public class MainActivity extends Activity {
         applySafeInsets(root);
 
         LinearLayout top = new LinearLayout(this);
-        top.setGravity(Gravity.CENTER_VERTICAL);
-        top.setPadding(d(8), d(5), d(8), d(5));
+        top.setOrientation(LinearLayout.VERTICAL);
+        top.setPadding(d(8), d(4), d(8), d(4));
         top.setBackgroundColor(Color.rgb(5, 24, 34));
 
-        LinearLayout titles = new LinearLayout(this);
-        titles.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout topRow = new LinearLayout(this);
+        topRow.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView title = new TextView(this);
         title.setText("TESLA INTELLIGENCE CORE");
         title.setTextColor(Color.WHITE);
-        title.setTextSize(14);
+        title.setTextSize(13);
         title.setTypeface(null, 1);
         title.setSingleLine(true);
+        title.setEllipsize(TextUtils.TruncateAt.END);
+        topRow.addView(title, new LinearLayout.LayoutParams(0, d(34), 1));
+
+        status = button("OFFLINE");
+        status.setTextSize(10);
+        status.setOnClickListener(v -> diagnostics());
+        topRow.addView(status, new LinearLayout.LayoutParams(d(84), d(32)));
+
+        LinearLayout routeRow = new LinearLayout(this);
+        routeRow.setGravity(Gravity.CENTER_VERTICAL);
 
         detail = new TextView(this);
         detail.setText("Companion v" + VER);
         detail.setTextColor(Color.rgb(105, 160, 184));
         detail.setTextSize(9);
+        detail.setGravity(Gravity.CENTER_VERTICAL);
         detail.setSingleLine(true);
         detail.setEllipsize(TextUtils.TruncateAt.MIDDLE);
+        detail.setPadding(0, 0, d(6), 0);
+        routeRow.addView(detail, new LinearLayout.LayoutParams(0, d(32), 1));
 
-        titles.addView(title, new LinearLayout.LayoutParams(-1, d(22)));
-        titles.addView(detail, new LinearLayout.LayoutParams(-1, d(16)));
-        top.addView(titles, new LinearLayout.LayoutParams(0, d(44), 1));
-
-        status = button("OFFLINE");
-        status.setOnClickListener(v -> diagnostics());
-        top.addView(status, new LinearLayout.LayoutParams(d(92), d(36)));
-
-        TextView connect = button("CONNECT");
+        TextView connect = button("RETRY");
+        connect.setTextSize(9);
         connect.setOnClickListener(v -> resolve());
-        top.addView(connect, new LinearLayout.LayoutParams(d(78), d(36)));
+        routeRow.addView(connect, new LinearLayout.LayoutParams(d(62), d(30)));
 
         TextView set = button("SETUP");
+        set.setTextSize(9);
         set.setOnClickListener(v -> settings(false));
-        top.addView(set, new LinearLayout.LayoutParams(d(70), d(36)));
+        routeRow.addView(set, new LinearLayout.LayoutParams(d(62), d(30)));
 
-        root.addView(top, new LinearLayout.LayoutParams(-1, d(54)));
+        top.addView(topRow, new LinearLayout.LayoutParams(-1, d(34)));
+        top.addView(routeRow, new LinearLayout.LayoutParams(-1, d(32)));
+        root.addView(top, new LinearLayout.LayoutParams(-1, d(74)));
 
         web = new WebView(this);
         WebSettings ws = web.getSettings();
