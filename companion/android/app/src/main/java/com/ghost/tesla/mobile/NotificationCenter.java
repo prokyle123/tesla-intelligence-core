@@ -2,6 +2,8 @@ package com.ghost.tesla.mobile;
 
 import android.Manifest;
 import android.app.*;
+import android.app.job.JobInfo;
+import android.app.job.JobScheduler;
 import android.content.*;
 import android.content.pm.PackageManager;
 import android.os.Build;
