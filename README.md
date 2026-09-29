@@ -33,7 +33,7 @@
 ![TeslaMate](https://img.shields.io/badge/source-TeslaMate-0ea5e9)
 ![Local first](https://img.shields.io/badge/data-local--first-2ea44f)
 ![Predictive](https://img.shields.io/badge/focus-predictive%20analytics-8b5cf6)
-![Android companion](https://img.shields.io/badge/Android-companion%20v0.5.0-3DDC84?logo=android&logoColor=white)
+![Android companion](https://img.shields.io/badge/Android-companion%20v0.9.1-3DDC84?logo=android&logoColor=white)
 ![Tesla browser](https://img.shields.io/badge/in--car%20browser-PIN%20Funnel-43D8FF)
 
 **[Quick install](#quick-start) · [Visual tour](#visual-tour) · [Use cases](docs/USE_CASES.md) · [How it works](#how-it-works) · [Documentation](#documentation) · [Latest release](https://github.com/prokyle123/tesla-intelligence-core/releases/latest)**
@@ -168,11 +168,17 @@ Tesla Intelligence Core is not limited to a desktop browser.
 
 ### 📱 Android companion
 
-The Android companion keeps the Pi dashboard as the source of truth while adding a phone-native shell for **discovery, connection management, fast navigation, diagnostics and remote access**.
+The Android companion keeps the Pi dashboard as the source of truth while adding phone-focused discovery, failover, diagnostics, navigation and background alerts.
 
-**Companion v0.5.0 is the navigation + reliability cleanup release.**
+**Companion v0.9.1** uses one navigation surface only: a single horizontally swipeable dashboard-owned row.
 
-The Connection Center can automatically discover a Pi on the local network and supports three routes:
+```text
+HOME · READY · EVENTS · NEURAL · TRUTH · THERMAL · MORE
+```
+
+The old duplicate Android navigation bar has been removed. The WebView is now explicitly padded for the real Android status/cutout and navigation/gesture insets so the companion bar stays above the phone's Home/Back/Recents area.
+
+The Connection Center supports:
 
 ```text
 Local LAN
@@ -182,45 +188,28 @@ Private Tailscale
 Public HTTPS / PIN gateway
 ```
 
-Configured routes are tested in parallel and the companion prefers the most-private working path. It verifies the **actual dashboard API**, not merely whether a web page returned HTTP 200.
+Configured routes are tested in parallel and the companion verifies the real dashboard API instead of treating any HTTP 200 page as data.
 
-That means a PIN gateway is recognized as authentication — not falsely reported as dashboard data.
+#### Background monitoring + notifications
 
-#### Native quick navigation
+v0.9.1 adds an Android JobService background monitor. Android wakes it approximately every 15 minutes when networking and OS scheduling allow, it checks the saved Tesla Intelligence Core routes, and then it goes back to sleep.
 
-```text
-READY · EVENTS · NEURAL · TRUTH · THERMAL · MORE
-```
+The Notification Center can independently enable:
 
-The native buttons now use normal dashboard URLs such as `/?view=events` instead of injected JavaScript. The dashboard reads the requested view on load, and the selected native section is visibly highlighted. **HOME** opens the top of the Home dashboard; **READY** jumps directly to the Winter Readiness hero.
+- connection lost / restored;
+- Winter Readiness threshold alerts;
+- warm-up / preconditioning recommendations;
+- projected arrival SOC threshold alerts;
+- battery-heater activation.
 
-**MORE** exposes AI Lab, Models, Data Quality, Sources, Production, History, full-screen Neural Atlas, Connection Center, Tesla Browser Access and diagnostics.
+The default readiness threshold is 70 and the default projected-arrival threshold is 20%. Both are editable in the app. A manual **Run Background Check Now** action and a test notification are included.
 
-#### Connection state that means what it says
+Background scheduling persists across reboot/package replacement and does not require an always-running foreground process.
 
-The phone header now uses a two-row layout so the current route is readable on normal phone-width screens.
-
-Meaningful states include:
-
-`LOCAL · TAILNET · PUBLIC · LOGIN · VERIFY · OFFLINE`
-
-v0.4.0 also removes the old false `NO RENDER` / `{}` state that could appear when Android WebView returned an asynchronous JavaScript Promise object instead of the eventual render result.
-
-After the data API is verified, the companion independently synchronizes the dashboard's core, V3, Events, Winter Readiness and Neural views. A problem in one endpoint no longer has to make the entire app appear disconnected.
-
-**[Download Android Companion v0.5.0](https://github.com/prokyle123/tesla-intelligence-core/releases/download/v0.8.27.6/Tesla-Intelligence-Core-Companion-v0.5.0-debug.apk)** · **[Source + local installer](companion/android)**
-
-The companion also handles Android status-bar, display-cutout and navigation-bar safe areas, keeps the app above disappearing system controls, and resizes setup around the keyboard.
-
-<p align="center">
-  <img src="docs/images/companion/companion-v050-home.png" alt="Tesla Intelligence Core Companion v0.5.0 home / readiness view" width="42%">
-  &nbsp;&nbsp;
-  <img src="docs/images/companion/companion-v050-neural.png" alt="Tesla Intelligence Core Companion v0.5.0 Neural Engine view" width="42%">
-</p>
-<p align="center"><sub><b>Companion v0.5.0</b> — smart route selection, direct native view switching, safe-area aware layout and dashboard/API diagnostics.</sub></p>
+**[Download Android Companion v0.9.1](https://github.com/prokyle123/tesla-intelligence-core/releases/download/v0.8.27.6/Tesla-Intelligence-Core-Companion-v0.9.1-debug.apk)** · **[Source + local installer](companion/android)**
 
 > [!NOTE]
-> The current public companion APK is a debug-signed sideload build. An older copy built on another machine may have a different Android signature and require one uninstall before installing the GitHub build. Locally rebuilding on the same PC normally reuses that PC's Android debug key and preserves an existing local installation.
+> The public companion APK is debug-signed. An older locally built copy may have a different Android signature. Rebuilding on the same PC normally reuses that PC's Android debug key and allows an in-place update without clearing the saved endpoints.
 
 ### 🚗 Open the dashboard in the Tesla browser
 
@@ -239,8 +228,6 @@ Tesla Intelligence Core
 This is useful because the Tesla browser does not need direct access to the Pi's LAN address. If the Pi installation has working Internet access, Funnel is configured correctly, and the car has Internet access, the dashboard can be reached directly from the Tesla browser using the public HTTPS URL.
 
 **Why the PIN?** Funnel makes that HTTPS endpoint reachable from the public Internet. The intended setup is **Funnel → PIN gateway → dashboard**, not Funnel directly to the raw dashboard.
-
-That means the same self-hosted dashboard can be available from a phone through LAN/Tailscale **and** from the in-car browser through the optional HTTPS route, while still putting an authentication step in front of the public path.
 
 Vehicle software, networks and installations can vary; this documents the project's tested setup rather than assuming every Tesla behaves identically.
 
