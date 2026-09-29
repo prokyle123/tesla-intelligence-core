@@ -677,7 +677,7 @@ public class MainActivity extends Activity {
         if (out.length() >= 2 && out.startsWith("\"") && out.endsWith("\"")) {
             out = out.substring(1, out.length() - 1);
         }
-        return out.replace("\\\\", "\\").replace("\\\\"", "\"");
+        return out.replace("\\\\", "\\").replace("\\\"", "\"");
     }
 
     void openAnyway(String base, String k) {
