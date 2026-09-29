@@ -18,12 +18,13 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class MainActivity extends Activity {
-    static final String VER = "0.7.1";
+    static final String VER = "0.8.0";
 
     WebView web;
     TextView status;
     TextView detail;
     LinearLayout root;
+    LinearLayout navPanel;
     SharedPreferences prefs;
     ConnectorManager connector;
     final Handler ui = new Handler(Looper.getMainLooper());
@@ -95,7 +96,9 @@ public class MainActivity extends Activity {
 
         try {
             if (Build.VERSION.SDK_INT >= 30) {
-                getWindow().setDecorFitsSystemWindows(false);
+                // Keep app content inside the normal Android system-bar area.
+                // This prevents the phone navigation/gesture region from overlapping companion controls.
+                getWindow().setDecorFitsSystemWindows(true);
                 WindowInsetsController c = getWindow().getInsetsController();
                 if (c != null) {
                     c.show(WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());
@@ -109,35 +112,12 @@ public class MainActivity extends Activity {
     }
 
     void applySafeInsets(View v) {
-        if (Build.VERSION.SDK_INT >= 21) {
-            v.setOnApplyWindowInsetsListener((view, insets) -> {
-                int left, top, right, bottom;
-                if (Build.VERSION.SDK_INT >= 30) {
-                    Insets s = insets.getInsets(
-                            WindowInsets.Type.systemBars()
-                                    | WindowInsets.Type.displayCutout()
-                    );
-                    left = s.left;
-                    top = s.top;
-                    right = s.right;
-                    bottom = s.bottom;
-                } else {
-                    left = insets.getSystemWindowInsetLeft();
-                    top = insets.getSystemWindowInsetTop();
-                    right = insets.getSystemWindowInsetRight();
-                    bottom = insets.getSystemWindowInsetBottom();
-                }
-                view.setPadding(left, top, right, bottom);
-                return insets;
-            });
-            v.requestApplyInsets();
-        }
+        // v0.8.0 uses decorFitsSystemWindows(true), so Android owns the safe-area layout.
     }
 
     @Override protected void onResume() {
         super.onResume();
         bars();
-        if (root != null) root.requestApplyInsets();
         if (pausedAt > 0 && System.currentTimeMillis() - pausedAt > 180000 && any()) resolve();
     }
 
@@ -150,7 +130,6 @@ public class MainActivity extends Activity {
         super.onWindowFocusChanged(focused);
         if (focused) {
             bars();
-            if (root != null) root.requestApplyInsets();
         }
     }
 
@@ -338,11 +317,58 @@ public class MainActivity extends Activity {
 
         root.addView(web, new LinearLayout.LayoutParams(-1, 0, 1));
 
-        // Companion navigation now lives inside the dashboard as standard HTML links.
-        // This avoids Android/WebView touch interception issues entirely.
+        navPanel = new LinearLayout(this);
+        navPanel.setOrientation(LinearLayout.VERTICAL);
+        navPanel.setBackgroundColor(Color.rgb(5, 24, 34));
+        navPanel.setPadding(d(4), d(3), d(4), d(3));
+        navPanel.setClickable(true);
+        navPanel.setFocusable(true);
+        if (Build.VERSION.SDK_INT >= 21) navPanel.setElevation(d(24));
+
+        LinearLayout row1 = new LinearLayout(this);
+        row1.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout row2 = new LinearLayout(this);
+        row2.setOrientation(LinearLayout.HORIZONTAL);
+
+        String[][] navItems = {
+                {"HOME", "home", "1"},
+                {"READY", "ready", "1"},
+                {"EVENTS", "events", "1"},
+                {"NEURAL", "neural", "1"},
+                {"TRUTH", "truth", "2"},
+                {"THERMAL", "thermal", "2"},
+                {"MORE", "more", "2"}
+        };
+
+        for (String[] item : navItems) {
+            Button b = new Button(this);
+            b.setText(item[0]);
+            b.setAllCaps(false);
+            b.setTextSize(10);
+            b.setTextColor(Color.rgb(220, 246, 255));
+            b.setBackgroundColor(Color.rgb(7, 30, 42));
+            b.setMinWidth(0);
+            b.setMinimumWidth(0);
+            b.setMinHeight(0);
+            b.setMinimumHeight(0);
+            b.setPadding(d(3), 0, d(3), 0);
+            b.setClickable(false); // Activity-level hit testing handles taps before children/WebView.
+            b.setFocusable(false);
+            if (!"more".equals(item[1])) navButtons.put(item[1], b);
+
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, d(44), 1);
+            lp.setMargins(d(2), d(2), d(2), d(2));
+            if ("1".equals(item[2])) row1.addView(b, lp);
+            else row2.addView(b, lp);
+        }
+
+        navPanel.addView(row1, new LinearLayout.LayoutParams(-1, d(48)));
+        navPanel.addView(row2, new LinearLayout.LayoutParams(-1, d(48)));
+        root.addView(navPanel, new LinearLayout.LayoutParams(-1, d(102)));
+        updateNativeNav();
+
         setContentView(root);
         bars();
-        root.requestApplyInsets();
     }
 
     String navKeyForView(String target) {
@@ -412,8 +438,14 @@ public class MainActivity extends Activity {
     }
 
     void updateNativeNav() {
-        // Native bottom navigation was intentionally removed in v0.7.0.
-        // The WebView dashboard owns the companion navigation now.
+        for (Map.Entry<String, TextView> e : navButtons.entrySet()) {
+            boolean selected = e.getKey().equals(navSelection) && !map;
+            TextView b = e.getValue();
+            b.setBackgroundColor(selected ? Color.rgb(13, 92, 122) : Color.rgb(7, 30, 42));
+            b.setTextColor(selected ? Color.WHITE : Color.rgb(177, 222, 238));
+            b.setTypeface(null, selected ? 1 : 0);
+            b.setAlpha(selected ? 1.0f : 0.90f);
+        }
     }
 
     void more() {
@@ -472,30 +504,11 @@ public class MainActivity extends Activity {
     }
 
     void ensureCompanionWebNav() {
-        String js =
-                "(function(){" +
-                "if(document.getElementById('ticCompanionNav')||document.getElementById('ticInjectedNav'))return 'EXISTS';" +
-                "var st=document.createElement('style');st.id='ticInjectedNavStyle';" +
-                "st.textContent='body{padding-bottom:108px!important}.navrow{display:none!important}#ticInjectedNav{position:fixed;left:0;right:0;bottom:0;z-index:2147483646;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;padding:6px 7px 8px;background:rgba(4,16,24,.98);border-top:1px solid #255069;box-shadow:0 -10px 28px rgba(0,0,0,.30)}#ticInjectedNav a{min-height:43px;display:flex;align-items:center;justify-content:center;text-decoration:none;border:1px solid #255069;border-radius:9px;background:#071923;color:#bfe0ef;font:900 10px system-ui;letter-spacing:.25px;text-transform:uppercase;touch-action:manipulation;-webkit-tap-highlight-color:rgba(63,212,255,.20);user-select:none}#ticInjectedNav a.tic-active{background:linear-gradient(180deg,#245d79,#163f58);border-color:#3fd4ff;color:#fff}#ticInjectedNav a:active{transform:scale(.97);background:#0d4860}';" +
-                "document.head.appendChild(st);" +
-                "var n=document.createElement('nav');n.id='ticInjectedNav';n.setAttribute('aria-label','Companion navigation');" +
-                "n.innerHTML='<a data-key=\\\"home\\\" href=\\\"tic://view/home\\\">Home</a><a data-key=\\\"ready\\\" href=\\\"tic://view/ready\\\">Ready</a><a data-key=\\\"events\\\" href=\\\"tic://view/events\\\">Events</a><a data-key=\\\"neural\\\" href=\\\"tic://view/neural\\\">Neural</a><a data-key=\\\"truth\\\" href=\\\"tic://view/truth\\\">Truth</a><a data-key=\\\"thermal\\\" href=\\\"tic://view/thermal\\\">Thermal</a><a data-key=\\\"more\\\" href=\\\"tic://more\\\">More</a>';" +
-                "document.body.appendChild(n);" +
-                "return 'INJECTED';" +
-                "})()";
-
-        web.evaluateJavascript(js, value -> setWebNavActive(navSelection));
+        // Native v0.8.0 navigation is authoritative. Do not inject a second web navigation layer.
     }
 
     void setWebNavActive(String key) {
-        if (key == null) key = "";
-        String safe = key.replace("'", "");
-        String js =
-                "(function(){" +
-                "var n=document.getElementById('ticInjectedNav');if(!n)return;" +
-                "n.querySelectorAll('a').forEach(function(a){a.classList.toggle('tic-active',a.getAttribute('data-key')==='" + safe + "');});" +
-                "})()";
-        web.evaluateJavascript(js, null);
+        updateNativeNav();
     }
 
     void handleCompanionLink(String raw) {
@@ -876,7 +889,7 @@ public class MainActivity extends Activity {
 
         String css = map ?
                 "var st=document.getElementById('ticMapStyle');if(st)st.remove();st=document.createElement('style');st.id='ticMapStyle';st.textContent='header.topbar,.neural-v4-hero,.neural-v4-kpis,.n6-governor,.neural-dev>.section-title,.n4-live-narrative,.n4-mission-strip,.n4-runtime-strip,.neural-progress-card,.n4-insight-strip,.n4-observatory-strip{display:none!important}main{padding:0!important;max-width:none!important;width:100%!important}.neural-dev{margin:0!important;padding:0!important;border:0!important}#n4MapShell{height:100vh!important;min-height:0!important;padding:0!important;margin:0!important;overflow:hidden!important}#n4NetworkMap{width:100%!important;height:100%!important;max-width:100%!important;max-height:100%!important;display:block!important}';document.head.appendChild(st);" :
-                "var st=document.getElementById('ticMapStyle');if(st)st.remove();st=document.createElement('style');st.id='ticMapStyle';st.textContent='#n4MapShell{height:auto!important;min-height:0!important}#n4NetworkMap{width:100%!important;height:auto!important;max-width:100%!important;display:block!important}';document.head.appendChild(st);";
+                "var st=document.getElementById('ticMapStyle');if(st)st.remove();st=document.createElement('style');st.id='ticMapStyle';st.textContent='.navrow,#ticCompanionNav,#ticInjectedNav,#ticCompanionMore{display:none!important}body{padding-bottom:0!important}#n4MapShell{height:auto!important;min-height:0!important}#n4NetworkMap{width:100%!important;height:auto!important;max-width:100%!important;display:block!important}';document.head.appendChild(st);";
 
         String js =
                 "(function(){" +
@@ -1140,6 +1153,100 @@ public class MainActivity extends Activity {
         }
 
         b.show();
+    }
+
+    @Override public boolean dispatchTouchEvent(MotionEvent ev) {
+        if (navPanel != null && navPanel.getVisibility() == View.VISIBLE) {
+            int[] loc = new int[2];
+            navPanel.getLocationOnScreen(loc);
+            float rawX = ev.getRawX();
+            float rawY = ev.getRawY();
+            float left = loc[0];
+            float top = loc[1];
+            float right = left + navPanel.getWidth();
+            float bottom = top + navPanel.getHeight();
+
+            if (rawX >= left && rawX < right && rawY >= top && rawY < bottom) {
+                if (ev.getActionMasked() == MotionEvent.ACTION_UP) {
+                    float localX = rawX - left;
+                    float localY = rawY - top;
+                    boolean topRow = localY < navPanel.getHeight() / 2f;
+
+                    String key;
+                    if (topRow) {
+                        int col = Math.max(0, Math.min(3, (int) (localX / Math.max(1f, navPanel.getWidth() / 4f))));
+                        key = new String[]{"home", "ready", "events", "neural"}[col];
+                    } else {
+                        int col = Math.max(0, Math.min(2, (int) (localX / Math.max(1f, navPanel.getWidth() / 3f))));
+                        key = new String[]{"truth", "thermal", "more"}[col];
+                    }
+
+                    navPanel.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                    handleNativeNavKey(key);
+                }
+                return true;
+            }
+        }
+        return super.dispatchTouchEvent(ev);
+    }
+
+    void handleNativeNavKey(String key) {
+        if (key == null) return;
+
+        switch (key) {
+            case "home":
+                navSelection = "home";
+                view = "morning";
+                map = false;
+                updateNativeNav();
+                detail.setText(kind + " • HOME");
+                switchCurrentWebView("morning", "");
+                break;
+            case "ready":
+                navSelection = "ready";
+                view = "morning";
+                map = false;
+                updateNativeNav();
+                detail.setText(kind + " • WINTER READINESS");
+                switchCurrentWebView("morning", "readiness");
+                break;
+            case "events":
+                navSelection = "events";
+                view = "events";
+                map = false;
+                updateNativeNav();
+                detail.setText(kind + " • EVENTS");
+                switchCurrentWebView("events", "");
+                break;
+            case "neural":
+                navSelection = "neural";
+                view = "neural4";
+                map = false;
+                updateNativeNav();
+                detail.setText(kind + " • NEURAL");
+                switchCurrentWebView("neural4", "");
+                break;
+            case "truth":
+                navSelection = "truth";
+                view = "truth";
+                map = false;
+                updateNativeNav();
+                detail.setText(kind + " • TRUTH");
+                switchCurrentWebView("truth", "");
+                break;
+            case "thermal":
+                navSelection = "thermal";
+                view = "thermal";
+                map = false;
+                updateNativeNav();
+                detail.setText(kind + " • THERMAL");
+                switchCurrentWebView("thermal", "");
+                break;
+            case "more":
+                detail.setText(kind + " • MORE");
+                more();
+                break;
+        }
     }
 
     @Override public void onBackPressed() {
