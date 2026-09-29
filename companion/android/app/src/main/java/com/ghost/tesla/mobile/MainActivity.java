@@ -18,7 +18,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class MainActivity extends Activity {
-    static final String VER = "0.6.0";
+    static final String VER = "0.7.0";
 
     WebView web;
     TextView status;
@@ -320,72 +320,8 @@ public class MainActivity extends Activity {
 
         root.addView(web, new LinearLayout.LayoutParams(-1, 0, 1));
 
-        LinearLayout navWrap = new LinearLayout(this);
-        navWrap.setOrientation(LinearLayout.VERTICAL);
-        navWrap.setBackgroundColor(Color.rgb(5, 24, 34));
-        navWrap.setPadding(d(4), d(3), d(4), d(3));
-
-        LinearLayout navRow1 = new LinearLayout(this);
-        navRow1.setOrientation(LinearLayout.HORIZONTAL);
-        navRow1.setGravity(Gravity.CENTER);
-
-        LinearLayout navRow2 = new LinearLayout(this);
-        navRow2.setOrientation(LinearLayout.HORIZONTAL);
-        navRow2.setGravity(Gravity.CENTER);
-
-        String[][] items = {
-                {"HOME", "home", "morning", "", "1"},
-                {"READY", "ready", "morning", "readiness", "1"},
-                {"EVENTS", "events", "events", "", "1"},
-                {"NEURAL", "neural", "neural4", "", "1"},
-                {"TRUTH", "truth", "truth", "", "2"},
-                {"THERMAL", "thermal", "thermal", "", "2"},
-                {"MORE", "more", "more", "", "2"}
-        };
-
-        for (String[] it : items) {
-            Button x = new Button(this);
-            x.setText(it[0]);
-            x.setAllCaps(false);
-            x.setTextSize(10);
-            x.setTextColor(Color.rgb(220, 246, 255));
-            x.setGravity(Gravity.CENTER);
-            x.setPadding(d(4), 0, d(4), 0);
-            x.setMinHeight(d(42));
-            x.setMinimumHeight(d(42));
-            x.setMinWidth(0);
-            x.setMinimumWidth(0);
-            x.setBackgroundColor(Color.rgb(7, 30, 42));
-            x.setContentDescription(it[0] + " dashboard section");
-            x.setClickable(true);
-            x.setFocusable(true);
-
-            if (!"more".equals(it[1])) navButtons.put(it[1], x);
-
-            x.setOnClickListener(v -> {
-                v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
-                bars();
-
-                if ("more".equals(it[1])) {
-                    detail.setText(kind + " • opening menu…");
-                    more();
-                } else {
-                    detail.setText(kind + " • tap " + it[0]);
-                    navigateTo(it[1], it[2], it[3]);
-                }
-            });
-
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, d(44), 1);
-            lp.setMargins(d(2), d(2), d(2), d(2));
-            if ("1".equals(it[4])) navRow1.addView(x, lp);
-            else navRow2.addView(x, lp);
-        }
-
-        navWrap.addView(navRow1, new LinearLayout.LayoutParams(-1, d(48)));
-        navWrap.addView(navRow2, new LinearLayout.LayoutParams(-1, d(48)));
-
-        root.addView(navWrap, new LinearLayout.LayoutParams(-1, d(102)));
-        updateNativeNav();
+        // Companion navigation now lives inside the dashboard as standard HTML links.
+        // This avoids Android/WebView touch interception issues entirely.
         setContentView(root);
         bars();
         root.requestApplyInsets();
@@ -404,7 +340,7 @@ public class MainActivity extends Activity {
         String base = ConnectorManager.normalize(active);
         if (base.isEmpty()) return "";
         StringBuilder u = new StringBuilder(base)
-                .append("/?view=")
+                .append("/?companion=1&view=")
                 .append(Uri.encode(target == null || target.isEmpty() ? "morning" : target));
         if (focus != null && !focus.isEmpty()) {
             u.append("&focus=").append(Uri.encode(focus));
@@ -445,14 +381,8 @@ public class MainActivity extends Activity {
     }
 
     void updateNativeNav() {
-        for (Map.Entry<String, TextView> e : navButtons.entrySet()) {
-            boolean selected = e.getKey().equals(navSelection) && !map;
-            TextView b = e.getValue();
-            b.setBackgroundColor(selected ? Color.rgb(13, 92, 122) : Color.rgb(7, 30, 42));
-            b.setTextColor(selected ? Color.WHITE : Color.rgb(177, 222, 238));
-            b.setTypeface(null, selected ? 1 : 0);
-            b.setAlpha(selected ? 1.0f : 0.88f);
-        }
+        // Native bottom navigation was intentionally removed in v0.7.0.
+        // The WebView dashboard owns the companion navigation now.
     }
 
     void more() {
@@ -617,7 +547,9 @@ public class MainActivity extends Activity {
         dashboardReady = false;
         status.setText("LOGIN");
         detail.setText("PIN gateway • enter PIN");
-        web.loadUrl(active + "/");
+        String focus = "ready".equals(navSelection) ? "readiness" : "";
+        String url = viewUrl(view, focus);
+        web.loadUrl(url.isEmpty() ? active + "/" : url);
     }
 
     void verifyWebViewData() {
@@ -798,7 +730,7 @@ public class MainActivity extends Activity {
 
         String css = map ?
                 "var st=document.getElementById('ticMapStyle');if(st)st.remove();st=document.createElement('style');st.id='ticMapStyle';st.textContent='header.topbar,.neural-v4-hero,.neural-v4-kpis,.n6-governor,.neural-dev>.section-title,.n4-live-narrative,.n4-mission-strip,.n4-runtime-strip,.neural-progress-card,.n4-insight-strip,.n4-observatory-strip{display:none!important}main{padding:0!important;max-width:none!important;width:100%!important}.neural-dev{margin:0!important;padding:0!important;border:0!important}#n4MapShell{height:100vh!important;min-height:0!important;padding:0!important;margin:0!important;overflow:hidden!important}#n4NetworkMap{width:100%!important;height:100%!important;max-width:100%!important;max-height:100%!important;display:block!important}';document.head.appendChild(st);" :
-                "var st=document.getElementById('ticMapStyle');if(st)st.remove();st=document.createElement('style');st.id='ticMapStyle';st.textContent='header .navrow{display:none!important}#n4MapShell{height:auto!important;min-height:0!important}#n4NetworkMap{width:100%!important;height:auto!important;max-width:100%!important;display:block!important}';document.head.appendChild(st);";
+                "var st=document.getElementById('ticMapStyle');if(st)st.remove();st=document.createElement('style');st.id='ticMapStyle';st.textContent='#n4MapShell{height:auto!important;min-height:0!important}#n4NetworkMap{width:100%!important;height:auto!important;max-width:100%!important;display:block!important}';document.head.appendChild(st);";
 
         String js =
                 "(function(){" +
