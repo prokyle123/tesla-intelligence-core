@@ -19,7 +19,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class MainActivity extends Activity {
-    static final String VER = "0.9.0";
+    static final String VER = "0.9.1";
 
     WebView web;
     TextView status;
@@ -99,9 +99,8 @@ public class MainActivity extends Activity {
 
         try {
             if (Build.VERSION.SDK_INT >= 30) {
-                // Keep app content inside the normal Android system-bar area.
-                // This prevents the phone navigation/gesture region from overlapping companion controls.
-                getWindow().setDecorFitsSystemWindows(true);
+                // We manage the exact status/cutout/navigation insets on the root view.
+                getWindow().setDecorFitsSystemWindows(false);
                 WindowInsetsController c = getWindow().getInsetsController();
                 if (c != null) {
                     c.show(WindowInsets.Type.statusBars() | WindowInsets.Type.navigationBars());
@@ -115,7 +114,26 @@ public class MainActivity extends Activity {
     }
 
     void applySafeInsets(View v) {
-        // v0.8.0 uses decorFitsSystemWindows(true), so Android owns the safe-area layout.
+        if (Build.VERSION.SDK_INT >= 21) {
+            v.setOnApplyWindowInsetsListener((view, insets) -> {
+                int topInset;
+                int bottomInset;
+
+                if (Build.VERSION.SDK_INT >= 30) {
+                    Insets top = insets.getInsets(WindowInsets.Type.statusBars() | WindowInsets.Type.displayCutout());
+                    Insets nav = insets.getInsets(WindowInsets.Type.navigationBars());
+                    Insets gestures = insets.getInsets(WindowInsets.Type.mandatorySystemGestures());
+                    topInset = top.top;
+                    bottomInset = Math.max(nav.bottom, gestures.bottom);
+                } else {
+                    topInset = insets.getSystemWindowInsetTop();
+                    bottomInset = insets.getSystemWindowInsetBottom();
+                }
+
+                view.setPadding(0, topInset, 0, bottomInset);
+                return insets;
+            });
+        }
     }
 
     @Override protected void onResume() {
@@ -322,6 +340,7 @@ public class MainActivity extends Activity {
 
         setContentView(root);
         bars();
+        root.requestApplyInsets();
     }
 
     String navKeyForView(String target) {
@@ -453,7 +472,7 @@ public class MainActivity extends Activity {
     }
 
     void ensureCompanionWebNav() {
-        // Native v0.8.0 navigation is authoritative. Do not inject a second web navigation layer.
+        // The dashboard-owned companion bar is the single navigation surface in v0.9.x.
     }
 
     void setWebNavActive(String key) {
