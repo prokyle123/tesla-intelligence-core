@@ -1204,38 +1204,100 @@ public class MainActivity extends Activity {
         master.setChecked(prefs.getBoolean("notifications_enabled", true));
         box.addView(master);
 
+        box.addView(label("CONNECTION + RECOMMENDATIONS"));
+
         CheckBox connection = new CheckBox(this);
         connection.setText("Connection lost / restored");
         connection.setChecked(prefs.getBoolean("alert_connection", true));
         box.addView(connection);
-
-        CheckBox readiness = new CheckBox(this);
-        readiness.setText("Winter readiness threshold");
-        readiness.setChecked(prefs.getBoolean("alert_readiness", true));
-        box.addView(readiness);
-
-        EditText readinessThreshold = field("Readiness alert below", String.valueOf(prefs.getInt("readiness_threshold", 70)));
-        readinessThreshold.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
-        box.addView(readinessThreshold);
 
         CheckBox warmup = new CheckBox(this);
         warmup.setText("Warm-up / preconditioning recommendation");
         warmup.setChecked(prefs.getBoolean("alert_warmup", true));
         box.addView(warmup);
 
-        CheckBox arrival = new CheckBox(this);
-        arrival.setText("Projected arrival SOC threshold");
-        arrival.setChecked(prefs.getBoolean("alert_arrival_soc", true));
-        box.addView(arrival);
-
-        EditText arrivalThreshold = field("Arrival SOC alert below %", String.valueOf(prefs.getInt("arrival_soc_threshold", 20)));
-        arrivalThreshold.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
-        box.addView(arrivalThreshold);
-
         CheckBox heater = new CheckBox(this);
         heater.setText("Battery heater turns on");
         heater.setChecked(prefs.getBoolean("alert_heater", false));
         box.addView(heater);
+
+        box.addView(label("READINESS LIMIT"));
+
+        CheckBox readiness = new CheckBox(this);
+        readiness.setText("Alert when Winter Readiness falls below");
+        readiness.setChecked(prefs.getBoolean("alert_readiness", true));
+        box.addView(readiness);
+
+        EditText readinessThreshold = field("Readiness score 1-100", String.valueOf(prefs.getInt("readiness_threshold", 70)));
+        readinessThreshold.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        box.addView(readinessThreshold);
+
+        box.addView(label("SOC LIMITS"));
+
+        CheckBox currentSoc = new CheckBox(this);
+        currentSoc.setText("Alert when current battery SOC falls below");
+        currentSoc.setChecked(prefs.getBoolean("alert_current_soc", false));
+        box.addView(currentSoc);
+
+        EditText currentSocThreshold = field("Current SOC %", String.valueOf(prefs.getInt("current_soc_threshold", 20)));
+        currentSocThreshold.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        box.addView(currentSocThreshold);
+
+        CheckBox departureSoc = new CheckBox(this);
+        departureSoc.setText("Alert when projected departure SOC falls below");
+        departureSoc.setChecked(prefs.getBoolean("alert_departure_soc", false));
+        box.addView(departureSoc);
+
+        EditText departureSocThreshold = field("Projected departure SOC %", String.valueOf(prefs.getInt("departure_soc_threshold", 70)));
+        departureSocThreshold.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        box.addView(departureSocThreshold);
+
+        CheckBox arrival = new CheckBox(this);
+        arrival.setText("Alert when projected arrival SOC falls below");
+        arrival.setChecked(prefs.getBoolean("alert_arrival_soc", true));
+        box.addView(arrival);
+
+        EditText arrivalThreshold = field("Projected arrival SOC %", String.valueOf(prefs.getInt("arrival_soc_threshold", 20)));
+        arrivalThreshold.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        box.addView(arrivalThreshold);
+
+        box.addView(label("TEMPERATURE LIMITS"));
+
+        CheckBox packTemp = new CheckBox(this);
+        packTemp.setText("Alert when current pack temperature falls below");
+        packTemp.setChecked(prefs.getBoolean("alert_pack_temp", false));
+        box.addView(packTemp);
+
+        EditText packTempThreshold = field("Current pack temp °F", String.valueOf(prefs.getInt("pack_temp_threshold_f", 40)));
+        packTempThreshold.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_SIGNED);
+        box.addView(packTempThreshold);
+
+        CheckBox departurePack = new CheckBox(this);
+        departurePack.setText("Alert when projected departure pack temperature falls below");
+        departurePack.setChecked(prefs.getBoolean("alert_departure_pack", false));
+        box.addView(departurePack);
+
+        EditText departurePackThreshold = field("Projected departure pack temp °F", String.valueOf(prefs.getInt("departure_pack_threshold_f", 45)));
+        departurePackThreshold.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_SIGNED);
+        box.addView(departurePackThreshold);
+
+        CheckBox outsideTemp = new CheckBox(this);
+        outsideTemp.setText("Alert when outside temperature falls below");
+        outsideTemp.setChecked(prefs.getBoolean("alert_outside_temp", false));
+        box.addView(outsideTemp);
+
+        EditText outsideTempThreshold = field("Outside temp °F", String.valueOf(prefs.getInt("outside_temp_threshold_f", 20)));
+        outsideTempThreshold.setInputType(android.text.InputType.TYPE_CLASS_NUMBER | android.text.InputType.TYPE_NUMBER_FLAG_SIGNED);
+        box.addView(outsideTempThreshold);
+
+        CheckBox moduleSpread = new CheckBox(this);
+        moduleSpread.setText("Alert when battery module spread rises above");
+        moduleSpread.setChecked(prefs.getBoolean("alert_module_spread", false));
+        box.addView(moduleSpread);
+
+        EditText moduleSpreadThreshold = field("Module spread °F", String.valueOf(prefs.getInt("module_spread_threshold_f", 8)));
+        moduleSpreadThreshold.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        box.addView(moduleSpreadThreshold);
 
         long last = prefs.getLong("last_monitor_at", 0L);
         TextView state = new TextView(this);
@@ -1256,7 +1318,7 @@ public class MainActivity extends Activity {
         box.addView(checkNow);
 
         AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("Notification Center")
+                .setTitle("Limits + Notifications")
                 .setView(scroll)
                 .setPositiveButton("SAVE", null)
                 .setNegativeButton("CANCEL", null)
@@ -1267,12 +1329,27 @@ public class MainActivity extends Activity {
                 prefs.edit()
                         .putBoolean("notifications_enabled", master.isChecked())
                         .putBoolean("alert_connection", connection.isChecked())
+                        .putBoolean("alert_warmup", warmup.isChecked())
+                        .putBoolean("alert_heater", heater.isChecked())
+
                         .putBoolean("alert_readiness", readiness.isChecked())
                         .putInt("readiness_threshold", intValue(readinessThreshold, 70, 1, 100))
-                        .putBoolean("alert_warmup", warmup.isChecked())
+
+                        .putBoolean("alert_current_soc", currentSoc.isChecked())
+                        .putInt("current_soc_threshold", intValue(currentSocThreshold, 20, 1, 100))
+                        .putBoolean("alert_departure_soc", departureSoc.isChecked())
+                        .putInt("departure_soc_threshold", intValue(departureSocThreshold, 70, 1, 100))
                         .putBoolean("alert_arrival_soc", arrival.isChecked())
                         .putInt("arrival_soc_threshold", intValue(arrivalThreshold, 20, 1, 100))
-                        .putBoolean("alert_heater", heater.isChecked())
+
+                        .putBoolean("alert_pack_temp", packTemp.isChecked())
+                        .putInt("pack_temp_threshold_f", intValue(packTempThreshold, 40, -100, 200))
+                        .putBoolean("alert_departure_pack", departurePack.isChecked())
+                        .putInt("departure_pack_threshold_f", intValue(departurePackThreshold, 45, -100, 200))
+                        .putBoolean("alert_outside_temp", outsideTemp.isChecked())
+                        .putInt("outside_temp_threshold_f", intValue(outsideTempThreshold, 20, -100, 150))
+                        .putBoolean("alert_module_spread", moduleSpread.isChecked())
+                        .putInt("module_spread_threshold_f", intValue(moduleSpreadThreshold, 8, 1, 100))
                         .apply();
 
                 if (master.isChecked()) NotificationCenter.schedule(this);
