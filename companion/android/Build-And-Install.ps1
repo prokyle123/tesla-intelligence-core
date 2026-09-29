@@ -73,4 +73,4 @@ Write-Host "Installed package:" -ForegroundColor DarkGray
 Write-Host ""
 Write-Host "Installed + launched: Tesla Intelligence Core Companion v$Version" -ForegroundColor Green
 Write-Host "Expected connection state after startup: LOCAL / TAILNET / PUBLIC with LIVE or API LIVE detail."
-Write-Host "Bottom navigation: one swipeable dashboard row — HOME / READY / EVENTS / NEURAL / TRUTH / THERMAL / MORE."
+Write-Host "Bottom navigation: one swipeable dashboard row - HOME / READY / EVENTS / NEURAL / TRUTH / THERMAL / MORE."
