@@ -772,7 +772,31 @@ function renderWinterBoard(w){if(!w)return;const c=w.current||{},d=w.departure||
   renderWinterHistory(w.history||[]);$('winterSamples').textContent=`${(w.history||[]).length} SAMPLES`;const ev=w.timeline||[];$('winterEventCount').textContent=`${ev.length} EVENTS`;$('winterTimeline').innerHTML=ev.map(e=>`<div class="winter-timeline-row"><time>${tm(e.ts)}</time><i class="winter-event-dot ${esc(e.type)}"></i><span>${esc(e.text)}</span></div>`).join('')||'<div class="empty">No recent thermal events yet.</div>';
   $('winterLiveSource').textContent=DATA?.source?.active==='tessie_api'?'TESSIE':'LOCAL';$('winterSourceAge').textContent=DATA?.latest?.age_seconds==null?'—':`${Math.round(DATA.latest.age_seconds)} sec`;$('winterPackFooter').textContent=wf(c.pack_f);$('winterHvacFooter').textContent=c.climate_on?'ON':'OFF';$('winterHeaterFooter').textContent=c.heater_on?'ON':'OFF';$('winterChargingFooter').textContent=(c.charging_state||'—').toUpperCase();
 }
-async function refreshV3(){try{const [a,b,c]=await Promise.all([fetch('/api/v3/overview',{cache:'no-store'}),fetch('/api/v3/events?limit=80',{cache:'no-store'}),fetch('/api/v3/winter',{cache:'no-store'})]);if(a.ok)renderV3(await a.json());if(b.ok)renderEventRows(await b.json());if(c.ok)renderWinterBoard(await c.json())}catch(e){console.warn('v0.3 intelligence refresh',e)}}
+async function refreshV3(){
+  if(window.__ticV3Busy)return;
+  window.__ticV3Busy=true;
+  try{
+    const companion=document.documentElement.classList.contains('tic-companion');
+    const active=(document.querySelector('.view.active')||{}).id||'';
+    const jobs=[];
+
+    if(!companion||active==='view-morning'||active==='view-overview'||!active){
+      jobs.push(fetch('/api/v3/overview',{cache:'no-store'}).then(async r=>{if(r.ok)renderV3(await r.json())}));
+    }
+    if(!companion||active==='view-events'){
+      jobs.push(fetch('/api/v3/events?limit=80',{cache:'no-store'}).then(async r=>{if(r.ok)renderEventRows(await r.json())}));
+    }
+    if(!companion||active==='view-morning'||!active){
+      jobs.push(fetch('/api/v3/winter',{cache:'no-store'}).then(async r=>{if(r.ok)renderWinterBoard(await r.json())}));
+    }
+
+    await Promise.all(jobs);
+  }catch(e){
+    console.warn('v0.3 intelligence refresh',e);
+  }finally{
+    window.__ticV3Busy=false;
+  }
+}
 async function rebuildIntelligence(){const b=$('intelligenceBtn');if(!b)return;b.disabled=true;b.textContent='REBUILDING…';try{const r=await fetch('/api/v3/rebuild',{method:'POST'});b.textContent=r.ok?'✓ REBUILT':'FAILED'}catch(e){b.textContent='FAILED'}setTimeout(()=>{b.disabled=false;b.textContent='◎ Rebuild Intelligence';refreshV3()},1600)}
 
 
@@ -1367,7 +1391,28 @@ function renderNeuralV4(j){const e=j?.engine||{},run=e.run||null,rawState=e.engi
  const metrics=run?.metrics||{};$('n4TaskGrid').innerHTML=Object.entries(metrics).map(([name,m])=>{const imp=m.improvement_pct;const cls=imp==null?'':imp>0?'good':'bad';const beat=m.beats_champion_same_holdout;const baseLabel=m.baseline_source==='neural_production'?`Neural Gen ${m.baseline_generation||'?'}`:'Tree champion';return `<div class="neural-task"><h3>${esc(m.label||name)}</h3><div class="big">${n4Mae(name,m.mae)}</div><div class="ksub">PyTorch holdout MAE</div><div class="kv"><span>${esc(baseLabel)}</span><b>${n4Mae(name,m.baseline_mae)}</b></div><div class="kv"><span>Difference</span><b class="delta ${cls}">${imp==null?'—':`${imp>0?'+':''}${Number(imp).toFixed(1)}%`}</b></div><div class="kv"><span>R²</span><b>${m.r2==null?'—':Number(m.r2).toFixed(3)}</b></div><div class="kv"><span>Verdict</span><b class="${beat?'goodtxt':'warntxt'}">${imp==null?'NO BASELINE':beat?'BEATS PRODUCTION':'TRAILS PRODUCTION'}</b></div></div>`}).join('')||'<div class="empty">PyTorch benchmark cards appear when the current generation finishes.</div>';
  $('n4Live').innerHTML=(forecast.predictions||[]).map(p=>`<div class="neural-live"><span>${esc(p.label)}</span><b>${n4DisplayValue(p.name,p.value)}</b><small>Gen ${forecast.generation} • holdout ${n4Mae(p.name,p.holdout_mae)}${p.improvement_pct==null?'':` • ${p.improvement_pct>0?'+':''}${Number(p.improvement_pct).toFixed(1)}% vs tree`}</small></div>`).join('')||'<div class="empty">Live neural forecast appears after the first generation finishes.</div>';
  $('n4Truth').innerHTML=truth.map(x=>`<div class="neural-truth-row"><b>${esc(x.label)}</b><span>${x.resolved} resolved</span><span>${x.mae==null?'—':`${x.mae}${x.unit}`}</span><span>${x.hit_rate==null?'—':`${x.hit_rate}% hit`}</span><span>${x.pending} pending</span></div>`).join('')||'<div class="empty">Truth scoring begins after the first live neural predictions mature.</div>'}
-async function refreshNeuralV4(){try{const [r,l]=await Promise.all([fetch('/api/v4/neural/status',{cache:'no-store'}),fetch('/api/v4/neural/log',{cache:'no-store'})]);if(r.ok)renderNeuralV4(await r.json());if(l.ok){const j=await l.json();if($('n4LiveLog')){$('n4LiveLog').textContent=j.text||'No neural training log yet.';$('n4LiveLog').scrollTop=$('n4LiveLog').scrollHeight}}}catch(e){console.warn('v0.4 neural',e)}}
+async function refreshNeuralV4(){
+  if(window.__ticNeuralBusy)return;
+  window.__ticNeuralBusy=true;
+  try{
+    const [r,l]=await Promise.all([
+      fetch('/api/v4/neural/status',{cache:'no-store'}),
+      fetch('/api/v4/neural/log',{cache:'no-store'})
+    ]);
+    if(r.ok)renderNeuralV4(await r.json());
+    if(l.ok){
+      const j=await l.json();
+      if($('n4LiveLog')){
+        $('n4LiveLog').textContent=j.text||'No neural training log yet.';
+        $('n4LiveLog').scrollTop=$('n4LiveLog').scrollHeight;
+      }
+    }
+  }catch(e){
+    console.warn('v0.4 neural',e);
+  }finally{
+    window.__ticNeuralBusy=false;
+  }
+}
 
 async function trainNeuralV4(){const b=$('n4TrainBtn'),msg=$('n4TrainMessage');if(!b)return;b.disabled=true;b.textContent='STARTING PYTORCH…';if(msg){msg.className='n4-training-message warn';msg.textContent='Sending the training request to GHOST…'}try{const r=await fetch('/api/v4/neural/train',{method:'POST'});const j=await r.json();if(j.status==='busy'){b.textContent=`● ALREADY TRAINING${j.epoch?` • EPOCH ${j.epoch}`:''}`;if(msg)msg.textContent=j.message||'PyTorch is already training.'}else if(j.status==='started'){b.textContent='● PYTORCH STARTED';if(msg){msg.className='n4-training-message good';msg.textContent=`Training process started${j.pid?` • PID ${j.pid}`:''}. Live progress will appear here.`}}else{b.textContent='TRAIN REQUEST CHECK';if(msg)msg.textContent=j.message||j.status||'Unknown response.'}}catch(e){b.textContent='START FAILED';if(msg){msg.className='n4-training-message bad';msg.textContent=`Could not start PyTorch: ${e.message}`}}setTimeout(refreshNeuralV4,500)}
 
@@ -1435,7 +1480,25 @@ function render(d){DATA=d;const l=d.latest||{},src=d.source||{},sum=d.summary||{
 $('liveBadge').textContent=l.age_seconds==null?'WAITING':l.age_seconds<300?'LIVE':'CACHED';$('heroSoc').textContent=val(l.battery_level,'%');$('heroSocBar').style.width=`${Math.max(0,Math.min(100,Number(l.battery_level||0)))}%`;$('heroOutside').textContent=val(l.outside_temp_f,'°F');$('heroCabin').textContent=val(l.inside_temp_f,'°F');$('heroPack').textContent=val(l.battery_temp_f,'°F');$('heroClimate').textContent=`climate ${l.climate_on?'ON':'OFF'} • ${l.preconditioning?'preconditioning':'idle'}`;setPredictionHero(d.predictions);
 $('kReadiness').textContent=`${sum.readiness||0}%`;$('kReadinessSub').textContent=(sum.promoted_models||0)?`${sum.promoted_models} production model${sum.promoted_models===1?'':'s'}`:'collecting evidence';$('kPipeline').textContent=d.training?.status==='running'?'TRAINING':'READY';$('kPipelineSub').textContent=d.training?.status==='running'?'AI cycle in progress':'local pipeline nominal';$('kProduction').textContent=sum.promoted_models||0;$('kProductionSub').textContent=`${d.models.length-(sum.promoted_models||0)} learning / validating`;$('kImproving').textContent=sum.improving_models||0;$('kEvidence').textContent=nfmt(sum.training_evidence);$('kEvidenceSub').textContent=`${Number(d.dataset_span_days||0).toFixed(1)} days of local span`;const lm=sum.latest_model;$('kLatest').textContent=lm?lm.label:'—';$('kLatestSub').textContent=lm?`Gen ${lm.generation} • ${ago(lm.trained_at)}`:'no training run yet';
 const cps=d.checkpoints||[];renderTrend(cps);if(cps.length>=2){const a=cps[cps.length-2].overall||0,b=cps[cps.length-1].overall||0;$('trendBadge').textContent=`${b>=a?'↑':'↓'} ${Math.abs(b-a)} pts latest`;$('trendBadge').className=`tiny-pill ${b>=a?'good':''}`}else{$('trendBadge').textContent=cps.length?'1 CHECKPOINT':'NO CHECKPOINTS';$('trendBadge').className='tiny-pill'}$('modelGrid').innerHTML=d.models.map(m=>modelCard(m)).join('');renderHeatmap(d);renderPipeline(d);renderInsights(d);renderSecondary(d);renderTruth(d);renderThermal(d)}
-async function refresh(){const v3=refreshV3();try{const r=await fetch('/api/status',{cache:'no-store'});if(!r.ok)throw new Error(`HTTP ${r.status}`);render(await r.json())}catch(e){$('sourceHealth').textContent='CORE STATUS ERROR';$('sourceHealthSub').textContent=e.message;$('sourceDot').className='health-dot warn'}try{await v3}catch(e){console.warn('v3 refresh failed',e)}}
+async function refresh(){
+  if(window.__ticCoreBusy)return;
+  window.__ticCoreBusy=true;
+  try{
+    const v3=refreshV3();
+    try{
+      const r=await fetch('/api/status',{cache:'no-store'});
+      if(!r.ok)throw new Error(`HTTP ${r.status}`);
+      render(await r.json());
+    }catch(e){
+      $('sourceHealth').textContent='CORE STATUS ERROR';
+      $('sourceHealthSub').textContent=e.message;
+      $('sourceDot').className='health-dot warn';
+    }
+    try{await v3}catch(e){console.warn('v3 refresh failed',e)}
+  }finally{
+    window.__ticCoreBusy=false;
+  }
+}
 async function trainNow(){const b=$('trainBtn');const old=b.textContent;b.disabled=true;b.textContent='STARTING…';try{const r=await fetch('/api/train',{method:'POST'});const j=await r.json();b.textContent=j.status==='busy'?'AI CYCLE BUSY':'AI CYCLE STARTED'}catch(e){b.textContent='START FAILED'}setTimeout(()=>{b.disabled=false;b.textContent=old;refresh()},1800)}
 function applyRequestedViewFromUrl(){
   try{
@@ -1464,10 +1527,22 @@ for(const id of ['backfillBtn','backfillBtn2','backfillBtn3'])if($(id))$(id).add
 if($('intelligenceBtn'))$('intelligenceBtn').addEventListener('click',rebuildIntelligence);
 if($('n4TrainBtn'))$('n4TrainBtn').addEventListener('click',trainNeuralV4);
 applyRequestedViewFromUrl();
+const TIC_COMPANION_MODE=document.documentElement.classList.contains('tic-companion');
 refresh();
-refreshNeuralV4();
-setInterval(refresh,5000);
-setInterval(refreshNeuralV4,2000);
+if(!TIC_COMPANION_MODE||document.getElementById('view-neural4')?.classList.contains('active'))refreshNeuralV4();
+
+setInterval(refresh,TIC_COMPANION_MODE?10000:5000);
+setInterval(()=>{
+  if(!TIC_COMPANION_MODE||document.getElementById('view-neural4')?.classList.contains('active')){
+    refreshNeuralV4();
+  }
+},TIC_COMPANION_MODE?5000:2000);
+
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden)return;
+  refresh();
+  if(document.getElementById('view-neural4')?.classList.contains('active'))refreshNeuralV4();
+});
 </script>
 <!-- DEPARTURE-LEARNING-V0827 SCORE-EXPLAIN-V08272 -->
 
