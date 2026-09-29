@@ -8,6 +8,10 @@ on:
       - '.github/workflows/companion-screenshots.yml'
       - 'companion/android/**'
 
+concurrency:
+  group: companion-screenshots-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
@@ -38,7 +42,7 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - name: Capture companion screenshots
+      - name: Capture connected companion screenshots
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 31
@@ -47,28 +51,78 @@ jobs:
           profile: pixel_6
           disable-animations: true
           script: |
-            python3 -m http.server 8766 --directory web/templates >/tmp/tic-demo-http.log 2>&1 &
+            cat >/tmp/tic_mock.py <<'PY'
+            from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
+            from pathlib import Path
+            import json, os, urllib.parse
+
+            ROOT = Path(os.environ["GITHUB_WORKSPACE"])
+            INDEX = (ROOT / "web/templates/index.html").read_bytes()
+
+            class Handler(BaseHTTPRequestHandler):
+                def _json(self, obj, code=200):
+                    body = json.dumps(obj).encode()
+                    self.send_response(code)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Content-Length", str(len(body)))
+                    self.end_headers()
+                    self.wfile.write(body)
+
+                def do_GET(self):
+                    path = urllib.parse.urlparse(self.path).path
+                    if path == "/":
+                        self.send_response(200)
+                        self.send_header("Content-Type", "text/html; charset=utf-8")
+                        self.send_header("Content-Length", str(len(INDEX)))
+                        self.end_headers()
+                        self.wfile.write(INDEX)
+                    elif path == "/api/health":
+                        self._json({"ok": True, "version": "ci-demo"})
+                    elif path == "/api/v3/overview":
+                        self._json({"version": "ci-demo", "readiness": {}, "events": {}})
+                    elif path == "/api/v3/events":
+                        self._json({"summary": {}, "routine": {}, "events": []})
+                    elif path == "/api/v3/winter":
+                        self._json({})
+                    elif path == "/api/status":
+                        self._json({"error": "ci demo intentionally omits runtime telemetry"}, 503)
+                    elif path.startswith("/api/v4/neural/"):
+                        self._json({"status": "idle", "ci_demo": True})
+                    else:
+                        self.send_error(404)
+
+                def log_message(self, fmt, *args):
+                    pass
+
+            ThreadingHTTPServer(("0.0.0.0", 8766), Handler).serve_forever()
+            PY
+
+            python3 /tmp/tic_mock.py >/tmp/tic-demo-http.log 2>&1 &
             adb install -r companion/android/app/build/outputs/apk/debug/app-debug.apk
-            adb shell am force-stop com.ghost.tesla.mobile
-            adb shell am start -n com.ghost.tesla.mobile/.MainActivity --es tic_local http://10.0.2.2:8766
-            sleep 10
             mkdir -p docs/images/companion
-            adb exec-out screencap -p > docs/images/companion/companion-v030-home.png
+
+            adb shell am force-stop com.ghost.tesla.mobile
+            adb shell am start -n com.ghost.tesla.mobile/.MainActivity --es tic_local http://10.0.2.2:8766 --es tic_view morning
+            sleep 9
+            adb exec-out screencap -p > docs/images/companion/companion-v040-home.png
+
             adb shell am force-stop com.ghost.tesla.mobile
             adb shell am start -n com.ghost.tesla.mobile/.MainActivity --es tic_local http://10.0.2.2:8766 --es tic_view neural4
-            sleep 8
-            adb exec-out screencap -p > docs/images/companion/companion-v030-neural.png
+            sleep 7
+            adb exec-out screencap -p > docs/images/companion/companion-v040-neural.png
+
             adb shell am force-stop com.ghost.tesla.mobile
             adb shell pm clear com.ghost.tesla.mobile
             adb shell am start -n com.ghost.tesla.mobile/.MainActivity --ez tic_settings true
             sleep 3
-            adb exec-out screencap -p > docs/images/companion/companion-v030-connector.png
+            adb exec-out screencap -p > docs/images/companion/companion-v040-connector.png
 
       - name: Commit screenshots
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/images/companion/companion-v030-connector.png
-          git commit -m "Add Companion v0.3.0 Connection Center screenshot" || exit 0
+          git add             docs/images/companion/companion-v040-home.png             docs/images/companion/companion-v040-neural.png             docs/images/companion/companion-v040-connector.png
+          git diff --cached --quiet && exit 0
+          git commit -m "Add Companion v0.4.0 emulator screenshots"
           git pull --rebase origin main
           git push origin HEAD:main
