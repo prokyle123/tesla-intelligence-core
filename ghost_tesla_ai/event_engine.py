@@ -16,6 +16,43 @@ def _median(vals):
     vals=[x for x in (_f(v) for v in vals) if x is not None]
     return statistics.median(vals) if vals else None
 
+# GHOST-L1-FASTCHARGE-GUARD-V1: classify L1 conservatively, without changing historical records.
+def _l1_soc_rate(row):
+    """SOC percentage points/hour only when the stored event is plausibly Level 1.
+
+    Cross-check the measured charge power, energy gain / elapsed time, and SOC gain rate.
+    A zero or missing power field alone is NOT proof of low-power charging.
+    Returns None for uncertain events; they do not teach the L1 charging-rate median.
+    """
+    minutes = _f(row['duration_min'])
+    gained = _f(row['soc_change'])
+    measured_kw = _f(row['avg_charge_power_kw'])
+    added_kwh = _f(row['charge_energy_added_kwh'])
+    if minutes is None or minutes < 10.0 or gained is None or gained <= 0.0:
+        return None
+    rate = gained * 60.0 / minutes
+    # Tesla's Level 1 charging cannot replenish a large fraction of the pack per hour.
+    # Leave generous headroom for SOC rounding on short (10-minute) events.
+    if rate > 7.5:
+        return None
+    if measured_kw is not None and (measured_kw < 0.0 or measured_kw > 2.5):
+        return None
+    # The event energy counter independently catches 230 kW charging when
+    # charge_input_kw was reported as zero. Never trust zero/missing avg power alone.
+    derived_kw = None
+    if added_kwh is not None:
+        if added_kwh < 0.0:
+            return None
+        derived_kw = added_kwh * 60.0 / minutes
+        if derived_kw > 2.5:
+            return None
+    if measured_kw is None or measured_kw == 0.0:
+        # Unknown power requires some positive independent energy evidence.
+        if derived_kw is None or not (0.25 <= derived_kw <= 2.5):
+            return None
+    return rate
+
+
 def _event_type(regime):
     return {'driving':'drive','l1_charging':'charge','charging':'charge','preconditioning':'precondition','cold_soak':'cold_soak','sleeping':'sleep','parked':'park'}.get(regime,regime)
 
@@ -48,7 +85,8 @@ def _segment_metric(seg,event_type):
       'start_soc':ss,'end_soc':es,'soc_change':soc,'start_pack_c':sp,'end_pack_c':ep,'pack_change_c':pchg,'avg_pack_c':avg_pack,
       'avg_outside_c':avg_out,'min_outside_c':min(vals_out) if vals_out else None,'max_outside_c':max(vals_out) if vals_out else None,
       'start_odometer_km':so,'end_odometer_km':eo,'distance_km':dist,'energy_used_kwh':used,'energy_remaining_delta_kwh':erd,
-      'avg_pack_power_kw':_mean([r['pack_power_kw'] for r in seg]),'avg_charge_power_kw':_mean([r['charge_input_kw'] if r['charge_input_kw'] is not None else r['charger_power_kw'] for r in seg]),
+      'avg_pack_power_kw':_mean([r['pack_power_kw'] for r in seg]),# GHOST-L1-FASTCHARGE-GUARD-V1: a reported AC input of zero must not mask DC charger power.
+      'avg_charge_power_kw':_mean([max(0.0, _f(r['charge_input_kw']) or 0.0, _f(r['charger_power_kw']) or 0.0) for r in seg]),
       'charge_energy_added_kwh':charge_added,'wh_per_mile':whmi,'metadata_json':json.dumps(meta,separators=(',',':'))
     }
 
@@ -104,7 +142,7 @@ def event_summary(days:int=60):
       'drive_distance_mi':round(sum((r['distance_km'] or 0)*0.621371 for r in drives),1),
       'median_drive_wh_mi':None if not drives else _median([r['wh_per_mile'] for r in drives]),
       'median_drive_soc_drop':None if not drives else _median([-(r['soc_change']) for r in drives if r['soc_change'] is not None and r['soc_change']<0]),
-      'median_l1_soc_per_hr':_median([(r['soc_change'] or 0)/(r['duration_min']/60) for r in charges if r['duration_min'] and r['duration_min']>=10 and r['soc_change'] is not None and r['soc_change']>0 and (r['avg_charge_power_kw'] or 0)<=2.5]),
+      'median_l1_soc_per_hr':_median([rate for r in charges if (rate := _l1_soc_rate(r)) is not None]),
       'median_precondition_heat_f_hr':_median([(r['pack_change_c']*1.8)/(r['duration_min']/60) for r in pre if r['duration_min'] and r['duration_min']>=5 and r['pack_change_c'] is not None and r['pack_change_c']>0]),
       'cold_soak_events':len(cold),'precondition_events':len(pre),'charge_events':len(charges),'drive_events':len(drives),
     }
@@ -204,7 +242,7 @@ def learned_dynamics(days:int=60):
                 k=-math.log(ratio)/h
                 if 0<k<2:ks.append(k)
         if h>0.5 and r['pack_change_c'] is not None:cool.append(r['pack_change_c']*1.8/h)
-    charge_rates=[r['soc_change']/((r['duration_min'] or 1)/60) for r in charges if r['soc_change'] is not None and r['soc_change']>0 and (r['duration_min'] or 0)>=10 and (r['avg_charge_power_kw'] or 0)<=2.5]
+    charge_rates=[rate for r in charges if (rate := _l1_soc_rate(r)) is not None]
     pre_heat=[r['pack_change_c']*1.8/((r['duration_min'] or 1)/60) for r in pre if r['pack_change_c'] is not None and r['pack_change_c']>0 and (r['duration_min'] or 0)>=5]
     standby=[-r['soc_change']/((r['duration_min'] or 1)/60) for r in park if r['soc_change'] is not None and r['soc_change']<0 and (r['duration_min'] or 0)>=60]
     pre_soc=[-r['soc_change']/((r['duration_min'] or 1)/60) for r in pre if r['soc_change'] is not None and r['soc_change']<0 and (r['duration_min'] or 0)>=5]

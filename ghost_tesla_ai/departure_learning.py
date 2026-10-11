@@ -390,7 +390,7 @@ def schedule_status(now: float | None = None, refresh: bool = True):
 def features_at(ts: float, state=None):
     state = state or model_state(refresh=False)
     p = probability_at(ts, state)
-    nxt = next_departure(ts, state)
+    nxt = _ghost_previous_next_departure(ts, state)
     dep = nxt.get('departure_ts')
     minutes = None if dep is None else max(0.0, (float(dep) - float(ts)) / 60.0)
     # Normalize at 12 hours and clip so a far-future routine cannot dominate the GRU.
@@ -400,3 +400,111 @@ def features_at(ts: float, state=None):
         'minutes_to_departure_norm': float(norm),
         'minutes_to_departure': minutes,
     }
+
+
+
+# GHOST_ADAPTIVE_MULTITRIP_V1
+# Additive improvement: learns multiple recurring departures from actual drive events.
+# Existing time-kernel and neural-network features remain unchanged.
+_ghost_previous_learn_schedule = learn_schedule
+_ghost_previous_model_state = model_state
+_ghost_previous_next_departure = next_departure
+
+
+def _ghost_adaptive_patterns(events):
+    # Only sufficiently measured drives should create recurring trip patterns.
+    usable = [e for e in events if (e.get('distance_km') or 0) >= 5.0]
+    result = []
+    for group in ('weekday', 'weekend'):
+        selected = [e for e in usable if (e['dow'] < 5) == (group == 'weekday')]
+        if not selected:
+            continue
+        group_days = len({e['day'] for e in selected})
+        clusters = []
+        for e in sorted(selected, key=lambda x: x['minute']):
+            options = [c for c in clusters
+                       if _minute_delta(e['minute'], statistics.median(x['minute'] for x in c)) <= 55]
+            if options:
+                nearest = min(options, key=lambda c: _minute_delta(
+                    e['minute'], statistics.median(x['minute'] for x in c)))
+                nearest.append(e)
+            else:
+                clusters.append([e])
+        # A weekday pattern should be observed on several DIFFERENT dates,
+        # not created from multiple stops on the same afternoon.
+        min_days = max(4, math.ceil(group_days * 0.27)) if group == 'weekday' else max(4, math.ceil(group_days * 0.35))
+        for c in clusters:
+            by_day = defaultdict(list)
+            for e in c:
+                by_day[e['day']].append(e['minute'])
+            if len(by_day) < min_days:
+                continue
+            per_day_minutes = [statistics.median(v) for v in by_day.values()]
+            minute = int(round(statistics.median(per_day_minutes)))
+            mad = statistics.median(_minute_delta(m, minute) for m in per_day_minutes)
+            support = len(by_day)
+            frequency = support / max(1, group_days)
+            stability = max(0.0, 1.0 - mad / 100.0)
+            confidence = int(round(100 * (0.25 + 0.75 * min(1.0, support / 15.0)) *
+                                   (0.6 + 0.4 * stability)))
+            result.append({'group': group, 'minute': minute, 'time': f'{minute//60:02d}:{minute%60:02d}',
+                           'support_days': support, 'group_drive_days': group_days,
+                           'frequency': round(frequency, 3), 'mad_min': round(mad, 1),
+                           'confidence': confidence})
+    return sorted(result, key=lambda x: (x['group'], x['minute']))
+
+
+def learn_schedule(days=None, force=False):
+    state = _ghost_previous_learn_schedule(days=days, force=force)
+    if state.get('adaptive_trip_version') == 'multi-pattern-v1':
+        return state
+    now = time.time()
+    car_id = db.latest_car_id() or str(config.CAR_ID)
+    cutoff = now - int(days or config.DEPARTURE_LOOKBACK_DAYS) * 86400
+    state['adaptive_patterns'] = _ghost_adaptive_patterns(_drive_events(cutoff, car_id))
+    state['adaptive_trip_version'] = 'multi-pattern-v1'
+    db.set_state(STATE_KEY, state)
+    return state
+
+
+def model_state(refresh=True):
+    state = _ghost_previous_model_state(refresh=refresh)
+    if refresh and state.get('adaptive_trip_version') != 'multi-pattern-v1':
+        return learn_schedule(force=True)
+    return state
+
+
+def _ghost_multitrip_next(now, state):
+    patterns = state.get('adaptive_patterns') or []
+    if not patterns:
+        return None
+    earliest = []
+    from datetime import datetime, timedelta
+    today = datetime.fromtimestamp(now).date()
+    for day_offset in range(3):
+        day = today + timedelta(days=day_offset)
+        for p in patterns:
+            if (day.weekday() < 5) != (p['group'] == 'weekday'):
+                continue
+            minute = int(p['minute'])
+            ts = time.mktime((day.year, day.month, day.day,
+                              minute // 60, minute % 60, 0, 0, 0, -1))
+            if now + 5 * 60 < ts <= now + 36 * 3600:
+                earliest.append((ts, p))
+    if not earliest:
+        return None
+    ts, p = min(earliest, key=lambda x: x[0])
+    return {'departure_ts': float(ts), 'probability': p['frequency'],
+            'confidence': p['confidence'], 'source': 'adaptive_multi_trip',
+            'class': 'ROUTINE' if p['confidence'] >= 65 else 'LIKELY',
+            'pattern_time': p['time'], 'pattern_group': p['group'],
+            'support_days': p['support_days'], 'time_mad_min': p['mad_min']}
+
+
+def next_departure(now=None, state=None):
+    now = float(now or time.time())
+    state = state or model_state(refresh=True)
+    learned = _ghost_multitrip_next(now, state)
+    return learned if learned is not None else _ghost_previous_next_departure(now, state)
+
+

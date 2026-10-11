@@ -15,6 +15,8 @@ from .readiness import current_readiness,snapshot_readiness,readiness_history
 from .departure_learning import learn_schedule,schedule_status
 from .event_models import model_status as trip_model_status
 from .winter_board import build_winter_board
+from .winter_score_history import attach_score_history
+from .trip_energy_preview_v1 import preview as trip_energy_preview
 
 bp=Blueprint('v3_api',__name__)
 
@@ -68,4 +70,6 @@ def rebuild():
 
 @bp.get('/api/v3/winter')
 def winter_board():
-    return jsonify(build_winter_board())
+    board = attach_score_history(build_winter_board())
+    board['trip_energy_preview'] = trip_energy_preview()
+    return jsonify(board)

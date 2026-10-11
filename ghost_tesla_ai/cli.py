@@ -62,7 +62,7 @@ def intelligence():
 def main():
     p=argparse.ArgumentParser(prog='ghost-ai');sp=p.add_subparsers(dest='cmd',required=True)
     for c in ('status','init-db','train','tessie-test','audit','events','readiness','departure','intelligence','neural','neural-v4','neural-status','neural-governor'):sp.add_parser(c)
-    bp=sp.add_parser('backfill');bp.add_argument('--days',type=int,default=30);bp.add_argument('--interval',type=int,default=300);bp.add_argument('--train-after',action='store_true')
+    bp=sp.add_parser('backfill');bp.add_argument('--days',type=int,default=2500);bp.add_argument('--interval',type=int,default=300);bp.add_argument('--train-after',action='store_true')
     a=p.parse_args()
     if a.cmd=='status':status()
     elif a.cmd=='init-db':db.init_db();print(config.DB_PATH)

@@ -92,6 +92,9 @@ Tesla Intelligence Core is especially useful when **time, temperature and chargi
 
 ---
 
+<!-- GHOST-OCT-2026-UPDATES -->
+> **October 2026 development update:** GHOST now includes multi-trip shadow learning, audited departure forecasts, recorded readiness-score history, and protection against DC fast-charging events contaminating Level 1 charge-rate learning. See [October 2026 development notes](docs/OCTOBER_2026_UPDATES.md). Vehicle controls remain read-only.
+
 ## Visual tour
 
 ### 🧠 Live Neural Engine Atlas

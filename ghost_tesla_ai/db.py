@@ -38,6 +38,33 @@ CREATE TABLE IF NOT EXISTS telemetry (
   pack_voltage_v REAL,
   module_temp_min_c REAL,
   module_temp_max_c REAL,
+  charge_limit_soc REAL,
+  charger_pilot_current REAL,
+  charge_current_request REAL,
+  charge_current_request_max REAL,
+  minutes_to_full_charge REAL,
+  not_enough_power_to_heat INTEGER,
+  charge_port_cold_weather_mode TEXT,
+  phantom_drain REAL,
+  defrost_mode REAL,
+  hvac_auto_request TEXT,
+  climate_keeper_mode TEXT,
+  driver_temp_setting_c REAL,
+  front_defroster_on INTEGER,
+  rear_defroster_on INTEGER,
+  side_mirror_heaters INTEGER,
+  wiper_blade_heater INTEGER,
+  steering_wheel_heater INTEGER,
+  battery_heater_no_power INTEGER,
+  auto_conditioning_on INTEGER,
+  user_present INTEGER,
+  sentry_mode INTEGER,
+  pack_current_abs_a REAL,
+  module_min_ambient_delta_c REAL,
+  module_max_ambient_delta_c REAL,
+  charge_request_gap_a REAL,
+  charge_utilization REAL,
+  thermal_aux_load REAL,
   pack_power_kw REAL,
   charge_input_kw REAL,
   module_temp_spread_c REAL,
@@ -297,6 +324,33 @@ TELEMETRY_MIGRATIONS = {
     'pack_voltage_v': 'REAL',
     'module_temp_min_c': 'REAL',
     'module_temp_max_c': 'REAL',
+    'charge_limit_soc': 'REAL',
+    'charger_pilot_current': 'REAL',
+    'charge_current_request': 'REAL',
+    'charge_current_request_max': 'REAL',
+    'minutes_to_full_charge': 'REAL',
+    'not_enough_power_to_heat': 'INTEGER',
+    'charge_port_cold_weather_mode': 'TEXT',
+    'phantom_drain': 'REAL',
+    'defrost_mode': 'REAL',
+    'hvac_auto_request': 'TEXT',
+    'climate_keeper_mode': 'TEXT',
+    'driver_temp_setting_c': 'REAL',
+    'front_defroster_on': 'INTEGER',
+    'rear_defroster_on': 'INTEGER',
+    'side_mirror_heaters': 'INTEGER',
+    'wiper_blade_heater': 'INTEGER',
+    'steering_wheel_heater': 'INTEGER',
+    'battery_heater_no_power': 'INTEGER',
+    'auto_conditioning_on': 'INTEGER',
+    'user_present': 'INTEGER',
+    'sentry_mode': 'INTEGER',
+    'pack_current_abs_a': 'REAL',
+    'module_min_ambient_delta_c': 'REAL',
+    'module_max_ambient_delta_c': 'REAL',
+    'charge_request_gap_a': 'REAL',
+    'charge_utilization': 'REAL',
+    'thermal_aux_load': 'REAL',
     'pack_power_kw': 'REAL',
     'charge_input_kw': 'REAL',
     'module_temp_spread_c': 'REAL',
@@ -324,7 +378,13 @@ TELEMETRY_FIELDS = [
   'outside_temp_c','inside_temp_c','battery_temp_c','power_kw','speed_kmh','odometer_km','plugged_in','charging_state',
   'charge_energy_added_kwh','charger_power_kw','charger_voltage','charger_actual_current','climate_on','preconditioning',
   'shift_state','battery_heater_on','lifetime_energy_used_kwh','energy_remaining_kwh','pack_current_a','pack_voltage_v',
-  'module_temp_min_c','module_temp_max_c','pack_power_kw','charge_input_kw','module_temp_spread_c','pack_ambient_delta_c','raw_json'
+  'module_temp_min_c','module_temp_max_c','charge_limit_soc','charger_pilot_current','charge_current_request',
+  'charge_current_request_max','minutes_to_full_charge','not_enough_power_to_heat','charge_port_cold_weather_mode',
+  'phantom_drain','defrost_mode','hvac_auto_request','climate_keeper_mode','driver_temp_setting_c',
+  'front_defroster_on','rear_defroster_on','side_mirror_heaters','wiper_blade_heater','steering_wheel_heater',
+  'battery_heater_no_power','auto_conditioning_on','user_present','sentry_mode',
+  'pack_current_abs_a','module_min_ambient_delta_c','module_max_ambient_delta_c','charge_request_gap_a',
+  'charge_utilization','thermal_aux_load','pack_power_kw','charge_input_kw','module_temp_spread_c','pack_ambient_delta_c','raw_json'
 ]
 
 LOCK_WORDS = ('database is locked', 'database table is locked', 'database is busy')
@@ -415,6 +475,28 @@ def enrich_sample(sample: dict) -> dict:
     pack=_num(s.get('battery_temp_c')); out=_num(s.get('outside_temp_c'))
     if s.get('pack_ambient_delta_c') is None and pack is not None and out is not None:
         s['pack_ambient_delta_c']=round(pack-out,6)
+    if s.get('pack_current_abs_a') is None and pa is not None:
+        s['pack_current_abs_a']=round(abs(pa),6)
+    if s.get('module_min_ambient_delta_c') is None and lo is not None and out is not None:
+        s['module_min_ambient_delta_c']=round(lo-out,6)
+    if s.get('module_max_ambient_delta_c') is None and hi is not None and out is not None:
+        s['module_max_ambient_delta_c']=round(hi-out,6)
+    req=_num(s.get('charge_current_request')); actual=_num(s.get('charger_actual_current')); pilot=_num(s.get('charger_pilot_current'))
+    if s.get('charge_request_gap_a') is None and req is not None and actual is not None:
+        s['charge_request_gap_a']=round(req-actual,6)
+    if s.get('charge_utilization') is None and actual is not None and pilot is not None and pilot > 0:
+        s['charge_utilization']=round(actual/pilot,6)
+    if s.get('thermal_aux_load') is None:
+        aux=0.0; seen=False
+        for k in ('front_defroster_on','rear_defroster_on','side_mirror_heaters','wiper_blade_heater','steering_wheel_heater'):
+            v=_num(s.get(k))
+            if v is not None:
+                aux += 1.0 if v > 0 else 0.0; seen=True
+        d=_num(s.get('defrost_mode'))
+        if d is not None:
+            aux += min(max(d,0.0),2.0); seen=True
+        if seen:
+            s['thermal_aux_load']=round(aux,6)
     return s
 
 def insert_telemetry(sample: dict) -> int:
@@ -439,13 +521,16 @@ def backfill_derived(batch_size: int = 1000) -> dict:
         while True:
             rows=con.execute('''SELECT id,pack_voltage_v,pack_current_a,charger_voltage,charger_actual_current,charger_power_kw,
                                 module_temp_min_c,module_temp_max_c,battery_temp_c,outside_temp_c,
+                                charger_actual_current,charger_pilot_current,charge_current_request,
+                                front_defroster_on,rear_defroster_on,side_mirror_heaters,wiper_blade_heater,steering_wheel_heater,defrost_mode,
+                                pack_current_abs_a,module_min_ambient_delta_c,module_max_ambient_delta_c,charge_request_gap_a,charge_utilization,thermal_aux_load,
                                 pack_power_kw,charge_input_kw,module_temp_spread_c,pack_ambient_delta_c
                                 FROM telemetry WHERE id>? ORDER BY id LIMIT ?''',(last,int(batch_size))).fetchall()
             if not rows: break
             for r in rows:
                 last=int(r['id']); scanned+=1
                 d=enrich_sample(dict(r)); sets=[]; vals=[]
-                for f in ('pack_power_kw','charge_input_kw','module_temp_spread_c','pack_ambient_delta_c'):
+                for f in ('pack_power_kw','charge_input_kw','module_temp_spread_c','pack_ambient_delta_c','pack_current_abs_a','module_min_ambient_delta_c','module_max_ambient_delta_c','charge_request_gap_a','charge_utilization','thermal_aux_load'):
                     if r[f] is None and d.get(f) is not None:
                         sets.append(f'{f}=?'); vals.append(d[f])
                 if sets:

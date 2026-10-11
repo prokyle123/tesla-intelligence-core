@@ -285,7 +285,7 @@ def _ecoflow_fetch():
     sign_header='&'.join(f"{k}={base_headers[k]}" for k in sorted(base_headers))
     sign_string=f"{query}&{sign_header}" if query else sign_header
     signature=hmac.new(secret.encode('utf-8'),sign_string.encode('utf-8'),hashlib.sha256).hexdigest()
-    headers={**base_headers,'sign':signature,'Accept':'application/json','User-Agent':'GHOST-Tesla-AI/0.8.26'}
+    headers={**base_headers,'sign':signature,'Accept':'application/json','User-Agent':'GHOST-Tesla-AI/0.8.25'}
     url=f"{config.ECOFLOW_API_BASE}/iot-open/sign/device/quota/all?{query}"
     req=urllib.request.Request(url,headers=headers,method='GET')
     started=time.time()
@@ -366,6 +366,80 @@ def _ecoflow_refresh_worker():
     finally:
         with _ECOFLOW_LOCK:
             _ECOFLOW_CACHE['refreshing']=False
+
+
+
+def _delta3_status(now=None):
+    import json as _json
+    import time as _time
+    from pathlib import Path as _Path
+
+    now = float(now or _time.time())
+    p = _Path("/run/ghost-delta-soc.json")
+
+    if not p.exists():
+        return {
+            "configured": True,
+            "device": "DELTA 3 MAX",
+            "status": "offline",
+            "online": False,
+            "soc": None,
+            "telemetry_age_s": None,
+            "source": "local_influx",
+            "error": "Delta SOC exporter has not produced data yet",
+        }
+
+    try:
+        d = _json.loads(p.read_text())
+    except Exception as e:
+        return {
+            "configured": True,
+            "device": "DELTA 3 MAX",
+            "status": "offline",
+            "online": False,
+            "soc": None,
+            "telemetry_age_s": None,
+            "source": "local_influx",
+            "error": f"{type(e).__name__}: {e}",
+        }
+
+    sample_at = d.get("sample_at")
+
+    try:
+        age = None if sample_at is None else max(0.0, now - float(sample_at))
+    except Exception:
+        age = None
+
+    source_status = str(d.get("status") or "waiting").lower()
+
+    if source_status == "offline":
+        status = "offline"
+    elif age is None:
+        status = "waiting"
+    elif age > 300:
+        status = "offline"
+    elif age > 120:
+        status = "stale"
+    else:
+        status = "online"
+
+    try:
+        soc = None if d.get("soc") is None else float(d.get("soc"))
+    except Exception:
+        soc = None
+
+    return {
+        "configured": True,
+        "device": "DELTA 3 MAX",
+        "serial_tail": d.get("serial_tail"),
+        "soc": soc,
+        "status": status,
+        "online": status == "online",
+        "telemetry_age_s": None if age is None else round(age, 1),
+        "source": d.get("source") or "local_influx",
+        "error": d.get("error"),
+        "updated_at": d.get("updated_at"),
+    }
 
 
 def _ecoflow_status(now=None):
@@ -504,39 +578,117 @@ def _checkpoint_payload(run_rows,source_counts):
     return out
 
 def _truth_payload(con):
-    rows=con.execute("SELECT * FROM prediction_audit ORDER BY predicted_at DESC LIMIT 1000").fetchall()
-    by=defaultdict(list); pending=missed=resolved=0
-    for r in rows:
-        st=r['status']; pending+=st=='pending'; missed+=st=='missed'; resolved+=st=='resolved'; by[r['model_name']].append(r)
+    active_rows=con.execute("SELECT model_name,generation FROM model_runs WHERE promoted=1").fetchall()
+    active_gen={str(r['model_name']):int(r['generation']) for r in active_rows}
+
     models=[]
+    total_pending=total_missed=total_resolved=0
+
     for name,spec in MODEL_SPECS.items():
-        rr=[r for r in by.get(name,[]) if r['status']=='resolved' and r['abs_error'] is not None]
-        allm=by.get(name,[]); mres=len(rr); mmiss=sum(r['status']=='missed' for r in allm); mpend=sum(r['status']=='pending' for r in allm)
-        if spec['unit']=='C': tol=3/1.8; factor=1.8; unit='°F'
-        else: tol=2.5; factor=1.0; unit='%'
-        mae=(sum(float(r['abs_error']) for r in rr)/mres) if mres else None
-        bias=(sum(float(r['signed_error']) for r in rr)/mres) if mres else None
-        hit=(100.0*sum(float(r['abs_error'])<=tol for r in rr)/mres) if mres else None
-        coverage=(100.0*mres/(mres+mmiss)) if mres+mmiss else None
-        # Trust is deliberately not called accuracy: it rewards real resolved evidence,
-        # hit rate and resolution coverage and is capped until evidence accumulates.
+        gen=active_gen.get(name)
+
+        if spec['unit']=='C':
+            tol=3/1.8
+            factor=1.8
+            unit='°F'
+        else:
+            tol=2.5
+            factor=1.0
+            unit='%'
+
+        if gen is None:
+            mres=mpend=mmiss=0
+            mae=bias=hit=coverage=None
+        else:
+            sql=(
+                "SELECT "
+                "SUM(CASE WHEN status='resolved' THEN 1 ELSE 0 END) AS resolved, "
+                "SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS pending, "
+                "SUM(CASE WHEN status='missed' THEN 1 ELSE 0 END) AS missed, "
+                "AVG(CASE WHEN status='resolved' AND abs_error IS NOT NULL THEN abs_error END) AS mae, "
+                "AVG(CASE WHEN status='resolved' AND signed_error IS NOT NULL THEN signed_error END) AS bias, "
+                "SUM(CASE WHEN status='resolved' AND abs_error IS NOT NULL AND abs_error<=? THEN 1 ELSE 0 END) AS hits, "
+                "SUM(CASE WHEN status='resolved' AND abs_error IS NOT NULL THEN 1 ELSE 0 END) AS scored "
+                "FROM prediction_audit WHERE model_name=? AND generation=?"
+            )
+            counts=con.execute(sql,(tol,name,gen)).fetchone()
+
+            mres=int(counts['resolved'] or 0)
+            mpend=int(counts['pending'] or 0)
+            mmiss=int(counts['missed'] or 0)
+            mae=_finite(counts['mae'])
+            bias=_finite(counts['bias'])
+            scored=int(counts['scored'] or 0)
+            hits=int(counts['hits'] or 0)
+            hit=(100.0*hits/scored) if scored else None
+            coverage=(100.0*mres/(mres+mmiss)) if mres+mmiss else None
+
+        total_resolved+=mres
+        total_pending+=mpend
+        total_missed+=mmiss
+
         trust=0
         if mres:
-            trust=int(round(min(100, min(40,mres/25*40) + (hit or 0)*.45 + (coverage or 0)*.15)))
-        models.append({'name':name,'label':spec['label'],'resolved':mres,'pending':mpend,'missed':mmiss,'mae':None if mae is None else round(mae*factor,2),
-            'bias':None if bias is None else round(bias*factor,2),'unit':unit,'hit_rate':None if hit is None else round(hit,1),
-            'coverage':None if coverage is None else round(coverage,1),'trust':trust})
+            trust=int(round(min(
+                100,
+                min(40,mres/25*40) + (hit or 0)*.45 + (coverage or 0)*.15
+            )))
+
+        models.append({
+            'name':name,
+            'label':spec['label'],
+            'generation':gen,
+            'resolved':mres,
+            'pending':mpend,
+            'missed':mmiss,
+            'mae':None if mae is None else round(mae*factor,2),
+            'bias':None if bias is None else round(bias*factor,2),
+            'unit':unit,
+            'hit_rate':None if hit is None else round(hit,1),
+            'coverage':None if coverage is None else round(coverage,1),
+            'trust':trust,
+        })
+
+    rows=con.execute(
+        "SELECT * FROM prediction_audit ORDER BY predicted_at DESC LIMIT 1000"
+    ).fetchall()
+
     recent=[]
     for r in rows[:40]:
-        spec=MODEL_SPECS.get(r['model_name'],{}); unit=spec.get('unit',''); factor=1.8 if unit=='C' else 1.0; offset=32 if unit=='C' else 0
-        pred=float(r['predicted_value']); actual=r['actual_value']
-        recent.append({'predicted_at':float(r['predicted_at']),'target_ts':float(r['target_ts']),'model':r['model_name'],'label':spec.get('label',r['model_name']),
-            'generation':int(r['generation']),'status':r['status'],'predicted':round(pred*factor+offset,2) if unit=='C' else round(pred,2),
-            'actual':None if actual is None else (round(float(actual)*factor+offset,2) if unit=='C' else round(float(actual),2)),
-            'error':None if r['abs_error'] is None else round(float(r['abs_error'])*factor,2),'unit':'°F' if unit=='C' else unit})
+        spec=MODEL_SPECS.get(r['model_name'],{})
+        unit0=spec.get('unit','')
+        factor=1.8 if unit0=='C' else 1.0
+        offset=32 if unit0=='C' else 0
+        pred=float(r['predicted_value'])
+        actual=r['actual_value']
+
+        recent.append({
+            'predicted_at':float(r['predicted_at']),
+            'target_ts':float(r['target_ts']),
+            'model':r['model_name'],
+            'label':spec.get('label',r['model_name']),
+            'generation':int(r['generation']),
+            'status':r['status'],
+            'predicted':round(pred*factor+offset,2) if unit0=='C' else round(pred,2),
+            'actual':None if actual is None else (
+                round(float(actual)*factor+offset,2) if unit0=='C' else round(float(actual),2)
+            ),
+            'error':None if r['abs_error'] is None else round(float(r['abs_error'])*factor,2),
+            'unit':'°F' if unit0=='C' else unit0,
+        })
+
     scored=[m for m in models if m['resolved']]
     overall=int(round(sum(m['trust'] for m in scored)/len(scored))) if scored else 0
-    return {'overall_trust':overall,'resolved':resolved,'pending':pending,'missed':missed,'models':models,'recent':recent}
+
+    return {
+        'overall_trust':overall,
+        'resolved':total_resolved,
+        'pending':total_pending,
+        'missed':total_missed,
+        'models':models,
+        'recent':recent,
+        'scope':'current_promoted_generations_full_history',
+    }
 
 def _slope(points,key):
     pts=[(float(r['ts']),_finite(r[key])) for r in points if r[key] is not None]
@@ -663,6 +815,7 @@ def status():
                    'pipeline':pipeline,'min_train_rows':int(config.MIN_TRAIN_ROWS),'db_size_bytes':db_size,'model_size_bytes':model_bytes},
         'system':_system_status(),
         'ecoflow':_ecoflow_status(),
+        'delta3':_delta3_status(),
         'neural_backend':'governed_pytorch_gru_with_tree_fallback','local_db':str(config.DB_PATH)})
 
 @app.post('/api/train')
@@ -675,7 +828,7 @@ def train():
 def backfill():
     cur=db.get_state('backfill',{}) or {}
     if cur.get('status')=='running': return jsonify({'ok':False,'status':'busy'}),409
-    body=request.get_json(silent=True) or {}; days=max(1,min(int(body.get('days',30)),365)); interval=max(60,min(int(body.get('interval',300)),3600))
+    body=request.get_json(silent=True) or {}; days=max(1,min(int(body.get('days',2500)),2500)); interval=max(60,min(int(body.get('interval',300)),3600))
     subprocess.Popen([sys.executable,'-m','ghost_tesla_ai.backfill','--days',str(days),'--interval',str(interval),'--train-after'],cwd='/opt/ghost-tesla-ai',stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)
     return jsonify({'ok':True,'status':'started','days':days,'interval':interval})
 

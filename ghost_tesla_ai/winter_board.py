@@ -6,7 +6,6 @@ from . import config, db
 from .predict import current_predictions
 from .readiness import current_readiness
 from .event_engine import learned_dynamics, recent_events
-from .event_models import current_precondition_prediction
 
 
 def _f(v):
@@ -232,35 +231,6 @@ def _live_warmup(car_id, latest, now):
         'pack_kw':_f(latest['pack_power_kw']),
     }
 
-def _preconditioning_plan(ready,latest,weather,now,dyn):
-    dep_ts=_f(ready.get('departure_ts'));expected=_f(ready.get('predicted_departure_pack_f'));target=float(config.READINESS_TARGET_PACK_F)
-    current_out=_c2f(_f(latest['outside_temp_c']))
-    if dep_ts is None or expected is None:
-        return {'status':'LEARNING','needed':None,'minutes':None,'start_ts':None,'expected_pack_f':expected,'target_pack_f':target,
-                'outside_at_departure_f':None,'source':'learning','source_label':'Learning warm-up behavior','confidence':'LOW'}
-    outside_dep=_nearest_weather(weather.get('hours',[]),dep_ts,current_out)
-    if expected>=target-.25:
-        return {'status':'NOT_NEEDED','needed':False,'minutes':0,'start_ts':None,'expected_pack_f':round(expected,1),'target_pack_f':target,
-                'outside_at_departure_f':None if outside_dep is None else round(outside_dep,1),'source':'not_needed','source_label':'No warm-up needed','confidence':'HIGH'}
-    wall_kw=_f(latest['charge_input_kw'])
-    if wall_kw is None:wall_kw=_f(latest['charger_power_kw'])
-    pred=current_precondition_prediction(expected,target,outside_dep,bool(latest['plugged_in']),wall_kw,ready.get('predicted_departure_soc'),dep_ts)
-    mins=_f(pred.get('minutes'));source='precondition_duration_ml';label='Learned ML warm-up';confidence=pred.get('confidence') or 'LOW'
-    generation=pred.get('generation');mae=pred.get('mae_min');rows=pred.get('rows')
-    if mins is None or mins<=0:
-        rate=_f(dyn.get('precondition_heat_f_hr'));samples=int(dyn.get('precondition_samples') or 0)
-        if rate is None or rate<=.5:
-            return {'status':'LEARNING','needed':True,'minutes':None,'start_ts':None,'expected_pack_f':round(expected,1),'target_pack_f':target,
-                    'outside_at_departure_f':None if outside_dep is None else round(outside_dep,1),'source':'learning','source_label':'Learning warm-up behavior',
-                    'confidence':'LOW','model_generation':generation,'model_mae_min':mae,'evidence_rows':rows}
-        mins=min(90,max(1,math.ceil((target-expected)/rate*60)));source='learned_heat_rate';label='Learned heat-rate fallback'
-        confidence='HIGH' if samples>=10 else ('MEDIUM' if samples>=4 else 'LOW');generation=None;mae=None;rows=samples
-    mins=int(min(90,max(1,round(mins))));start_ts=dep_ts-mins*60
-    return {'status':'READY','needed':True,'minutes':mins,'start_ts':start_ts,'start_due':bool(start_ts<=now+60),
-            'expected_pack_f':round(expected,1),'target_pack_f':target,'outside_at_departure_f':None if outside_dep is None else round(outside_dep,1),
-            'source':source,'source_label':label,'confidence':confidence,'model_generation':generation,'model_mae_min':mae,'evidence_rows':rows}
-
-
 def _timeline(now):
     events=recent_events(40); out=[]
     for e in events:
@@ -291,13 +261,13 @@ def build_winter_board(now=None):
     weather=_weather(lat,lon,now)
     cur_pack=_c2f(_f(latest['battery_temp_c'])); cur_out=_c2f(_f(latest['outside_temp_c'])); cur_cabin=_c2f(_f(latest['inside_temp_c']))
     k,nk=_retention_k(); physics=_physics_series(cur_pack,cur_out,weather.get('hours',[]),now,k,12)
-    m1=_model_prediction('pack_temp_60m'); m3=_model_prediction('pack_temp_180m'); m6=_model_prediction('pack_temp_360m')
+    m1=_model_prediction('pack_temp_60m'); m3=_model_prediction('pack_temp_180m')
     f1=_forecast_card(1,now,cur_out,weather,physics,m1)
     f3=_forecast_card(3,now,cur_out,weather,physics,m3)
-    f6=_forecast_card(6,now,cur_out,weather,physics,m6)
+    f6=_forecast_card(6,now,cur_out,weather,physics,None)
     all_future=[]
     for h in range(1,13):
-        model=m1 if h==1 else m3 if h==3 else m6 if h==6 else None
+        model=m1 if h==1 else m3 if h==3 else None
         all_future.append(_forecast_card(h,now,cur_out,weather,physics,model))
     valid=[x for x in all_future if x.get('pack_f') is not None]
     cold=min(valid,key=lambda x:x['pack_f']) if valid else {'target_ts':None,'pack_f':None,'outside_f':None,'margin_f':None,'range_f':None,'source':'learning'}
@@ -307,8 +277,51 @@ def build_winter_board(now=None):
     arrival=_f(ready.get('predicted_arrival_soc'))
     soc_score=50 if arrival is None else _clamp((arrival-10)/(30-10)*100,0,100)
     dep_soc=_f(ready.get('predicted_departure_soc')); target=_f(ready.get('charge_target_soc')) or 80
-    charge_score=70 if dep_soc is None else _clamp((dep_soc-(target-15))/15*100,0,100)
+    # Departure-charge readiness is continuous relative to the configured
+    # target. Trip sufficiency is already measured separately by arrival SOC,
+    # so a departure prediction below target should lose points gradually
+    # rather than dropping the entire charge component to zero.
+    if dep_soc is None:
+        charge_score=70
+    elif target > 0:
+        charge_score=_clamp((dep_soc/target)*100,0,100)
+    else:
+        charge_score=100
     evidence=_f(ready.get('confidence')) or 0
+
+    # v0.8.28.3 rich readiness context
+    actual_a=_f(latest['charger_actual_current'])
+    request_a=_f(latest['charge_current_request'])
+    pilot_a=_f(latest['charger_pilot_current'])
+    request_gap=_f(latest['charge_request_gap_a'])
+    charge_util=_f(latest['charge_utilization'])
+    charge_limit=_f(latest['charge_limit_soc'])
+    minutes_full=_f(latest['minutes_to_full_charge'])
+    not_enough_heat=bool(latest['not_enough_power_to_heat']) if latest['not_enough_power_to_heat'] is not None else False
+    heater_no_power=bool(latest['battery_heater_no_power']) if latest['battery_heater_no_power'] is not None else False
+    defrost_mode=_f(latest['defrost_mode'])
+    aux_load=_f(latest['thermal_aux_load'])
+    driver_set_c=_f(latest['driver_temp_setting_c'])
+    module_min_f=_c2f(_f(latest['module_temp_min_c']))
+    module_max_f=_c2f(_f(latest['module_temp_max_c']))
+    module_spread_f=None if module_min_f is None or module_max_f is None else max(0.0,module_max_f-module_min_f)
+
+    rich_penalties=[]
+    if not_enough_heat:
+        rich_penalties.append({'key':'heat_power_limit','points':4.0,'reason':'Vehicle reports not enough AC power to heat while charging.'})
+    if heater_no_power:
+        rich_penalties.append({'key':'heater_no_power','points':3.0,'reason':'Battery heater is requested but reports no available power.'})
+    if bool(latest['plugged_in']) and str(latest['charging_state'] or '').lower()=='charging':
+        if charge_util is not None and charge_util < .70:
+            rich_penalties.append({'key':'charge_utilization','points':2.0,'reason':f'Only {charge_util*100:.0f}% of pilot current is reaching the charger.'})
+        elif request_gap is not None and request_gap > 2.0:
+            rich_penalties.append({'key':'charge_current_gap','points':1.5,'reason':f'Actual charge current trails the vehicle request by {request_gap:.1f} A.'})
+    if module_spread_f is not None:
+        if module_spread_f > 12:
+            rich_penalties.append({'key':'module_balance','points':3.0,'reason':f'Module temperature spread is wide at {module_spread_f:.1f}°F.'})
+        elif module_spread_f > 6:
+            rich_penalties.append({'key':'module_balance','points':1.0,'reason':f'Module temperature spread is elevated at {module_spread_f:.1f}°F.'})
+    rich_penalty=min(8.0,sum(float(x['points']) for x in rich_penalties))
 
     # Transparent readiness accounting. Each component contributes a fixed
     # portion of the 100-point operational score, and the dashboard can show
@@ -352,14 +365,18 @@ def build_winter_board(now=None):
     for part in score_parts:
         part['points']=round(part['weight']*part['raw_score']/100.0,2)
         part['penalty']=round(part['weight']-part['points'],2)
-    score_unrounded=_clamp(sum(x['points'] for x in score_parts),0,100)
+    base_score_unrounded=_clamp(sum(x['points'] for x in score_parts),0,100)
+    score_unrounded=_clamp(base_score_unrounded-rich_penalty,0,100)
     score=int(round(score_unrounded))
     score_breakdown={
         'max_score':100.0,
+        'base_score_unrounded':round(base_score_unrounded,2),
+        'rich_context_penalty':round(rich_penalty,2),
         'score_unrounded':round(score_unrounded,2),
         'total_penalty':round(100.0-score_unrounded,2),
         'components':score_parts,
         'active_penalties':[x for x in score_parts if x['penalty']>=0.05],
+        'execution_penalties':rich_penalties,
     }
     if score>=90:headline='WINTER READY NOW'; state='READY'
     elif score>=75:headline='WINTER READY'; state='READY'
@@ -369,15 +386,17 @@ def build_winter_board(now=None):
     target_pack=float(config.READINESS_TARGET_PACK_F)
     dep_pack=_f(ready.get('predicted_departure_pack_f'))
     heater=bool(latest['battery_heater_on']) if latest['battery_heater_on'] is not None else False
-    pre_plan=_preconditioning_plan(ready,latest,weather,now,dyn)
     if heater:action='Battery heater is active.'
-    elif pre_plan.get('needed') and pre_plan.get('start_ts'):
-        when='NOW' if pre_plan.get('start_due') else time.strftime('%-I:%M %p',time.localtime(pre_plan['start_ts']))
-        action=f"Precondition {when} • about {pre_plan['minutes']} min • expected pack {pre_plan['expected_pack_f']:.0f}°F → {pre_plan['target_pack_f']:.0f}°F."
-    elif pre_plan.get('needed') is False:action='No battery warm-up is needed.'
+    elif ready.get('suggested_precondition_start_ts'):action=f"Warm-up recommended near {time.strftime('%-I:%M %p',time.localtime(ready['suggested_precondition_start_ts']))}."
     elif dep_pack is not None and dep_pack>=target_pack:action='No battery warm-up is needed.'
     elif min_pack>=target_pack:action='No battery warm-up is expected to be needed.'
-    else:action='Pack may be below the preferred warm target; warm-up timing is still learning.'
+    else:action='Pack may be below the preferred warm target; continue monitoring.'
+
+    # v0.8.28.3 live execution override
+    if not_enough_heat:
+        action='L1 POWER LIMITED • charging and battery heating may compete for available wall power.'
+    elif heater_no_power:
+        action='BATTERY HEAT POWER LIMITED • heater demand is present but power is not currently available.'
 
     # 30-minute movement / trend
     with db.connect() as con:
@@ -391,7 +410,7 @@ def build_winter_board(now=None):
     forecast_low=min([x['temp_f'] for x in weather.get('hours',[]) if x['ts']<=now+18*3600],default=cur_out if cur_out is not None else 99)
     season='WINTER CONDITIONS' if forecast_low<32 else 'COLD-WEATHER WATCH' if forecast_low<45 else 'MILD-WEATHER THERMAL WATCH'
 
-    confidence='HIGH' if weather.get('status')=='ready' and m1 and m3 and m6 and nk>=5 else 'MEDIUM' if (m1 or m3 or m6 or nk>=3) else 'LOW'
+    confidence='HIGH' if weather.get('status')=='ready' and m1 and m3 and nk>=5 else 'MEDIUM' if (m1 or nk>=3) else 'LOW'
 
     # v0.8.27.4 HUMAN-READINESS-V08274
     # Human-facing explanation layer. Only score_penalty values remove points;
@@ -527,9 +546,8 @@ def build_winter_board(now=None):
     elif weather.get('hours'):_diag('weather','FORECAST LINK','CACHED','warn','GHOST is using a cached forecast until refresh.','CACHED')
     else:_diag('weather','FORECAST LINK','FALLBACK','warn','No hourly forecast; current outside air is the fallback.','AMBIENT')
 
-    thermal_models=[x for x in (m1,m3,m6) if x]
-    if len(thermal_models)==3:_diag('thermal_ai','PACK THERMAL AI','ONLINE','good','1-hour, 3-hour and 6-hour learned pack forecasts are available.','1h + 3h + 6h')
-    elif thermal_models:_diag('thermal_ai','PACK THERMAL AI','PARTIAL','info','Some learned horizons are available; missing horizons use retention physics.','PARTIAL')
+    if m1 and m3:_diag('thermal_ai','PACK THERMAL AI','ONLINE','good','Both 1-hour and 3-hour learned pack forecasts are available.','1h + 3h')
+    elif m1 or m3:_diag('thermal_ai','PACK THERMAL AI','PARTIAL','info','One neural horizon is available; other horizons use retention physics.','PARTIAL')
     else:_diag('thermal_ai','PACK THERMAL AI','LEARNING','warn','Pack outlook is relying on learned retention physics.','PHYSICS')
 
     if nk>=5:_diag('retention','THERMAL RETENTION MEMORY','READY','good','Enough parked thermal events exist for the retention model.',f'{nk} events')
@@ -537,11 +555,9 @@ def build_winter_board(now=None):
     else:_diag('retention','THERMAL RETENTION MEMORY','THIN','warn','Very little parked thermal history is available.',f'{nk} events')
 
     heat_rate=_f(rdyn.get('precondition_heat_f_hr'))
-    if pre_plan.get('source')=='precondition_duration_ml':
-        _diag('warmup_memory','WARM-UP MODEL','ONLINE','good',f"Learned preconditioning-duration model recommends about {pre_plan.get('minutes')} min; confidence {pre_plan.get('confidence','LOW')}.",f"{pre_plan.get('minutes')} min · {pre_plan.get('confidence','LOW')}")
-    elif heat_rate is not None and heat_rate>0.5:_diag('warmup_memory','WARM-UP LEARNING','FALLBACK','good','Observed pack-heating rate safely times preconditioning while the ML duration model builds evidence.',f'{heat_rate:.1f}°F/hr')
-    elif dep_pack_val is not None and dep_pack_val < target_pack:_diag('warmup_memory','WARM-UP LEARNING','NEEDS DATA','warn','Pack may need heat, but GHOST has not learned a reliable warm-up model yet.','LEARNING')
-    else:_diag('warmup_memory','WARM-UP LEARNING','STANDBY','info','A learned warm-up estimate is not currently required.','—')
+    if heat_rate is not None and heat_rate>0.5:_diag('warmup_memory','WARM-UP LEARNING','READY','good','Observed pack-heating rate can time preconditioning.',f'{heat_rate:.1f}°F/hr')
+    elif dep_pack_val is not None and dep_pack_val < target_pack:_diag('warmup_memory','WARM-UP LEARNING','NEEDS DATA','warn','Pack may need heat, but GHOST has not learned a reliable heat rate yet.','LEARNING')
+    else:_diag('warmup_memory','WARM-UP LEARNING','STANDBY','info','A learned heat rate is not currently required.','—')
 
     age_min=max(0.0,(now-(_f(latest['ts']) or now))/60.0)
     if age_min>30:_diag('telemetry','TESLA TELEMETRY','STALE','bad','The newest vehicle sample is too old for strong live context.',f'{age_min:.0f} min old')
@@ -571,23 +587,94 @@ def build_winter_board(now=None):
     elif dep_soc is not None and dep_soc < target:_diag('power_state','CHARGE CONNECTION','UNPLUGGED','warn','Departure SOC is below target and the vehicle is not plugged in.','UNPLUGGED')
     else:_diag('power_state','CHARGE CONNECTION','UNPLUGGED','info','Vehicle is not plugged in; departure charge still looks acceptable.','UNPLUGGED')
 
+    if not_enough_heat:
+        _diag('rich_heat_power','L1 THERMAL SUPPORT','POWER LIMITED','bad',
+              'Tesla reports that available charging power is not enough to fully support heating demand.',
+              'LIMITED',4.0,'rich_context')
+    elif heater_no_power:
+        _diag('rich_heat_power','BATTERY HEATER POWER','NO POWER','bad',
+              'Battery-heater demand is present but the car reports no heater power.',
+              'NO POWER',3.0,'rich_context')
+    elif bool(latest['plugged_in']):
+        _diag('rich_heat_power','THERMAL SUPPORT','AVAILABLE','good',
+              'No direct AC-power limitation for battery heating is currently reported.',
+              'AVAILABLE')
+    else:
+        _diag('rich_heat_power','THERMAL SUPPORT','UNPLUGGED','info',
+              'Thermal support will come from the battery until the car is connected to AC power.',
+              'BATTERY')
+
+    if actual_a is not None or request_a is not None or pilot_a is not None:
+        bits=[]
+        if actual_a is not None: bits.append(f'{actual_a:.1f}A actual')
+        if request_a is not None: bits.append(f'{request_a:.1f}A requested')
+        if pilot_a is not None: bits.append(f'{pilot_a:.1f}A pilot')
+        sev='good'; st='NORMAL'
+        if charge_util is not None and charge_util < .70:
+            sev='warn'; st='LIMITED'
+        elif request_gap is not None and request_gap > 2:
+            sev='warn'; st='BELOW REQUEST'
+        _diag('rich_charge_path','CHARGING PATH',st,sev,
+              ' • '.join(bits),f'{charge_util*100:.0f}% utilization' if charge_util is not None else 'CURRENT PATH')
+    else:
+        _diag('rich_charge_path','CHARGING PATH','LEARNING','info',
+              'Pilot/request/actual-current detail has not appeared in the latest sample yet.','—')
+
     active_human=[x for x in diagnostics if float(x.get('score_penalty') or 0)>=.025]
     score_breakdown['human_penalties']=active_human
     score_breakdown['human_checks']=diagnostics
     score_breakdown['human_penalty_total']=round(sum(float(x['score_penalty']) for x in active_human),2)
     score_breakdown['human_note']='Only cards marked PENALTY remove Winter Score points. WATCH / LEARNING / COLD cards are context unless a point value is shown.'
 
+    if not_enough_heat or heater_no_power:
+        thermal_support_state='POWER LIMITED'; thermal_support_severity='bad'
+    elif heater:
+        thermal_support_state='HEATING'; thermal_support_severity='good'
+    elif bool(latest['plugged_in']):
+        thermal_support_state='AVAILABLE'; thermal_support_severity='good'
+    else:
+        thermal_support_state='BATTERY ONLY'; thermal_support_severity='info'
+
+    if charge_util is not None:
+        charging_state_label='NORMAL' if charge_util>=.85 else ('WATCH' if charge_util>=.70 else 'LIMITED')
+    elif actual_a is not None or request_a is not None or pilot_a is not None:
+        charging_state_label='LIVE'
+    else:
+        charging_state_label='LEARNING'
+
+    if module_spread_f is None:
+        balance_state='LEARNING'; balance_severity='info'
+    elif module_spread_f<=6:
+        balance_state='EVEN'; balance_severity='good'
+    elif module_spread_f<=12:
+        balance_state='WATCH'; balance_severity='warn'
+    else:
+        balance_state='WIDE'; balance_severity='bad'
+
+    readiness_context={
+        'score_penalty':round(rich_penalty,2),
+        'charging_path':{
+            'state':charging_state_label,
+            'actual_a':actual_a,'requested_a':request_a,'pilot_a':pilot_a,
+            'request_gap_a':request_gap,'utilization_pct':None if charge_util is None else round(charge_util*100,1),
+            'wall_kw':wall_kw,'charge_limit_soc':charge_limit,'minutes_to_full_charge':minutes_full,
+        },
+        'thermal_support':{
+            'state':thermal_support_state,'severity':thermal_support_severity,
+            'not_enough_power_to_heat':not_enough_heat,'battery_heater_no_power':heater_no_power,
+            'battery_heater_on':heater,'preconditioning':bool(latest['preconditioning']),
+            'defrost_mode':defrost_mode,'aux_load':aux_load,
+            'driver_temp_setting_f':_c2f(driver_set_c),
+        },
+        'pack_balance':{
+            'state':balance_state,'severity':balance_severity,
+            'pack_f':cur_pack,'module_min_f':module_min_f,'module_max_f':module_max_f,
+            'spread_f':None if module_spread_f is None else round(module_spread_f,1),
+        },
+        'penalties':rich_penalties,
+    }
+
     live_warmup=_live_warmup(latest['car_id'],latest,now)
-    live_eta=None;live_eta_source=None
-    if live_warmup.get('active') and _f(live_warmup.get('pack_f')) is not None and _f(live_warmup.get('pack_f'))<target_pack:
-        live_pred=current_precondition_prediction(live_warmup.get('pack_f'),target_pack,cur_out,bool(latest['plugged_in']),wall_kw,_f(latest['battery_level']),now)
-        if _f(live_pred.get('minutes')) is not None:
-            live_eta=int(live_pred['minutes']);live_eta_source='Learned ML warm-up'
-        elif _f(live_warmup.get('heat_rate_f_per_hr')) is not None and _f(live_warmup.get('heat_rate_f_per_hr'))>0.5:
-            live_eta=int(min(90,max(1,math.ceil((target_pack-float(live_warmup['pack_f']))/float(live_warmup['heat_rate_f_per_hr'])*60))));live_eta_source='Live heat rate'
-        elif heat_rate is not None and heat_rate>0.5:
-            live_eta=int(min(90,max(1,math.ceil((target_pack-float(live_warmup['pack_f']))/heat_rate*60))));live_eta_source='Learned heat-rate fallback'
-    live_warmup['eta_min']=live_eta;live_warmup['eta_source']=live_eta_source;live_warmup['target_pack_f']=target_pack
     return {
         'generated_at':now,'headline':headline,'state':state,'score':score,'score_breakdown':score_breakdown,'confidence_label':confidence,'action':action,
         'current':{'soc':_f(latest['battery_level']),'pack_f':cur_pack,'outside_f':cur_out,'cabin_f':cur_cabin,'cabin_target_f':target_cabin,
@@ -601,15 +688,12 @@ def build_winter_board(now=None):
                    'current_margin_f':None if cur_pack is None or cur_out is None else round(cur_pack-cur_out,1),'coldest_margin_f':cold.get('margin_f')},
         'departure':{'status':ready.get('status'),'confidence':ready.get('confidence'),'departure_ts':ready.get('departure_ts'),'current_soc':ready.get('current_soc'),
                      'departure_soc':ready.get('predicted_departure_soc'),'arrival_soc':ready.get('predicted_arrival_soc'),'departure_pack_f':ready.get('predicted_departure_pack_f'),
-                     'precondition_start_ts':pre_plan.get('start_ts'),'precondition_minutes':pre_plan.get('minutes'),
-                     'precondition_source':pre_plan.get('source'),'precondition_source_label':pre_plan.get('source_label'),'precondition_confidence':pre_plan.get('confidence'),
-                     'precondition_expected_pack_f':pre_plan.get('expected_pack_f'),'precondition_target_pack_f':pre_plan.get('target_pack_f'),
-                     'precondition_outside_f':pre_plan.get('outside_at_departure_f'),'precondition_model_generation':pre_plan.get('model_generation'),
-                     'precondition_model_mae_min':pre_plan.get('model_mae_min'),'precondition_evidence_rows':pre_plan.get('evidence_rows'),'precondition_plan':pre_plan,
+                     'precondition_start_ts':ready.get('suggested_precondition_start_ts'),'precondition_minutes':ready.get('suggested_precondition_minutes'),
                      'charge_target_soc':ready.get('charge_target_soc'),'charge_target_ts':ready.get('charge_target_ts'),'charging_now':ready.get('charging_now'),
                      'probability':ready.get('departure_probability'),'departure_class':ready.get('departure_class'),'departure_source':ready.get('departure_source'),
                      'departure_learning':ready.get('departure_learning',{}),
                      'routine':ready.get('routine',{}),'trip_prediction':ready.get('trip_prediction',{}),'reasons':ready.get('reasons',[])},
         'history':_thermal_history(latest['car_id'],now),'timeline':_timeline(now),'live_warmup':live_warmup,
-        'notes':['Readiness score is a transparent operational score, not model accuracy.','Preconditioning duration uses the promoted learned event model when proven; observed heat-rate timing remains the fallback.','Weather is fetched only for forecast temperatures; model training and inference remain local on GHOST.']
+        'readiness_context':readiness_context,
+        'notes':['Readiness score is a transparent operational score, not model accuracy.','Weather is fetched only for forecast temperatures; model training and inference remain local on GHOST.']
     }

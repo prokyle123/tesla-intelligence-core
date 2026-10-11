@@ -1,3 +1,13 @@
+<!-- GHOST-OCT-2026-ENTRY -->
+## October 2026 â€” live GHOST source sync
+
+- Publish running Raspberry Pi source rather than rebuilding from outdated patch archives.
+- Adaptive departure learning and six read-only / shadow trip-analysis layers (where installed).
+- Production Winter Readiness remains advisory; neural governor promotion continues to use validation gates.
+- Persistent readiness-score sampling and history (where installed).
+- Verified protection against Supercharger / DC fast-charging events being learned as Level 1 sessions.
+- No telemetry database, learned artifacts, passwords, or GPS location registry is included.
+
 # Changelog
 
 ## 0.8.27.6 — first consolidated public release

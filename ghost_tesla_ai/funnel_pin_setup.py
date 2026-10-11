@@ -57,7 +57,7 @@ def main() -> int:
     print("PASS - Funnel PIN configured.")
     print("File :", PIN_FILE)
     print("Mode : 0600")
-    print("Login: use the HTTPS URL shown by: tailscale funnel status")
+    print("Login: https://ghost.YOUR-TAILNET.ts.net/")
     print("The PIN is not stored in plaintext.")
     return 0
 

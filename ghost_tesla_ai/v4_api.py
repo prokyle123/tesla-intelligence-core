@@ -75,8 +75,8 @@ def _runtime_status(neural):
 def status():
     s=neural_status()
     runtime=_runtime_status(s)
-    try: version=Path('/opt/ghost-tesla-ai/VERSION').read_text().strip() or '0.8.26'
-    except Exception: version='0.8.26'
+    try: version=Path('/opt/ghost-tesla-ai/VERSION').read_text().strip() or '0.8.25'
+    except Exception: version='0.8.25'
     return jsonify({
         'version':version,
         'engine':s,

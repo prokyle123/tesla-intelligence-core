@@ -9,7 +9,6 @@ TARGET_TO_TREE = {
     'cabin_60m':'cabin_temp_60m',
     'soc_180m':'soc_180m',
     'pack_180m':'pack_temp_180m',
-    'pack_360m':'pack_temp_360m',
 }
 
 
@@ -20,13 +19,10 @@ def _f(v):
 
 
 def _baseline_map(challenger_generation=None):
-    # Begin with tree champions, then overlay only targets actually served by an
-    # older production neural generation. New heads always keep a safe baseline.
-    try:
-        from .predict import tree_predictions
-        out={p.get('model'):p for p in tree_predictions() if p and not p.get('error')}
-    except Exception:
-        out={}
+    # When an older neural generation is already in production, a new challenger
+    # is scored against that actually-served neural generation. The production
+    # generation itself keeps a tree baseline so rollback always has a known-safe
+    # fallback comparison.
     try:
         from .neural_governor import production_generation
         prod=production_generation()
@@ -34,13 +30,19 @@ def _baseline_map(challenger_generation=None):
             from .neural_v4 import forecast_for_generation
             pf=forecast_for_generation(prod)
             if pf.get('status')=='ready':
+                m={}
                 for p in pf.get('predictions',[]):
                     model_name=TARGET_TO_TREE.get(p.get('name'))
                     if model_name:
-                        out[model_name]={'model':f'neural:{p.get("name")}', 'value':p.get('value'), 'generation':int(prod), 'source_backend':'neural_production'}
+                        m[model_name]={'model':f'neural:{p.get("name")}', 'value':p.get('value'), 'generation':int(prod), 'source_backend':'neural_production'}
+                if m:return m
     except Exception:
         pass
-    return out
+    try:
+        from .predict import tree_predictions
+        return {p.get('model'):p for p in tree_predictions() if p and not p.get('error')}
+    except Exception:
+        return {}
 
 
 def _capture_forecast(f):
@@ -122,6 +124,30 @@ def metrics(generation=None,since=None):
             comp=[r for r in rr if ('baseline_abs_error' in r.keys() and r['baseline_abs_error'] is not None)]
             pending=sum(r['status']=='pending' for r in rows); missed=sum(r['status']=='missed' for r in rows)
             mae=(sum(float(r['abs_error']) for r in rr)/len(rr)) if rr else None
+            # ATLAS-VNEXT-ERROR-BANDS
+            #
+            # Empirical absolute-error coverage radii.
+            # p80 means 80% of resolved live predictions landed within
+            # ± this distance of the eventual real telemetry value.
+            abs_values = sorted(
+                float(r['abs_error'])
+                for r in rr
+            )
+
+            if abs_values:
+                p80_index = int(
+                    round((len(abs_values) - 1) * 0.80)
+                )
+                p90_index = int(
+                    round((len(abs_values) - 1) * 0.90)
+                )
+
+                p80 = abs_values[p80_index]
+                p90 = abs_values[p90_index]
+
+            else:
+                p80 = None
+                p90 = None
             bias=(sum(float(r['signed_error']) for r in rr)/len(rr)) if rr else None
             bmae=(sum(float(r['baseline_abs_error']) for r in comp)/len(comp)) if comp else None
             nmae_comp=(sum(float(r['abs_error']) for r in comp)/len(comp)) if comp else None
@@ -132,7 +158,7 @@ def metrics(generation=None,since=None):
             out.append({
                 'name':t['name'],'label':t['label'],'unit':'°F' if t['unit']=='C' else '%',
                 'resolved':len(rr),'comparable':len(comp),'pending':pending,'missed':missed,
-                'mae':None if mae is None else round(mae*factor,2),'bias':None if bias is None else round(bias*factor,2),
+                'mae':None if mae is None else round(mae*factor,2),'p80':None if p80 is None else round(p80*factor,2),'p90':None if p90 is None else round(p90*factor,2),'bias':None if bias is None else round(bias*factor,2),
                 'hit_rate':None if hit is None else round(hit,1),
                 'baseline_mae':None if bmae is None else round(bmae*factor,2),
                 'neural_comparable_mae':None if nmae_comp is None else round(nmae_comp*factor,2),

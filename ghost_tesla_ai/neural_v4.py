@@ -18,10 +18,10 @@ from . import config, db
 from . import departure_learning
 from .backends.sklearn_histgb import SklearnHistGBBackend
 from .backends.torch_gru import TorchGRUBackend
-from .features import V3_FEATURES, feature_map, row_to_features
+from .features import V3_FEATURES, NEURAL_CONTEXT_FEATURES, feature_map, row_to_features
 
 MODEL_NAME = 'winter_multitask_gru'
-FEATURE_VERSION = 'v4-sequence-3-departure-6h'
+FEATURE_VERSION = 'v4-sequence-3-statecontext'
 LOCK = config.DATA_DIR / 'neural-v4.lock'
 
 # One network learns the related winter tasks together. Targets stay in their
@@ -32,7 +32,6 @@ TARGETS = [
     {'name': 'cabin_60m', 'field': 'inside_temp_c', 'horizon_min': 60, 'unit': 'C', 'label': 'Cabin +60 min'},
     {'name': 'soc_180m', 'field': 'battery_level', 'horizon_min': 180, 'unit': '%', 'label': 'SOC +3 hr'},
     {'name': 'pack_180m', 'field': 'battery_temp_c', 'horizon_min': 180, 'unit': 'C', 'label': 'Pack +3 hr'},
-    {'name': 'pack_360m', 'field': 'battery_temp_c', 'horizon_min': 360, 'unit': 'C', 'label': 'Pack +6 hr'},
 ]
 BASELINE_MODELS = {
     'soc_60m': 'soc_60m',
@@ -40,21 +39,45 @@ BASELINE_MODELS = {
     'cabin_60m': 'cabin_temp_60m',
     'soc_180m': 'soc_180m',
     'pack_180m': 'pack_temp_180m',
-    'pack_360m': 'pack_temp_360m',
 }
 
 # The v4 model sees the same rich contextual values used by v3, but as a
 # sequence instead of a single row. sample_age_min tells the GRU when a step is
 # based on held/stale telemetry (important while a sleeping Tesla is cached).
 DEPARTURE_FEATURES = ['departure_probability','minutes_to_departure_norm']
-INPUT_FEATURES = list(V3_FEATURES) + DEPARTURE_FEATURES + ['sample_age_min']
+INPUT_FEATURES = list(V3_FEATURES) + list(NEURAL_CONTEXT_FEATURES) + DEPARTURE_FEATURES + ['sample_age_min']
 
 
 FEATURE_GROUPS = {
-    'battery': ['battery_level','usable_battery_level','energy_remaining_kwh','module_temp_spread_c','pack_ambient_delta_c','soc_delta_15m'],
-    'thermal': ['outside_temp_c','inside_temp_c','battery_temp_c','pack_temp_delta_15m','cabin_temp_delta_15m','outside_temp_delta_15m'],
-    'charging': ['plugged_in','charger_power_kw','charge_input_kw','avg_charge_power_15m','battery_heater_on'],
-    'vehicle': ['pack_power_kw','speed_kmh','avg_pack_power_15m','active_fraction_15m','state_asleep','state_online','state_charging','state_driving'],
+    'battery': ['battery_level','usable_battery_level','energy_remaining_kwh','pack_voltage_v','pack_current_a','pack_current_abs_a',
+                'module_temp_min_c','module_temp_max_c','module_temp_spread_c','pack_ambient_delta_c',
+                'module_min_ambient_delta_c','module_max_ambient_delta_c','soc_delta_15m','soc_delta_60m'],
+
+    'thermal': ['outside_temp_c','inside_temp_c','battery_temp_c','defrost_mode','driver_temp_setting_c','thermal_aux_load',
+                'battery_heater_no_power','auto_conditioning_on',
+                'pack_temp_delta_15m','cabin_temp_delta_15m','outside_temp_delta_15m',
+                'pack_temp_delta_60m','cabin_temp_delta_60m','outside_temp_delta_60m',
+                'regime_cold_soak','regime_preconditioning',
+                'precondition_elapsed_min','minutes_since_precondition_activity'],
+
+    'charging': ['plugged_in','charger_power_kw','charge_input_kw','charger_voltage','charger_actual_current',
+                 'charger_pilot_current','charge_current_request','charge_current_request_max',
+                 'charge_request_gap_a','charge_utilization',
+                 'charge_limit_soc','minutes_to_full_charge','not_enough_power_to_heat',
+                 'avg_charge_power_15m','battery_heater_on',
+                 'charge_energy_added_kwh',
+                 'charge_state_charging','charge_state_stopped',
+                 'charge_state_disconnected','charge_state_complete',
+                 'regime_charging','minutes_since_charge_activity',
+                 'charge_session_elapsed_min'],
+
+    'vehicle': ['pack_power_kw','speed_kmh','avg_pack_power_15m','active_fraction_15m',
+                'user_present','sentry_mode',
+                'state_asleep','state_online','state_charging','state_driving',
+                'shift_drive','shift_reverse','shift_park',
+                'regime_driving','regime_parked',
+                'minutes_since_drive_activity'],
+
     'climate_time': ['climate_on','preconditioning','hour_sin','hour_cos','dow_sin','dow_cos','sample_age_min'],
     'schedule': ['departure_probability','minutes_to_departure_norm'],
 }
@@ -273,6 +296,8 @@ def _sequence_debug(rows, times, i, max_hold_minutes=120, schedule_state=None):
         if age_min > max_hold_minutes:
             return []
         row = rows[j]
+        history = _history_for_index(rows, times, j, 3600)
+        fm = feature_map(row, history)
         dep = departure_learning.features_at(float(times[j]), state=schedule_state)
         out.append({
             'offset_min': int(back * config.NEURAL_V4_STEP_MINUTES),
@@ -290,6 +315,32 @@ def _sequence_debug(rows, times, i, max_hold_minutes=120, schedule_state=None):
             'preconditioning': bool(_get(row, 'preconditioning')),
             'battery_heater_on': bool(_get(row, 'battery_heater_on')),
             'state': str(_get(row, 'state') or ''),
+            'charging_state': str(_get(row, 'charging_state') or ''),
+            'shift_state': str(_get(row, 'shift_state') or ''),
+            'charge_energy_added_kwh': _finite(fm.get('charge_energy_added_kwh')),
+            'charge_current_request_max': _finite(fm.get('charge_current_request_max')),
+            'auto_conditioning_on': bool(fm.get('auto_conditioning_on')),
+            'charge_state_charging': bool(fm.get('charge_state_charging')),
+            'charge_state_stopped': bool(fm.get('charge_state_stopped')),
+            'charge_state_disconnected': bool(fm.get('charge_state_disconnected')),
+            'charge_state_complete': bool(fm.get('charge_state_complete')),
+            'shift_drive': bool(fm.get('shift_drive')),
+            'shift_reverse': bool(fm.get('shift_reverse')),
+            'shift_park': bool(fm.get('shift_park')),
+            'regime_driving': bool(fm.get('regime_driving')),
+            'regime_charging': bool(fm.get('regime_charging')),
+            'regime_preconditioning': bool(fm.get('regime_preconditioning')),
+            'regime_cold_soak': bool(fm.get('regime_cold_soak')),
+            'regime_parked': bool(fm.get('regime_parked')),
+            'soc_delta_60m': _finite(fm.get('soc_delta_60m')),
+            'pack_temp_delta_60m': _finite(fm.get('pack_temp_delta_60m')),
+            'cabin_temp_delta_60m': _finite(fm.get('cabin_temp_delta_60m')),
+            'outside_temp_delta_60m': _finite(fm.get('outside_temp_delta_60m')),
+            'minutes_since_drive_activity': _finite(fm.get('minutes_since_drive_activity')),
+            'minutes_since_charge_activity': _finite(fm.get('minutes_since_charge_activity')),
+            'minutes_since_precondition_activity': _finite(fm.get('minutes_since_precondition_activity')),
+            'charge_session_elapsed_min': _finite(fm.get('charge_session_elapsed_min')),
+            'precondition_elapsed_min': _finite(fm.get('precondition_elapsed_min')),
             'departure_probability': round(float(dep.get('departure_probability') or 0.0), 3),
             'minutes_to_departure': None if dep.get('minutes_to_departure') is None else round(float(dep['minutes_to_departure']), 1),
         })
@@ -444,16 +495,15 @@ def _neural_baseline_same_holdout(data, split, generation):
             run=con.execute('SELECT * FROM neural_v4_runs WHERE generation=? ORDER BY id DESC LIMIT 1',(int(generation),)).fetchone()
         if not run or not run['artifact_path'] or not Path(run['artifact_path']).exists():return {}
         payload=TorchGRUBackend.load(run['artifact_path'])
-        payload_targets=list(payload.get('targets') or [])
-        backend=TorchGRUBackend(input_size=len(payload['input_features']),output_size=len(payload_targets),hidden_size=int(payload['hidden_size']),layers=int(payload['layers']),dropout=float(payload['dropout']))
+        backend=TorchGRUBackend(input_size=len(payload['input_features']),output_size=len(payload['targets']),hidden_size=int(payload['hidden_size']),layers=int(payload['layers']),dropout=float(payload['dropout']))
         model=backend.create();model.load_state_dict(payload['state_dict']);model.eval()
         old_features=list(payload.get('input_features') or [])
         if old_features == list(INPUT_FEATURES):
             Xte=data['X'][split:]
         else:
-            # Rebuild identical holdout timestamps with the served artifact's own
-            # feature contract. A five-head production GRU can therefore remain
-            # the baseline while a challenger adds the new six-hour head.
+            # Rebuild the identical holdout timestamps using the production artifact's
+            # own feature contract. This is what lets the pre-v0.8.27 GRU remain a
+            # valid baseline after the new schedule inputs are added.
             seqs=[]
             for idx in data['source_indices'][split:]:
                 seq,_=_sequence_at(data['rows'],data['times'],idx,max_hold_minutes=20,input_features=old_features,schedule_state=data.get('schedule_state'),schedule_cache=data.get('schedule_cache'))
@@ -466,13 +516,9 @@ def _neural_baseline_same_holdout(data, split, generation):
         with torch.no_grad():pn=model(torch.from_numpy(Xn)).cpu().numpy()
         ymean=np.asarray(payload['y_mean'],dtype=np.float32);ystd=np.asarray(payload['y_std'],dtype=np.float32)
         pp=pn*ystd[None,:]+ymean[None,:]
-        current_index={t['name']:i for i,t in enumerate(TARGETS)}
         out={}
-        for old_i,target in enumerate(payload_targets):
-            name=target.get('name')
-            cur_i=current_index.get(name)
-            if cur_i is None or old_i>=pp.shape[1]:continue
-            out[name]={'available':True,'generation':int(generation),'backend':'pytorch_gru','mae':float(mean_absolute_error(data['Y'][split:,cur_i],pp[:,old_i])),'source':'neural_production'}
+        for i,target in enumerate(TARGETS):
+            out[target['name']]={'available':True,'generation':int(generation),'backend':'pytorch_gru','mae':float(mean_absolute_error(data['Y'][split:,i],pp[:,i])),'source':'neural_production'}
         return out
     except Exception as e:
         return {'_error':f'{type(e).__name__}: {e}'}
@@ -622,9 +668,7 @@ def train():
         if served_neural is not None:
             neural_baseline=_neural_baseline_same_holdout(data,split,served_neural)
             if neural_baseline and '_error' not in neural_baseline:
-                # Overlay only heads the served generation actually owns. New
-                # heads retain their tree champion as the safe comparison.
-                baseline.update(neural_baseline)
+                baseline=neural_baseline
         for target in TARGETS:
             name = target['name']
             b = baseline.get(name) or {}
@@ -786,6 +830,137 @@ def _forecast_loaded(run, loaded):
             pred_tensor, diag = model.forward_diagnostics(xt)
             pn = pred_tensor.cpu().numpy()[0]
             diagnostics = _diagnostic_summary(diag, Xn)
+            # ATLAS-VNEXT-FEATURE-INFLUENCE
+            #
+            # Real current-sequence perturbation attribution.
+            # Each feature group is replaced with its normalized neutral
+            # value (0 == training mean after scaling), then the actual
+            # PyTorch GRU is run again. The output displacement tells us
+            # how sensitive THIS forecast is to that group.
+            #
+            # Cache by generation + telemetry row so dashboard refreshes
+            # do not repeatedly run the same attribution workload.
+            try:
+                influence_key = (
+                    int(run['generation']),
+                    int(rows[-1]['id'])
+                )
+
+                influence_cache = getattr(
+                    _forecast_loaded,
+                    '_atlas_influence_cache',
+                    None
+                )
+
+                if (
+                    influence_cache
+                    and influence_cache.get('key') == influence_key
+                ):
+                    diagnostics['feature_influence'] = (
+                        influence_cache.get('value')
+                    )
+
+                else:
+                    base_std = (
+                        pred_tensor
+                        .detach()
+                        .cpu()
+                        .numpy()
+                    )
+
+                    raw_groups = []
+
+                    for group_name, group_fields in FEATURE_GROUPS.items():
+
+                        idxs = [
+                            i
+                            for i, feature_name
+                            in enumerate(artifact_features)
+                            if feature_name in group_fields
+                        ]
+
+                        if not idxs:
+                            continue
+
+                        x_group = xt.clone()
+
+                        # Normalized zero = neutral/training-mean input.
+                        x_group[:, :, idxs] = 0.0
+
+                        group_pred, _ = model.forward_diagnostics(x_group)
+
+                        diff = np.abs(
+                            group_pred.detach().cpu().numpy()
+                            - base_std
+                        )
+
+                        raw = float(np.mean(diff))
+
+                        raw_groups.append({
+                            'name': str(group_name),
+                            'raw': raw,
+                            'feature_count': len(idxs),
+                            'features': [
+                                artifact_features[i]
+                                for i in idxs
+                            ],
+                        })
+
+                    total_raw = sum(
+                        max(0.0, float(g['raw']))
+                        for g in raw_groups
+                    )
+
+                    groups = []
+
+                    for g in raw_groups:
+
+                        pct = (
+                            100.0 * max(0.0, float(g['raw']))
+                            / total_raw
+                            if total_raw > 1e-12
+                            else 0.0
+                        )
+
+                        groups.append({
+                            **g,
+                            'raw': round(float(g['raw']), 7),
+                            'pct': round(float(pct), 1),
+                        })
+
+                    groups.sort(
+                        key=lambda x: x['pct'],
+                        reverse=True
+                    )
+
+                    influence_value = {
+                        'source':
+                            'live_mean_ablation_pytorch',
+                        'method':
+                            'neutralize normalized feature group and rerun current GRU forecast',
+                        'groups': groups,
+                        'total_raw': round(
+                            float(total_raw),
+                            7
+                        ),
+                    }
+
+                    diagnostics['feature_influence'] = (
+                        influence_value
+                    )
+
+                    _forecast_loaded._atlas_influence_cache = {
+                        'key': influence_key,
+                        'value': influence_value,
+                    }
+
+            except Exception as influence_exc:
+                diagnostics['feature_influence'] = {
+                    'source': 'influence_error',
+                    'error':
+                        f'{type(influence_exc).__name__}: '
+                        f'{influence_exc}'
+                }
         else:
             pn = model(xt).cpu().numpy()[0]
     ymean = np.asarray(payload['y_mean'], dtype=np.float32)
@@ -801,11 +976,23 @@ def _forecast_loaded(run, loaded):
         })
     seq_debug = _sequence_debug(rows, times, len(rows)-1, max_hold_minutes=120, schedule_state=schedule_state)
     departure_context = departure_learning.schedule_status(times[-1], refresh=False)
+    candidate_new_features = [f for f in INPUT_FEATURES if f not in artifact_features]
+    feature_contract = {
+        'feature_version': FEATURE_VERSION,
+        'active_count': len(artifact_features),
+        'candidate_count': len(INPUT_FEATURES),
+        'candidate_new_count': len(candidate_new_features),
+        'candidate_new_features': candidate_new_features,
+        'active_groups': _feature_group_summary(artifact_features),
+        'candidate_groups': _feature_group_summary(INPUT_FEATURES),
+        'upgrade_pending': bool(candidate_new_features),
+    }
     return {
         'status': 'ready', 'generation': int(run['generation']), 'backend': run['backend'], 'predicted_at': times[-1],
         'source_telemetry_id': int(rows[-1]['id']), 'sequence_max_age_min': round(float(max_age or 0), 1), 'predictions': out,
         'sequence_debug': seq_debug,
         'feature_groups': _feature_group_summary(artifact_features),
+        'feature_contract': feature_contract,
         'departure_context': departure_context,
         'diagnostics': diagnostics,
         'latest_context': {
@@ -825,7 +1012,12 @@ def status():
     forecast = current_forecast()
     if not run:
         return {'engine': state, 'run': None, 'forecast': forecast, 'torch_version': _torch_version(),
+                'feature_version': FEATURE_VERSION,
                 'feature_groups': _feature_group_summary(INPUT_FEATURES),
+                'candidate_input_features_count': len(INPUT_FEATURES),
+                'candidate_input_features': list(INPUT_FEATURES),
+                'candidate_feature_groups': _feature_group_summary(INPUT_FEATURES),
+                'neural_context_features': list(NEURAL_CONTEXT_FEATURES),
                 'departure_learning': departure_learning.schedule_status(refresh=True)}
     def loads(v, default):
         try: return json.loads(v) if v else default
@@ -858,7 +1050,12 @@ def status():
             'patience': int(config.NEURAL_V4_PATIENCE),
             'lr': float(config.NEURAL_V4_LR),
         },
+        'feature_version': FEATURE_VERSION,
         'feature_groups': _feature_group_summary((artifact_meta.get('input_features') or INPUT_FEATURES)),
+        'candidate_input_features_count': len(INPUT_FEATURES),
+        'candidate_input_features': list(INPUT_FEATURES),
+        'candidate_feature_groups': _feature_group_summary(INPUT_FEATURES),
+        'neural_context_features': list(NEURAL_CONTEXT_FEATURES),
         'departure_learning': departure_learning.schedule_status(refresh=True),
         'run': {
             'generation': int(run['generation']), 'trained_at': float(run['trained_at']), 'rows': int(run['rows_total']),

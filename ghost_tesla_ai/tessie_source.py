@@ -85,7 +85,7 @@ class TessieClient:
         req = urllib.request.Request(url, headers={
             'Authorization': f'Bearer {self.token}',
             'Accept': 'application/json',
-            'User-Agent': 'GhostTeslaAI/0.8.27.6',
+            'User-Agent': 'GhostTeslaAI/0.2.0',
         })
         try:
             with urllib.request.urlopen(req, timeout=(timeout or config.TESSIE_TIMEOUT_SECONDS)) as r:
@@ -232,13 +232,34 @@ def parse_state(state_payload: Any, battery_payload: Any = None, vin: str = '') 
         'climate_on': _bool(_first(state_payload, [('climate_state','is_climate_on'), ('is_climate_on',)])),
         'preconditioning': _bool(_first(state_payload, [('climate_state','is_preconditioning'), ('is_preconditioning',)])),
         'shift_state': _first(state_payload, [('drive_state','shift_state'), ('shift_state',)]),
-        'battery_heater_on': _bool(_first(state_payload, [('climate_state','battery_heater'), ('battery_heater_on',), ('battery_heater',)])),
+        'battery_heater_on': _bool(_first(state_payload, [('climate_state','battery_heater'), ('charge_state','battery_heater_on'), ('battery_heater_on',), ('battery_heater',)])),
         'lifetime_energy_used_kwh': _num(_first(state_payload, [('lifetime_energy_used',), ('vehicle_state','lifetime_energy_used')])),
         'energy_remaining_kwh': _num(_first(state_payload, [('energy_remaining',), ('charge_state','energy_remaining')])),
         'pack_current_a': _num(_first(state_payload, [('pack_current',), ('charge_state','pack_current')])),
         'pack_voltage_v': _num(_first(state_payload, [('pack_voltage',), ('charge_state','pack_voltage')])),
         'module_temp_min_c': module_min,
         'module_temp_max_c': module_max,
+        'charge_limit_soc': _num(_first(state_payload, [('charge_state','charge_limit_soc'), ('charge_limit_soc',)])),
+        'charger_pilot_current': _num(_first(state_payload, [('charge_state','charger_pilot_current'), ('charger_pilot_current',)])),
+        'charge_current_request': _num(_first(state_payload, [('charge_state','charge_current_request'), ('charge_current_request',)])),
+        'charge_current_request_max': _num(_first(state_payload, [('charge_state','charge_current_request_max'), ('charge_current_request_max',)])),
+        'minutes_to_full_charge': _num(_first(state_payload, [('charge_state','minutes_to_full_charge'), ('minutes_to_full_charge',)])),
+        'not_enough_power_to_heat': _bool(_first(state_payload, [('charge_state','not_enough_power_to_heat'), ('not_enough_power_to_heat',)])),
+        'charge_port_cold_weather_mode': _first(state_payload, [('charge_state','charge_port_cold_weather_mode'), ('charge_port_cold_weather_mode',)]),
+        'phantom_drain': _num(_first(state_payload, [('charge_state','phantom_drain'), ('phantom_drain',)])),
+        'defrost_mode': _num(_first(state_payload, [('climate_state','defrost_mode'), ('defrost_mode',)])),
+        'hvac_auto_request': _first(state_payload, [('climate_state','hvac_auto_request'), ('hvac_auto_request',)]),
+        'climate_keeper_mode': _first(state_payload, [('climate_state','climate_keeper_mode'), ('climate_keeper_mode',)]),
+        'driver_temp_setting_c': _num(_first(state_payload, [('climate_state','driver_temp_setting'), ('driver_temp_setting',)])),
+        'front_defroster_on': _bool(_first(state_payload, [('climate_state','is_front_defroster_on'), ('is_front_defroster_on',)])),
+        'rear_defroster_on': _bool(_first(state_payload, [('climate_state','is_rear_defroster_on'), ('is_rear_defroster_on',)])),
+        'side_mirror_heaters': _bool(_first(state_payload, [('climate_state','side_mirror_heaters'), ('side_mirror_heaters',)])),
+        'wiper_blade_heater': _bool(_first(state_payload, [('climate_state','wiper_blade_heater'), ('wiper_blade_heater',)])),
+        'steering_wheel_heater': _bool(_first(state_payload, [('climate_state','steering_wheel_heater'), ('steering_wheel_heater',)])),
+        'battery_heater_no_power': _bool(_first(state_payload, [('climate_state','battery_heater_no_power'), ('battery_heater_no_power',)])),
+        'auto_conditioning_on': _bool(_first(state_payload, [('climate_state','is_auto_conditioning_on'), ('is_auto_conditioning_on',)])),
+        'user_present': _bool(_first(state_payload, [('vehicle_state','is_user_present'), ('is_user_present',)])),
+        'sentry_mode': _bool(_first(state_payload, [('vehicle_state','sentry_mode'), ('sentry_mode',)])),
     }
     sample['_vehicle_timestamp'] = timestamp
     sample['raw_json'] = json.dumps({'state': state_payload, 'battery': battery_payload}, separators=(',', ':'), default=str)

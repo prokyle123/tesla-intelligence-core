@@ -17,8 +17,8 @@ PIN_FILE = Path(os.environ.get("GHOST_FUNNEL_PIN_FILE", "/var/lib/ghost-tesla-ai
 BACKEND_HOST = "127.0.0.1"
 BACKEND_PORT = 8766
 COOKIE = "ghost_funnel_session"
-FAIL_WINDOW_S = 300
-FAIL_MAX = 8
+FAIL_WINDOW_S = 1800
+FAIL_MAX = 2
 _FAIL_LOCK = threading.Lock()
 _FAILS: list[float] = []
 
@@ -128,7 +128,7 @@ def login_post():
     if obj is None:
         return Response(SETUP_HTML, status=503, mimetype="text/html")
     if _rate_limited():
-        out = _login_page("Too many failed attempts. Try again in a few minutes.")
+        out = _login_page("Too many failed attempts. Try again in 30 minutes.")
         out.status_code = 429
         out.headers["Retry-After"] = str(FAIL_WINDOW_S)
         return out
