@@ -99,6 +99,21 @@ Tesla Intelligence Core is especially useful when **time, temperature and chargi
 > [!NOTE]
 > **v1.0 release staging (not yet released):** The current development Pi now includes independent forecast-quality evaluation, multi-leg trip reconstruction, charging-aware trip-validation work, a read-only vehicle sensors view (TPMS/Sentry/charge port), and a themed 3h/6h/12h outdoor weather outlook. These features are being reconciled into a portable single-command installer; **do not assume the latest published tag installs them yet**. See the [v1.0 source audit](docs/V1_SOURCE_RECONCILIATION.md) and [release checklist](docs/V1_RELEASE_READINESS.md). The existing dashboard layout is preserved.
 
+## v1.0 major-release candidate — current development scope
+
+The **main Winter Readiness dashboard layout stays unchanged**. New sections and shadow services expand around it.
+
+| Area | v1 candidate improvements |
+| --- | --- |
+| Winter and charging | Learned overnight cold soak, temperature retention, slow AC charge rate, heater load and departure SOC |
+| Weather | Themed outdoor forecast at 3h, 6h and 12h under the existing pack-temperature panel |
+| Vehicle use | Every completed drive and multi-leg journey, including errands, weekends and uncommon routes |
+| Prediction accountability | Independent stationary/charging/driving forecast-quality views, all-trip scoring, planned/ongoing charging context |
+| Vehicle sensors | Four TPMS signals converted to PSI, Sentry Mode, lock, charge port, fan and freshness |
+| Automatic operations | Periodic forecast and trip-quality checks plus six-layer shadow trip learning |
+
+**This version remains unreleased:** see [draft v1 release notes](docs/V1_RELEASE_NOTES_DRAFT.md), [source reconciliation](docs/V1_SOURCE_RECONCILIATION.md) and [installer checklist](docs/V1_RELEASE_READINESS.md). The images below show genuine **earlier** builds; updated captures need a privacy check before replacing them.
+
 ## Visual tour
 
 ### 🧠 Live Neural Engine Atlas
