@@ -26,6 +26,17 @@ foreach ($p in $pages) {
     $png = Join-Path $OutputDir ($p.name + ".png")
     $profile = Join-Path $env:TEMP ("ghost-release-capture-" + [guid]::NewGuid().ToString("N"))
     try {
+        # Avoid mistaking an old screenshot for a successful new capture.
+        Remove-Item -LiteralPath $png -Force -ErrorAction SilentlyContinue
+        try {
+            $response = Invoke-WebRequest -Uri $target -UseBasicParsing -TimeoutSec 15
+            if ([int]$response.StatusCode -ne 200) {
+                throw "Unexpected HTTP status $($response.StatusCode)"
+            }
+        }
+        catch {
+            throw "Dashboard page did not respond at $target : $($_.Exception.Message)"
+        }
         $arguments = @("--headless=new","--disable-gpu","--hide-scrollbars",
             "--no-first-run","--window-size=1440,1000",
             "--virtual-time-budget=15000","--user-data-dir=$profile",
