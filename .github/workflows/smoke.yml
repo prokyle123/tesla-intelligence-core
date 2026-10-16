@@ -38,6 +38,19 @@ jobs:
       - name: Check committed diff whitespace
         run: git diff --check HEAD~1 HEAD
 
+      - name: Verify published screenshots are real review-approved assets
+        run: |
+          sha256sum --check docs/images/v1.sha256
+          python3 - <<'PY'
+          from pathlib import Path
+          files=sorted(Path("docs/images/v1").glob("v1-*.webp"))
+          assert len(files)==9, f"Expected 9 gallery images, found {len(files)}"
+          for f in files:
+              b=f.read_bytes()
+              assert len(b)>15000 and b[:4]==b"RIFF" and b[8:12]==b"WEBP", f"Not a valid WebP screenshot: {f}"
+          print("Verified",len(files),"dashboard photos")
+          PY
+
       - name: Secret-shaped string sanity check
         run: |
           ! grep -RIE '(tail[0-9a-f]{6,}\.ts\.net|5YJ[0-9A-Z]{14}|sk-[A-Za-z0-9]{20,}|Bearer [A-Za-z0-9._-]{20,})' --exclude-dir=.git .
