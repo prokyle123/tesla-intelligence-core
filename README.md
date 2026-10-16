@@ -95,6 +95,10 @@ Tesla Intelligence Core is especially useful when **time, temperature and chargi
 <!-- GHOST-OCT-2026-UPDATES -->
 > **October 2026 development update:** GHOST now includes multi-trip shadow learning, audited departure forecasts, recorded readiness-score history, and protection against DC fast-charging events contaminating Level 1 charge-rate learning. See [October 2026 development notes](docs/OCTOBER_2026_UPDATES.md). Vehicle controls remain read-only.
 
+<!-- V1-RELEASE-STAGING-20261015 -->
+> [!NOTE]
+> **v1.0 release staging (not yet released):** The current development Pi now includes independent forecast-quality evaluation, multi-leg trip reconstruction, charging-aware trip-validation work, a read-only vehicle sensors view (TPMS/Sentry/charge port), and a themed 3h/6h/12h outdoor weather outlook. These features are being reconciled into a portable single-command installer; **do not assume the latest published tag installs them yet**. See the [v1.0 source audit](docs/V1_SOURCE_RECONCILIATION.md) and [release checklist](docs/V1_RELEASE_READINESS.md). The existing dashboard layout is preserved.
+
 ## Visual tour
 
 ### 🧠 Live Neural Engine Atlas
