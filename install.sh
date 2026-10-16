@@ -56,6 +56,27 @@ if [[ "$TIMEZONE" != "$CURRENT_TZ" ]]; then
   if yn "Change this Pi's system timezone from $CURRENT_TZ to $TIMEZONE?" y; then $SUDO timedatectl set-timezone "$TIMEZONE"; fi
 fi
 
+# Check for existing configuration BEFORE asking for an API key.
+# Safe upgrades reuse credentials and source settings already on this Pi.
+ENV_FILE="$CONF_DIR/ghost.env"
+KEEP_CONFIG=false
+if [[ -f "$ENV_FILE" ]]; then
+  echo "Existing Tesla Intelligence Core configuration found."
+  if yn "Reuse existing configuration and credentials?" y; then KEEP_CONFIG=true; fi
+fi
+
+if $KEEP_CONFIG; then
+  echo "Upgrade mode: keeping existing credentials and skipping first-run setup prompts."
+  SOURCE_MODE="$(awk -F= '$1=="SOURCE_MODE" {print $2; exit}' "$ENV_FILE")"
+  DASH_PORT="$(awk -F= '$1=="GHOST_AI_PORT" {print $2; exit}' "$ENV_FILE")"
+  [[ "$DASH_PORT" =~ ^[0-9]+$ ]] || DASH_PORT=8766
+  [[ "$SOURCE_MODE" == "tessie" || "$SOURCE_MODE" == "mqtt" || "$SOURCE_MODE" == "auto" ]] || fail "Invalid saved SOURCE_MODE; choose to reconfigure the installation."
+  BACKFILL_DAYS=0
+  TESSIE_TOKEN=""
+  CONFIG_ECOFLOW=false
+  CONFIG_STARLINK=false
+  CONFIG_FUNNEL=false
+else
 cat <<'TXT'
 Telemetry source:
   1) Tessie API (recommended; supports historical backfill)
@@ -92,6 +113,7 @@ CONFIG_STARLINK=false
 if yn "Install optional Starlink local power telemetry support?" n; then CONFIG_STARLINK=true; fi
 CONFIG_FUNNEL=false
 if yn "Configure optional PIN-protected Tailscale Funnel after install?" n; then CONFIG_FUNNEL=true; fi
+fi
 
 echo
 banner
@@ -102,6 +124,22 @@ $SUDO apt-get install -y git curl ca-certificates python3 python3-venv python3-p
 $SUDO apt-get install -y python3-numpy python3-sklearn python3-flask python3-paho-mqtt python3-joblib 2>/dev/null || true
 # Prefer Debian's ARM-friendly PyTorch package when available.
 $SUDO apt-get install -y python3-torch 2>/dev/null || true
+
+# Refuse a downgrade that would silently delete manually deployed add-ons.
+# These files are present on upgraded Ghost installations, but may be absent
+# from older public branches. A major release must ship them before it can
+# replace that existing installation.
+for extra in \\
+  ghost_tesla_ai/forecast_quality_v2_api.py \\
+  ghost_tesla_ai/trip_quality_v3_api.py \\
+  ghost_tesla_ai/vehicle_sensors_v1.py \\
+  web/templates/forecast_quality_v2.html \\
+  web/templates/trip_quality_v32.html \\
+  web/templates/ghost_vehicle_sensors.html; do
+  if [[ -f "$INSTALL_DIR/$extra" && ! -f "$ROOT/$extra" ]]; then
+    fail "Release is missing installed feature $extra; refusing to overwrite your working dashboard. Update the release source first."
+  fi
+done
 
 # Back up code only. Runtime history/models live separately and are never deleted here.
 if [[ -d "$INSTALL_DIR" ]]; then
@@ -132,12 +170,9 @@ if $CONFIG_STARLINK; then
   $SUDO "$INSTALL_DIR/venv/bin/pip" install -r "$INSTALL_DIR/requirements-starlink.txt" || echo "WARN: Starlink optional dependencies failed; core GHOST install will continue."
 fi
 
-# Preserve an existing config on upgrades, but create a fresh interactive config on first install.
-ENV_FILE="$CONF_DIR/ghost.env"
-if [[ -f "$ENV_FILE" ]]; then
-  echo "Existing config detected: $ENV_FILE"
-  if yn "Keep the existing GHOST configuration?" y; then KEEP_CONFIG=true; else KEEP_CONFIG=false; fi
-else KEEP_CONFIG=false; fi
+# KEEP_CONFIG was resolved before credential prompts. Never overwrite saved
+# credentials just because the app was upgraded.
+if $KEEP_CONFIG; then echo "Preserving existing configuration: $ENV_FILE"; fi
 
 if ! $KEEP_CONFIG; then
   TMP_ENV="$(mktemp)"
