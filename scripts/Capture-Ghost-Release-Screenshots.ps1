@@ -1,7 +1,7 @@
 # Safe release screenshot capture from a Windows PC already on the same Tailnet.
 # Never publishes images automatically: review for VIN, sites, tokens and addresses.
 param(
-    [string]$BaseUrl = "http://100.117.230.72:8766",
+    [Parameter(Mandatory=$true)][string]$BaseUrl,
     [string]$OutputDir = "$env:USERPROFILE\Downloads\Ghost-v1-Release-Screenshots"
 )
 $ErrorActionPreference = "Stop"
