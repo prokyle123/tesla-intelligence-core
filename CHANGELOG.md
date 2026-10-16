@@ -2,6 +2,17 @@
 
 ## Unreleased — v1.0 consolidation (draft)
 
+### Major release candidate — additions not yet field verified
+
+- Synced 26 live application source changes into a draft PR and integrated vehicle-sensor, Forecast Quality v2, and Trip Quality v3.2.1 endpoints.
+- Added all-journey/weekend summary alongside time-of-day context. Charge sessions already in progress when a forecast was frozen no longer automatically invalidate that forecast; newly initiated unverified charging still blocks comparisons.
+- Added portable on-Pi paths for sidecar reports and trip registries; scheduled independent hourly quality evaluation and a 30-minute six-stage shadow trip-learning pipeline.
+- Added package-relative import fixes and regression tests for all trip-shadow layers.
+- Updated the project GitHub page, draft installation documentation, feature matrix, release notes, an architecture illustration, and private screenshot capture instructions.
+- **Intentionally not done:** fresh Pi installation, active Ghost upgrade/reboot validation, current-production screenshot publication, or public v1.0.0 tag.
+
+
+
 - Audited the current Ghost development Pi against public `main`: 33 matching source files, 12 modified tracked files, and 14 new source/evaluator files; the existing `requirements.txt` was not part of that comparison.
 - v1.0 scope covers winter/overnight charging readiness, all-trip energy learning, multi-leg trip reconstruction, shadow forecast-truth evaluation, tire-pressure/Sentry/vehicle sensor monitoring, Open-Meteo hourly outlook, and a first-install / upgrade workflow.
 - Started source-only staging and secret review. Systemd unit templates and independent clean install tests **remain release blockers**.
