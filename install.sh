@@ -129,12 +129,12 @@ $SUDO apt-get install -y python3-torch 2>/dev/null || true
 # These files are present on upgraded Ghost installations, but may be absent
 # from older public branches. A major release must ship them before it can
 # replace that existing installation.
-for extra in \\
-  ghost_tesla_ai/forecast_quality_v2_api.py \\
-  ghost_tesla_ai/trip_quality_v3_api.py \\
-  ghost_tesla_ai/vehicle_sensors_v1.py \\
-  web/templates/forecast_quality_v2.html \\
-  web/templates/trip_quality_v32.html \\
+for extra in \
+  ghost_tesla_ai/forecast_quality_v2_api.py \
+  ghost_tesla_ai/trip_quality_v3_api.py \
+  ghost_tesla_ai/vehicle_sensors_v1.py \
+  web/templates/forecast_quality_v2.html \
+  web/templates/trip_quality_v32.html \
   web/templates/ghost_vehicle_sensors.html; do
   if [[ -f "$INSTALL_DIR/$extra" && ! -f "$ROOT/$extra" ]]; then
     fail "Release is missing installed feature $extra; refusing to overwrite your working dashboard. Update the release source first."
