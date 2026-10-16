@@ -183,7 +183,7 @@ def freeze(sidecar,when,p,now):
 def first_event(live, car, snap, now):
     # Reuse v3's conservative joined-drive matcher. Keep time-only metrics
     # separate: never infer destination, route, or SOC from v5.
-    from trip_outcome_v3 import candidate_drive
+    from .trip_outcome_v3 import candidate_drive
     return candidate_drive(live, car, snap, now)
 
 
@@ -258,7 +258,7 @@ def report(sidecar,patterns,info,now):
 
 def run(root,live_path,now):
     # Fail closed if the existing conservative v3.2 validator isn't installed.
-    from trip_outcome_v3 import trip_complete, observed_in_motion, VERSION as V3_VERSION
+    from .trip_outcome_v3 import trip_complete, observed_in_motion, VERSION as V3_VERSION
     if V3_VERSION!='prospective-trip-outcomes-v3.2.0':
         raise RuntimeError('Expected v3.2 scoring safeguards; refusing to run v5')
     if not live_path.is_file():raise RuntimeError('No read-only live DB')
