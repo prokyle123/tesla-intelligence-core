@@ -211,6 +211,14 @@ Neural training:
 sudo journalctl -u ghost-tesla-ai-neural.service -f
 ```
 
+## v1 release-candidate automatic services (not yet field-tested)
+
+The draft installer now deploys `ghost-forecast-quality-v2.timer` (hourly), `ghost-trip-quality-v32.timer` (hourly), and `ghost-trip-shadow.timer` (30 minutes) along with the existing collector, web, event-intelligence, baseline training and neural services. Six shadow trip learners execute in dependency order without vehicle-control actions.
+
+New reports and private trip-sidecar records live under `GHOST_AI_DATA_DIR` (usually `/var/lib/ghost-tesla-ai`), not a developer-specific home directory. The installer detects an existing configuration before asking for API tokens on an upgrade and refuses to silently overwrite features missing from the checkout.
+
+**Important:** the public one-command installer still points at the published `main` release, not this staging PR. Clean first-install and production upgrade verification remain outstanding; do not install the draft branch over the active Ghost Pi. See [v1 release notes](V1_RELEASE_NOTES_DRAFT.md).
+
 ## Updating
 
 From a cloned repository:
