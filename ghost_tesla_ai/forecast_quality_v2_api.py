@@ -2,9 +2,10 @@
 from pathlib import Path
 import json,time
 from flask import Blueprint,jsonify,render_template
+from . import config
 
 bp=Blueprint('ghost_forecast_quality_v2',__name__)
-REPORT=Path('/home/ghost/ghost-forecast-quality/v2-latest.json')
+REPORT=Path(config.get('GHOST_QUALITY_DIR', str(config.DATA_DIR / 'quality'))) / 'v2-latest.json'
 
 @bp.get('/forecast-quality')
 def page():
