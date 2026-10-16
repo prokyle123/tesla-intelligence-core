@@ -167,7 +167,7 @@ All panels shown below are **screenshots of a running Ghost development system**
 </p>
 
 > [!NOTE]
-> v1.0 is initially published with **limited installation validation**. The major source consolidation and automated regression checks have passed, but a clean install on a second Raspberry Pi was not available for end-to-end verification. See [release notes](docs/V1_RELEASE_NOTES_DRAFT.md), [installation guide](docs/INSTALL.md) and [compatibility](docs/COMPATIBILITY.md).
+> v1.0 is initially published with **limited installation validation**. The major source consolidation and automated regression checks have passed, but a clean install on a second Raspberry Pi was not available for end-to-end verification. See [release notes](docs/V1_RELEASE_NOTES.md), [installation guide](docs/INSTALL.md) and [compatibility](docs/COMPATIBILITY.md).
 
 ---
 
@@ -608,7 +608,7 @@ The uninstaller asks before removing learned data, models and configuration.
 
 # Project status
 
-**Current public release: v0.8.27.6**
+**Version 1.0.0 — Major winter and whole-vehicle intelligence release.**
 
 This is an experimental enthusiast project, not a Tesla product and not a safety system.
 
