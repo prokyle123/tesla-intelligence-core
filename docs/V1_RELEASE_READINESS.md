@@ -42,6 +42,14 @@ A private, source-only export from `/opt/ghost-tesla-ai` and the installed evalu
 - Claiming verified range, cold-weather performance or “AI accuracy” from tiny or overlapping samples.
 - Exposing vehicle location from exported reports or public screenshots.
 
+## Implementation update — October 15/16, 2026
+
+- **Done in draft PR:** 26 live source files reconciled; hardcoded public Funnel URL removed; portable report/DB paths; multi-layer trip-shadow orchestrator and 30-minute systemd timer; forecast/trip quality hourly evaluators; guarded installer copying versioned sidecar source and installing timers.
+- **Accuracy correction:** Trip Quality v3.2.1 treats charging already active at the forecast capture as known context, while still withholding newly initiated unverified charging and intervening drives. Reports include every journey, including weekends, and separate departure-SOC accuracy where available. Regression tests cover the guard; real-world validation still pending.
+- **Documentation:** README/feature matrix/installer guide and [draft release notes](V1_RELEASE_NOTES_DRAFT.md) updated; architecture illustration added without pretending to be a screenshot; [privacy-safe screenshot capture guide](SCREENSHOTS.md) prepared.
+- **Tests completed:** GitHub Actions source/secret/shell/package-contract checks, seven trip-shadow module self-tests, forecast/trip sidecar regressions. **No clean Raspberry Pi install or in-place Pi upgrade verification has been performed.**
+- **Remaining:** current real screenshot captures and privacy review, user-approved live-host upgrade/restart audit, and the explicitly deferred fresh-hardware installation before a stable v1.0.0 release.
+
 ## Release candidate approval
 
 This staging branch is for development/review only. It is **not** a v1.0 installable distribution until the above items are checked off.
