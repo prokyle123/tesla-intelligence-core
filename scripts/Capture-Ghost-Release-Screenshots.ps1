@@ -30,9 +30,34 @@ foreach ($p in $pages) {
             "--no-first-run","--window-size=1440,1000",
             "--virtual-time-budget=15000","--user-data-dir=$profile",
             "--screenshot=$png",$target)
-        & $edge @arguments 2>$null | Out-Null
-        if (-not (Test-Path $png)) { throw "No image captured: $target" }
-        Write-Host "CAPTURED $png"
+        # Chromium can emit non-fatal renderer diagnostics on stderr.
+        # Windows PowerShell 5.1 converts those native stderr lines to errors
+        # when ErrorActionPreference is Stop, even if the PNG is generated.
+        # Capture native streams to files, then validate actual output.
+        $stderrFile = Join-Path $profile "edge-stderr.txt"
+        $stdoutFile = Join-Path $profile "edge-stdout.txt"
+        New-Item -ItemType Directory -Force -Path $profile | Out-Null
+        $pRun = Start-Process -FilePath $edge -ArgumentList $arguments `
+            -Wait -PassThru -RedirectStandardError $stderrFile `
+            -RedirectStandardOutput $stdoutFile -WindowStyle Hidden
+        if (-not (Test-Path -LiteralPath $png)) {
+            $details = if (Test-Path $stderrFile) {
+                (Get-Content $stderrFile -Tail 4 -ErrorAction SilentlyContinue) -join " "
+            } else { "No Edge diagnostics available" }
+            throw "No image captured: $target (Edge exit $($pRun.ExitCode)). $details"
+        }
+        $imageBytes = [System.IO.File]::ReadAllBytes($png)
+        $pngHeader = [byte[]](137,80,78,71,13,10,26,10)
+        $validPng = $imageBytes.Length -ge 2000
+        if ($validPng) {
+            for ($i = 0; $i -lt $pngHeader.Length; $i++) {
+                if ($imageBytes[$i] -ne $pngHeader[$i]) { $validPng = $false; break }
+            }
+        }
+        if (-not $validPng) {
+            throw "Screenshot is not a valid nonempty PNG: $png"
+        }
+        Write-Host "CAPTURED $png ($([math]::Round($imageBytes.Length / 1KB, 1)) KB)"
     }
     finally {
         Remove-Item $profile -Recurse -Force -ErrorAction SilentlyContinue
