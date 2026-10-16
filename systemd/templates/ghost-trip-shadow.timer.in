@@ -1,0 +1,12 @@
+[Unit]
+Description=Tesla Intelligence Core trip-learning evaluation
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=30min
+Persistent=true
+AccuracySec=2min
+Unit=ghost-trip-shadow.service
+
+[Install]
+WantedBy=timers.target
