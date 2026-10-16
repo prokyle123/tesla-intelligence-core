@@ -226,6 +226,7 @@ WEATHER_CACHE_MINUTES=20
 GHOST_QUALITY_DIR=$DATA_DIR/quality
 # Optional: override with an existing private GPS-verified trip-sidecar DB.
 GHOST_TRIP_OUTCOMES_DB=$DATA_DIR/trip-sequence/prediction-eval-v3.sqlite3
+GHOST_TRIP_SHADOW_DIR=$DATA_DIR/trip-sequence
 ENV
   $SUDO install -m 640 -o root -g "$INSTALL_USER" "$TMP_ENV" "$ENV_FILE"
   rm -f "$TMP_ENV"
@@ -256,10 +257,11 @@ $SUDO chmod 755 /usr/local/bin/ghost-ai
 
 $SUDO -u "$INSTALL_USER" env PYTHONPATH="$INSTALL_DIR" "$INSTALL_DIR/venv/bin/python" -m ghost_tesla_ai.cli init-db >/dev/null
 $SUDO systemctl daemon-reload
-$SUDO systemctl enable --now ghost-tesla-ai-collector.service ghost-tesla-ai-web.service ghost-tesla-ai-train.timer ghost-tesla-ai-intelligence.timer ghost-tesla-ai-neural.timer ghost-forecast-quality-v2.timer ghost-trip-quality-v32.timer
+$SUDO systemctl enable --now ghost-tesla-ai-collector.service ghost-tesla-ai-web.service ghost-tesla-ai-train.timer ghost-tesla-ai-intelligence.timer ghost-tesla-ai-neural.timer ghost-forecast-quality-v2.timer ghost-trip-quality-v32.timer ghost-trip-shadow.timer
 # Quality jobs write read-only assessment reports. A fresh installation may not
 # have sufficient telemetry yet; hourly timers will retry automatically.
 if [[ -f "$DATA_DIR/ghost_ai.sqlite3" ]]; then
+  $SUDO systemctl start ghost-trip-shadow.service || echo "NOTE: Trip shadow learning awaits sufficient event history."
   $SUDO systemctl start ghost-forecast-quality-v2.service || echo "NOTE: Forecast Quality awaits sufficient history."
   $SUDO systemctl start ghost-trip-quality-v32.service || echo "NOTE: Trip Quality awaits sufficient history."
 fi
@@ -301,7 +303,7 @@ IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
 echo
 echo "===== VALIDATION ====="
 if curl -fsS "http://127.0.0.1:${DASH_PORT}/api/health" >/dev/null; then echo "Dashboard/API : PASS"; else echo "Dashboard/API : STARTING (check: sudo journalctl -u ghost-tesla-ai-web -n 80)"; fi
-$SUDO systemctl --no-pager --plain is-active ghost-tesla-ai-collector.service ghost-tesla-ai-web.service ghost-tesla-ai-intelligence.timer ghost-tesla-ai-neural.timer ghost-forecast-quality-v2.timer ghost-trip-quality-v32.timer || true
+$SUDO systemctl --no-pager --plain is-active ghost-tesla-ai-collector.service ghost-tesla-ai-web.service ghost-tesla-ai-intelligence.timer ghost-tesla-ai-neural.timer ghost-forecast-quality-v2.timer ghost-trip-quality-v32.timer ghost-trip-shadow.timer || true
 for p in /forecast-quality /trip-quality /vehicle-sensors; do
   status="$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:${DASH_PORT}$p" || true)"
   echo "Dashboard $p : HTTP $status"
