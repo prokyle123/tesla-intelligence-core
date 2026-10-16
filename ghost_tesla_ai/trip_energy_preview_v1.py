@@ -6,10 +6,11 @@ never creates a vehicle control instruction, never modifies the winter score.
 from __future__ import annotations
 from datetime import datetime, timedelta
 from pathlib import Path
+from . import config
 import json, math, sqlite3, time
 
-ROOT = Path('/home/ghost/ghost-trip-sequence')
-LIVE = Path('/var/lib/ghost-tesla-ai/ghost_ai.sqlite3')
+ROOT = Path(config.get('GHOST_TRIP_SHADOW_DIR', str(config.DATA_DIR / 'trip-sequence')))
+LIVE = config.DB_PATH
 MAX_HORIZON_H = 24
 
 
