@@ -1,0 +1,18 @@
+[Unit]
+Description=Tesla Intelligence Core Shadow Whole-Journey Quality v3.2
+After=ghost-tesla-ai-collector.service
+Wants=ghost-tesla-ai-collector.service
+ConditionPathExists=/var/lib/ghost-tesla-ai/ghost_ai.sqlite3
+
+[Service]
+Type=oneshot
+User=__GHOST_USER__
+Group=__GHOST_USER__
+WorkingDirectory=/opt/ghost-tesla-ai
+Environment=PYTHONPATH=/opt/ghost-tesla-ai
+ExecStart=/opt/ghost-tesla-ai/venv/bin/python -m ghost_tesla_ai.quality_runner trip
+NoNewPrivileges=true
+PrivateTmp=true
+Nice=10
+TimeoutStartSec=10min
+UMask=0077
