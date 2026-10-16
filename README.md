@@ -114,6 +114,13 @@ The **main Winter Readiness dashboard layout stays unchanged**. New sections and
 
 **This version remains unreleased:** see [draft v1 release notes](docs/V1_RELEASE_NOTES_DRAFT.md), [source reconciliation](docs/V1_SOURCE_RECONCILIATION.md) and [installer checklist](docs/V1_RELEASE_READINESS.md). The images below show genuine **earlier** builds; updated captures need a privacy check before replacing them.
 
+<p align="center">
+  <a href="docs/images/v1-architecture.svg">
+    <img src="docs/images/v1-architecture.svg" alt="Tesla Intelligence Core v1 local, read-only vehicle intelligence architecture" width="95%">
+  </a>
+</p>
+<p align="center"><sub>v1 architecture diagram — editable illustration, not a screenshot. Current in-car and dashboard captures appear below.</sub></p>
+
 ## Visual tour
 
 ### 🧠 Live Neural Engine Atlas
