@@ -1,0 +1,58 @@
+name: Publish v1 major release
+
+on:
+  workflow_run:
+    workflows: ["smoke"]
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  publish-v1:
+    # Only successful push builds on main may publish a release. PR checks cannot.
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the exact tested commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Confirm major-release readiness and screenshots
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(tr -d '\r\n' < VERSION)" = "1.0.0"
+          grep -q 'VERSION="1.0.0"' install.sh
+          test -s docs/V1_RELEASE_NOTES.md
+          python3 scripts/release_preflight.py --strict
+          for name in home-winter neural-engine pack-weather departure-planning thermal-power ai-workspace models truth-lab production; do
+            test -s "docs/images/v1/v1-${name}.webp"
+          done
+          # Make sure these release files are on the *current* main commit.
+          git fetch origin main --depth=1
+          test "$(git rev-parse origin/main)" = "${{ github.event.workflow_run.head_sha }}"
+
+      - name: Publish source release (idempotent)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TARGET: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          if gh release view v1.0.0 --repo "$REPO" >/dev/null 2>&1; then
+            echo "Release v1.0.0 already exists. No change."
+            exit 0
+          fi
+          gh release create v1.0.0 \
+            --repo "$REPO" \
+            --target "$TARGET" \
+            --title "Tesla Intelligence Core v1.0.0 — Winter & Whole-Vehicle Intelligence" \
+            --notes-file docs/V1_RELEASE_NOTES.md \
+            --latest

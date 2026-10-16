@@ -68,7 +68,7 @@ def _weather(lat,lon,now):
     try:
         q=urllib.parse.urlencode({
             'latitude':round(lat,4),'longitude':round(lon,4),
-            'hourly':'temperature_2m','temperature_unit':'fahrenheit',
+            'hourly':'temperature_2m,weather_code,precipitation_probability,wind_speed_10m','temperature_unit':'fahrenheit','wind_speed_unit':'mph',
             'forecast_days':2,'timeformat':'unixtime','timezone':'auto'
         })
         url='https://api.open-meteo.com/v1/forecast?'+q
@@ -77,12 +77,21 @@ def _weather(lat,lon,now):
             payload=json.loads(r.read().decode('utf-8'))
         times=payload.get('hourly',{}).get('time',[]) or []
         temps=payload.get('hourly',{}).get('temperature_2m',[]) or []
+        codes=payload.get('hourly',{}).get('weather_code',[]) or []
+        precip=payload.get('hourly',{}).get('precipitation_probability',[]) or []
+        winds=payload.get('hourly',{}).get('wind_speed_10m',[]) or []
         hours=[]
-        for ts,t in zip(times,temps):
+        for i,(ts,t) in enumerate(zip(times,temps)):
             try:
                 ts=float(ts); t=float(t)
             except Exception:continue
-            if ts >= now-3600 and ts <= now+48*3600:hours.append({'ts':ts,'temp_f':round(t,1)})
+            if ts >= now-3600 and ts <= now+48*3600:
+                def opt(values):
+                    try:
+                        v=values[i];return None if v is None else float(v)
+                    except (IndexError,ValueError,TypeError):return None
+                hours.append({'ts':ts,'temp_f':round(t,1),'weather_code':opt(codes),
+                              'precip_probability':opt(precip),'wind_mph':opt(winds)})
         out={'status':'ready','source':'Open-Meteo hourly','fetched_at':now,'hours':hours}
         db.set_state('winter_weather',out)
         return out
@@ -98,6 +107,20 @@ def _nearest_weather(hours,target,current_f):
     row=min(hours,key=lambda r:abs(float(r['ts'])-target))
     return _f(row.get('temp_f')) if _f(row.get('temp_f')) is not None else current_f
 
+
+# GHOST-WEATHER-STRIP-V1: purely presentational weather data, no forecasting changes.
+def _ghost_weather_at(weather,now,offset):
+    hours=weather.get('hours') or []
+    target=float(now)+float(offset)*3600.0
+    possible=[x for x in hours if isinstance(x,dict) and x.get('ts') is not None]
+    nearest=min(possible,key=lambda x:abs(float(x['ts'])-target),default=None)
+    if nearest is None or abs(float(nearest['ts'])-target)>5400:
+        return {'hours':offset,'target_ts':target,'temp_f':None,'weather_code':None,
+                'precip_probability':None,'wind_mph':None,'status':'unavailable'}
+    return {'hours':offset,'target_ts':target,'temp_f':_f(nearest.get('temp_f')),
+            'weather_code':_f(nearest.get('weather_code')),
+            'precip_probability':_f(nearest.get('precip_probability')),
+            'wind_mph':_f(nearest.get('wind_mph')),'status':weather.get('status','unknown')}
 
 def _retention_k(days=60):
     cutoff=time.time()-days*86400; ks=[]
@@ -136,20 +159,57 @@ def _model_prediction(name):
     return None
 
 
-def _forecast_card(hours,now,current_outside,weather,physics,model=None):
+def _parked_unheated_snapshot(row, now):
+    """Conservative current-state guard; future parking remains a scenario, not a fact.
+
+    Only use parked weather/retention as the primary displayed horizon when
+    the newest Tesla observation is fresh, explicitly in P and unplugged,
+    with no cabin/battery heating or evidence of AC charging.
+    """
+    ts=_f(row['ts'])
+    if ts is None or not (-30 <= now-ts <= 600):
+        return False
+    if str(row['shift_state'] or '').strip().upper()!='P':
+        return False
+    speed=_f(row['speed_kmh'])
+    if speed is None or abs(speed)>2.0:
+        return False
+    if bool(row['plugged_in']) or str(row['charging_state'] or '').strip().lower()=='charging':
+        return False
+    if bool(row['preconditioning']) or bool(row['battery_heater_on']) or bool(row['climate_on']):
+        return False
+    for key in ('charger_power_kw','charge_input_kw'):
+        kw=_f(row[key])
+        if kw is not None and kw>0.15:
+            return False
+    return True
+
+
+def _forecast_card(hours,now,current_outside,weather,physics,model=None,parked_unheated=False):
     target=now+hours*3600; outside=_nearest_weather(weather.get('hours',[]),target,current_outside)
     phys=next((x for x in physics if x['hours']==hours),None)
     pack=None; source='learning'; mae=None
-    if model and model.get('value_f') is not None:
-        pack=model['value_f']; source=f"Pack Thermal AI Gen {model.get('generation','?')}"; mae=model.get('mae_f')
+    model_pack=model.get('value_f') if model else None
+    physics_pack=phys.get('pack_f') if phys else None
+    used_parked=bool(parked_unheated and phys is not None)
+    if used_parked:
+        pack=phys['pack_f']; source='conditional parked/unheated: learned retention + hourly weather'
+    elif model and model_pack is not None:
+        pack=model_pack; source=f"Pack Thermal AI Gen {model.get('generation','?')} (mixed-state)"; mae=model.get('mae_f')
     elif phys:
         pack=phys['pack_f']; source=phys['source']
     margin=None if pack is None or outside is None else round(pack-outside,1)
     uncertainty=None
-    if mae is not None:uncertainty=max(2.0,round(mae*1.5,1))
-    elif pack is not None:uncertainty=4.0
+    if mae is not None: uncertainty=max(2.0,round(mae*1.5,1))
+    # Do not present an invented +/-4 F confidence band as a validated forecast
+    # interval. Parked physics currently has no independently calibrated band.
     rng=None if pack is None or uncertainty is None else [round(pack-uncertainty,1),round(pack+uncertainty,1)]
-    return {'hours':hours,'target_ts':target,'pack_f':pack,'outside_f':None if outside is None else round(outside,1),'margin_f':margin,'range_f':rng,'source':source}
+    return {'hours':hours,'target_ts':target,'pack_f':pack,
+            'outside_f':None if outside is None else round(outside,1),
+            'margin_f':margin,'range_f':rng,'source':source,
+            'prediction_mode':'parked_conditional' if used_parked else 'mixed_state_ai' if mae is not None else 'learned_retention',
+            'physics_pack_f':physics_pack,'ai_pack_f':model_pack,
+            'range_calibrated':False}
 
 
 def _thermal_history(car_id,now):
@@ -257,37 +317,34 @@ def build_winter_board(now=None):
         latest=con.execute('SELECT * FROM telemetry ORDER BY ts DESC LIMIT 1').fetchone()
     if not latest:return {'status':'WAITING','score':0,'generated_at':now,'forecast':[],'message':'Waiting for Tesla telemetry.'}
 
-    ready=current_readiness(now); dyn=learned_dynamics(); raw=latest['raw_json']; lat,lon=_gps(raw)
+    raw=latest['raw_json']; lat,lon=_gps(raw)
     weather=_weather(lat,lon,now)
+    ready=current_readiness(now,weather_hours=weather.get('hours',[])); dyn=learned_dynamics()
     cur_pack=_c2f(_f(latest['battery_temp_c'])); cur_out=_c2f(_f(latest['outside_temp_c'])); cur_cabin=_c2f(_f(latest['inside_temp_c']))
     k,nk=_retention_k(); physics=_physics_series(cur_pack,cur_out,weather.get('hours',[]),now,k,12)
     m1=_model_prediction('pack_temp_60m'); m3=_model_prediction('pack_temp_180m')
-    f1=_forecast_card(1,now,cur_out,weather,physics,m1)
-    f3=_forecast_card(3,now,cur_out,weather,physics,m3)
-    f6=_forecast_card(6,now,cur_out,weather,physics,None)
+    parked_scenario=_parked_unheated_snapshot(latest,now) and bool(physics)
+    f1=_forecast_card(1,now,cur_out,weather,physics,m1,parked_unheated=parked_scenario)
+    f3=_forecast_card(3,now,cur_out,weather,physics,m3,parked_unheated=parked_scenario)
+    f6=_forecast_card(6,now,cur_out,weather,physics,None,parked_unheated=parked_scenario)
     all_future=[]
     for h in range(1,13):
         model=m1 if h==1 else m3 if h==3 else None
-        all_future.append(_forecast_card(h,now,cur_out,weather,physics,model))
+        all_future.append(_forecast_card(h,now,cur_out,weather,physics,model,parked_unheated=parked_scenario))
     valid=[x for x in all_future if x.get('pack_f') is not None]
     cold=min(valid,key=lambda x:x['pack_f']) if valid else {'target_ts':None,'pack_f':None,'outside_f':None,'margin_f':None,'range_f':None,'source':'learning'}
 
+    # GHOST SHARED SCALE v1: current vehicle and next-departure score use the
+    # exact same numeric kernel. Only the input time differs. The minimum pack
+    # over the 12h outlook is still shown below as a separate advisory.
     min_pack=min([x['pack_f'] for x in valid],default=cur_pack if cur_pack is not None else 32)
-    thermal_score=100 if min_pack>=50 else _clamp((min_pack-20)/(50-20)*100,0,100)
     arrival=_f(ready.get('predicted_arrival_soc'))
-    soc_score=50 if arrival is None else _clamp((arrival-10)/(30-10)*100,0,100)
-    dep_soc=_f(ready.get('predicted_departure_soc')); target=_f(ready.get('charge_target_soc')) or 80
-    # Departure-charge readiness is continuous relative to the configured
-    # target. Trip sufficiency is already measured separately by arrival SOC,
-    # so a departure prediction below target should lose points gradually
-    # rather than dropping the entire charge component to zero.
-    if dep_soc is None:
-        charge_score=70
-    elif target > 0:
-        charge_score=_clamp((dep_soc/target)*100,0,100)
-    else:
-        charge_score=100
+    dep_soc=_f(ready.get('predicted_departure_soc'))
+    dep_pack=_f(ready.get('predicted_departure_pack_f'))
+    target=_f(ready.get('charge_target_soc')) or 80
     evidence=_f(ready.get('confidence')) or 0
+    from .winter_shared_score_v1 import score_projected
+    projected=score_projected(dep_soc,dep_pack,_f(ready.get('predicted_departure_outside_f')),dict(latest))
 
     # v0.8.28.3 rich readiness context
     actual_a=_f(latest['charger_actual_current'])
@@ -323,65 +380,26 @@ def build_winter_board(now=None):
             rich_penalties.append({'key':'module_balance','points':1.0,'reason':f'Module temperature spread is elevated at {module_spread_f:.1f}°F.'})
     rich_penalty=min(8.0,sum(float(x['points']) for x in rich_penalties))
 
-    # Transparent readiness accounting. Each component contributes a fixed
-    # portion of the 100-point operational score, and the dashboard can show
-    # the exact deductions instead of presenting an unexplained number.
-    score_parts=[
-        {
-            'key':'thermal','label':'Thermal margin','weight':45.0,'raw_score':thermal_score,
-            'reason':(
-                f"Coolest projected pack {min_pack:.1f}°F is at or above the 50°F full-score threshold."
-                if min_pack>=50 else
-                f"Coolest projected pack {min_pack:.1f}°F is below the 50°F full-score threshold."
-            )
-        },
-        {
-            'key':'arrival_soc','label':'Arrival SOC margin','weight':35.0,'raw_score':soc_score,
-            'reason':(
-                'Projected arrival SOC is not available yet, so this component is held at 50%.'
-                if arrival is None else
-                (f"Projected arrival SOC {arrival:.0f}% is at or above the 30% full-score threshold."
-                 if arrival>=30 else
-                 f"Projected arrival SOC {arrival:.0f}% is below the 30% full-score threshold.")
-            )
-        },
-        {
-            'key':'departure_charge','label':'Departure charge','weight':10.0,'raw_score':charge_score,
-            'reason':(
-                'Departure SOC is not available yet, so this component is held at 70%.'
-                if dep_soc is None else
-                (f"Projected departure SOC {dep_soc:.0f}% meets the {target:.0f}% charge target."
-                 if dep_soc>=target else
-                 f"Projected departure SOC {dep_soc:.0f}% is below the {target:.0f}% charge target.")
-            )
-        },
-        {
-            'key':'evidence','label':'Evidence confidence','weight':10.0,'raw_score':_clamp(evidence,0,100),
-            'reason':(
-                f"Overall readiness evidence confidence is {evidence:.0f}%. This combines commute, thermal and charging evidence; it is separate from departure-schedule confidence."
-            )
-        },
-    ]
-    for part in score_parts:
-        part['points']=round(part['weight']*part['raw_score']/100.0,2)
-        part['penalty']=round(part['weight']-part['points'],2)
-    base_score_unrounded=_clamp(sum(x['points'] for x in score_parts),0,100)
-    score_unrounded=_clamp(base_score_unrounded-rich_penalty,0,100)
-    score=int(round(score_unrounded))
-    score_breakdown={
-        'max_score':100.0,
-        'base_score_unrounded':round(base_score_unrounded,2),
-        'rich_context_penalty':round(rich_penalty,2),
-        'score_unrounded':round(score_unrounded,2),
-        'total_penalty':round(100.0-score_unrounded,2),
-        'components':score_parts,
-        'active_penalties':[x for x in score_parts if x['penalty']>=0.05],
-        'execution_penalties':rich_penalties,
-    }
-    if score>=90:headline='WINTER READY NOW'; state='READY'
-    elif score>=75:headline='WINTER READY'; state='READY'
-    elif score>=55:headline='WINTER WATCH'; state='WATCH'
-    else:headline='ACTION RECOMMENDED'; state='ACTION'
+    # Same 55/35/10 kernel as measured-only Right Now. No double subtraction
+    # for old rich penalties, route consumption or evidence confidence.
+    if projected.get('available'):
+        score_breakdown=projected['score_breakdown']
+        score_parts=score_breakdown['components']
+        score_unrounded=float(score_breakdown['score_unrounded'])
+        score=int(round(score_unrounded))
+        if score_unrounded>=75:headline='WINTER READY FOR DEPARTURE';state='READY'
+        elif score_unrounded>=55:headline='WINTER WATCH FOR DEPARTURE';state='WATCH'
+        elif score_unrounded>=35:headline='DEPARTURE ACTION RECOMMENDED';state='ACTION'
+        else:headline='CRITICAL DEPARTURE READINESS';state='ACTION'
+    else:
+        score_parts=[]
+        score_unrounded=0.0
+        score=0
+        state='LEARNING';headline='DEPARTURE READINESS LEARNING'
+        score_breakdown={'max_score':100.0,'base_score_unrounded':0.0,
+            'rich_context_penalty':0.0,'score_unrounded':0.0,'total_penalty':0.0,
+            'components':[],'active_penalties':[],'execution_penalties':[],
+            'human_penalties':[],'human_checks':[]}
 
     target_pack=float(config.READINESS_TARGET_PACK_F)
     dep_pack=_f(ready.get('predicted_departure_pack_f'))
@@ -392,10 +410,13 @@ def build_winter_board(now=None):
     elif min_pack>=target_pack:action='No battery warm-up is expected to be needed.'
     else:action='Pack may be below the preferred warm target; continue monitoring.'
 
+    if not projected.get('available'):
+        action=str(projected.get('reason') or 'Departure forecast is incomplete; no comparable score available.')
+
     # v0.8.28.3 live execution override
-    if not_enough_heat:
+    if projected.get('available') and not_enough_heat:
         action='L1 POWER LIMITED • charging and battery heating may compete for available wall power.'
-    elif heater_no_power:
+    elif projected.get('available') and heater_no_power:
         action='BATTERY HEAT POWER LIMITED • heater demand is present but power is not currently available.'
 
     # 30-minute movement / trend
@@ -426,35 +447,35 @@ def build_winter_board(now=None):
 
     parts_by_key={x.get('key'):x for x in score_parts}
     therm_pen=float((parts_by_key.get('thermal') or {}).get('penalty') or 0.0)
-    arrival_pen=float((parts_by_key.get('arrival_soc') or {}).get('penalty') or 0.0)
     charge_pen=float((parts_by_key.get('departure_charge') or {}).get('penalty') or 0.0)
-    evidence_pen=float((parts_by_key.get('evidence') or {}).get('penalty') or 0.0)
-
+    condition_pen=float((parts_by_key.get('vehicle_state') or {}).get('penalty') or 0.0)
+    # Only these three components affect the unified 100-point score.
     if therm_pen >= .05:
-        if min_pack < 32: lab='PACK FREEZING RISK'; sev='bad'
-        elif min_pack < 40: lab='PACK TOO COLD'; sev='bad'
-        else: lab='PACK BELOW READY TEMP'; sev='warn'
-        _diag('score_pack_temp',lab,'PENALTY',sev,
-              f'Coldest projected pack is {min_pack:.1f}°F. Full thermal credit starts at 50°F.',
-              f'{min_pack:.1f}°F',therm_pen,'thermal')
-    if arrival_pen >= .05:
-        if arrival is None:
-            _diag('score_arrival','ARRIVAL RESERVE UNKNOWN','PENALTY','warn',
-                  'GHOST does not have a reliable arrival-SOC estimate yet.','LEARNING',arrival_pen,'arrival_soc')
-        else:
-            lab='ARRIVAL RESERVE LOW' if arrival < 20 else 'ARRIVAL RESERVE THIN'
-            _diag('score_arrival',lab,'PENALTY','bad' if arrival < 20 else 'warn',
-                  f'Projected arrival is {arrival:.0f}% SOC. Full reserve credit starts at 30%.',
-                  f'{arrival:.0f}%',arrival_pen,'arrival_soc')
+        severity='bad' if dep_pack is not None and dep_pack<40 else 'warn'
+        _diag('score_pack_temp','DEPARTURE PACK TEMPERATURE','PENALTY',severity,
+              f'Predicted departure pack {dep_pack:.1f}°F; full thermal credit starts at 50°F.',
+              f'{dep_pack:.1f}°F',therm_pen,'thermal')
     if charge_pen >= .05:
-        if dep_soc is None:
-            _diag('score_departure_charge','DEPARTURE CHARGE UNKNOWN','PENALTY','warn',
-                  'Departure SOC is still learning, so GHOST cannot give full charge credit.','LEARNING',charge_pen,'departure_charge')
-        else:
-            lab='DEPARTURE SOC LOW' if dep_soc < target-10 else 'DEPARTURE SOC BELOW TARGET'
-            _diag('score_departure_charge',lab,'PENALTY','bad' if dep_soc < target-10 else 'warn',
-                  f'Projected departure is {dep_soc:.0f}% versus the {target:.0f}% target.',
-                  f'{dep_soc:.0f}% / {target:.0f}%',charge_pen,'departure_charge')
+        _diag('score_departure_charge','DEPARTURE SOC BELOW REFERENCE','PENALTY',
+              'bad' if dep_soc is not None and dep_soc < 35 else 'warn',
+              f'Predicted departure SOC {dep_soc:.1f}% versus the fixed 80% reference. Same 55-point weight as Right Now.',
+              f'{dep_soc:.1f}% / 80%',charge_pen,'departure_charge')
+    if condition_pen >= .05:
+        _diag('score_vehicle_state','CURRENT VEHICLE LIMITATION','PENALTY','warn',
+              'Currently observed heater-power and module-spread limitations are provisionally carried into the departure score; they may change.',
+              'CURRENT BASELINE',condition_pen,'vehicle_state')
+    # Unscored advisory: route arrival reserve & forecast evidence are still
+    # available, but do not alter the shared-scale gauge.
+    _diag('prediction_confidence','FORECAST EVIDENCE','CHECK',
+          'warn' if evidence<55 else 'info',
+          'Confidence describes prediction evidence, not a separate readiness-score penalty.',
+          f'{evidence:.0f}% evidence')
+    _diag('shared_scale_basis','READINESS SCALE','MATCHED','good',
+          'Right Now and Next Departure both use 55% charge, 35% pack temperature, and 10% observed vehicle conditions. Only measured versus forecast inputs differ.',
+          '55 / 35 / 10')
+    if not projected.get('available'):
+        _diag('forecast_missing','DEPARTURE SCORE','LEARNING','bad',
+              str(projected.get('reason') or 'Cannot score without SOC and pack forecasts.'),'UNAVAILABLE')
 
     routine=ready.get('routine') or {}
     rdyn=ready.get('dynamics') or {}
@@ -463,47 +484,8 @@ def build_winter_board(now=None):
     cold_samples=int(rdyn.get('cold_samples') or 0)
     l1_samples=int(rdyn.get('l1_samples') or 0)
     schedule_conf=_f(schedule.get('confidence')) if schedule else None
-    evidence_sources=[]
-    if commute_samples:
-        evidence_sources.append(('commute','COMMUTE MEMORY THIN',min(100.0,commute_samples/15.0*100.0),commute_samples,15,'first-drive events'))
-    if cold_samples:
-        evidence_sources.append(('cold','COLD-SOAK MEMORY THIN',min(100.0,cold_samples/15.0*100.0),cold_samples,15,'cold-soak events'))
-    if l1_samples:
-        evidence_sources.append(('charge','L1 CHARGE MEMORY THIN',min(100.0,l1_samples/10.0*100.0),l1_samples,10,'charging events'))
-    base_conf=(sum(x[2] for x in evidence_sources)/len(evidence_sources)) if evidence_sources else 10.0
-    if schedule_conf is not None:
-        uncapped_conf=round(base_conf*.65 + schedule_conf*.35); base_weight=6.5; schedule_weight=3.5
-    else:
-        uncapped_conf=round(base_conf); base_weight=10.0; schedule_weight=0.0
-    raw_hits=[]
-    if evidence_sources:
-        per_weight=base_weight/len(evidence_sources)
-        for key,label,pct,have,need,noun in evidence_sources:
-            hit=per_weight*(1.0-pct/100.0)
-            if hit>.0001:
-                raw_hits.append((key,label,hit,f'GHOST has {have} {noun}; full evidence credit is reached at {need}.',f'{have} / {need}'))
-    elif base_weight>0:
-        raw_hits.append(('history','READINESS HISTORY TOO THIN',base_weight*.90,'GHOST has not built enough commute, cold-soak or charging memory yet.','LEARNING'))
-    if schedule_weight>0 and schedule_conf is not None:
-        hit=schedule_weight*(1.0-_clamp(schedule_conf,0,100)/100.0)
-        if hit>.0001:
-            raw_hits.append(('schedule','DEPARTURE PATTERN STILL LEARNING',hit,
-                             f'The learned departure schedule is {schedule_conf:.0f}% confident; more observed departures will tighten it.',f'{schedule_conf:.0f}%'))
-    cold_threshold_f=_c2f(float(config.COLD_SOAK_THRESHOLD_C))
-    if cur_out is not None and cur_out <= cold_threshold_f and cold_samples < 3 and uncapped_conf > 35:
-        raw_hits.append(('cold_cap','COLD-WEATHER EVIDENCE CAP',(uncapped_conf-35)/10.0,
-                         f'Outside air is {cur_out:.1f}°F but GHOST only has {cold_samples} cold-soak events, so confidence is capped for safety.',f'{cold_samples} cold events'))
-    raw_total=sum(x[2] for x in raw_hits)
-    scale=(evidence_pen/raw_total) if evidence_pen>.0001 and raw_total>.0001 else 0.0
-    if evidence_pen>=.05:
-        if raw_hits:
-            for key,label,hit,detail,value in raw_hits:
-                pts=hit*scale
-                if pts>=.025:_diag('score_evidence_'+key,label,'PENALTY','warn',detail,value,pts,'evidence')
-        else:
-            _diag('score_evidence','READINESS EVIDENCE STILL LEARNING','PENALTY','warn',
-                  f'Overall GHOST readiness evidence is {evidence:.0f}%; more observed operation will close the gap.',f'{evidence:.0f}%',evidence_pen,'evidence')
-
+    # Cold-soak / L1 / commute evidence remains advisory rather than part
+    # of this shared-scale score; forecast confidence is displayed above.
     # Broad live readiness checks. These do not deduct points unless a matching
     # active score card above explicitly shows a point value.
     if min_pack < 32:_diag('pack_forecast','PACK FORECAST','FREEZING','bad',f'Coldest projected pack is {min_pack:.1f}°F.',f'{min_pack:.1f}°F')
@@ -526,6 +508,49 @@ def build_winter_board(now=None):
     elif arrival < 30:_diag('arrival_reserve','ARRIVAL RESERVE','THIN','warn','Projected arrival is below the full-credit reserve.',f'{arrival:.0f}%')
     else:_diag('arrival_reserve','ARRIVAL RESERVE','HEALTHY','good','Projected arrival retains a healthy SOC reserve.',f'{arrival:.0f}%')
 
+    # Winter route uncertainty stays advisory; identical current/departure
+    # physical inputs must earn identical scores under the 55/35/10 scale.
+    tpred=ready.get('trip_prediction') or {}
+    buffered=_f(tpred.get('arrival_soc_buffered'))
+    margin=_f(tpred.get('soc_planning_buffer_pp'))
+    if arrival is not None and buffered is not None and margin is not None:
+        _diag('arrival_planning_buffer','WINTER SOC PLANNING BUFFER',
+              'WATCH' if buffered<20 else 'ESTIMATED',
+              'warn' if buffered<20 else 'info',
+              'Nominal predicted arrival minus 2x historical trip-model MAE. This is not a guarantee or calibrated confidence interval.',
+              f'{buffered:.1f}% buffered / {arrival:.1f}% nominal')
+    elif arrival is not None:
+        _diag('arrival_planning_buffer','WINTER SOC PLANNING BUFFER','LEARNING','warn',
+              'No valid trip-model error estimate is available; nominal arrival is not uncertainty-adjusted.','UNAVAILABLE')
+    empirical=tpred.get('historical_comparison') or {}
+    if tpred.get('empirical_floor_applied'):
+        baseline=_f(empirical.get('median_soc_drop'))
+        model=_f(tpred.get('model_soc_drop'))
+        _diag('commute_empirical_guard','COMMUTE SOC REALITY CHECK','CORRECTED','warn',
+              f"The current trip forecast was below the {baseline:.1f}% observed median from {empirical.get('count',0)} comparable completed {str(empirical.get('window','')).lower()} drives. The planning and score arrival SOC use this historical floor. This matches time/distance, not GPS route.",
+              f'{model:.1f}% model / {baseline:.1f}% measured' if model is not None else f'{baseline:.1f}% observed baseline')
+    elif empirical.get('status')!='SUPPORTED':
+        _diag('commute_empirical_guard','COMMUTE SOC REALITY CHECK','LEARNING','info',
+              'Fewer than 8 recent comparable drives matched this departure; no empirical SOC floor applied.',
+              f"{empirical.get('count',0)} MATCHED DRIVES")
+    coverage=tpred.get('weather_coverage') or {}
+    cov_status=str(coverage.get('status') or 'UNKNOWN')
+    if cov_status in ('OUTSIDE_OBSERVED_RANGE','INSUFFICIENT_COLD_DRIVES'):
+        low=coverage.get('observed_min_f')
+        high=coverage.get('observed_max_f')
+        bounds=f'{low}°F to {high}°F' if low is not None and high is not None else 'unknown'
+        _diag('winter_energy_coverage','COLD TRIP MODEL EVIDENCE','NOT VERIFIED','bad',
+              f'Cold-trip SOC estimates may be unreliable. Observed drive ambient range: {bounds}; only {coverage.get("cold_drive_samples",0)} qualifying drives at or below 45°F. Do not rely on the nominal arrival value alone.',
+              'COLLECTING COLD TRIPS')
+    predicted_ambient=_f(ready.get('predicted_departure_outside_f'))
+    if predicted_ambient is not None:
+        basis='hourly weather forecast' if ready.get('hourly_forecast_used') else 'current ambient fallback'
+        _diag('departure_weather','AIR AT NEXT DEPARTURE',
+              'FORECAST' if ready.get('hourly_forecast_used') else 'FALLBACK',
+              'info' if ready.get('hourly_forecast_used') else 'warn',
+              f'Outside air used for the trip-energy and passive pack-cooling estimate: {basis}.',
+              f'{predicted_ambient:.1f}°F')
+
     if dep_soc is None:_diag('departure_soc','DEPARTURE CHARGE','LEARNING','info','GHOST is still learning departure SOC.','—')
     elif dep_soc+0.5 < target:_diag('departure_soc','DEPARTURE CHARGE','BELOW TARGET','warn',f'Predicted departure charge is below the {target:.0f}% target.',f'{dep_soc:.0f}%')
     else:_diag('departure_soc','DEPARTURE CHARGE','ON TARGET','good','Predicted departure charge meets the configured target.',f'{dep_soc:.0f}%')
@@ -546,7 +571,8 @@ def build_winter_board(now=None):
     elif weather.get('hours'):_diag('weather','FORECAST LINK','CACHED','warn','GHOST is using a cached forecast until refresh.','CACHED')
     else:_diag('weather','FORECAST LINK','FALLBACK','warn','No hourly forecast; current outside air is the fallback.','AMBIENT')
 
-    if m1 and m3:_diag('thermal_ai','PACK THERMAL AI','ONLINE','good','Both 1-hour and 3-hour learned pack forecasts are available.','1h + 3h')
+    if parked_scenario:_diag('thermal_ai','PACK THERMAL AI','PARKED GUARD','info','Unplugged parked scenario uses weather-aware learned retention for the scored 1h/3h outlook; trained tree model remains a benchmark, not the primary parked forecast.','RETENTION')
+    elif m1 and m3:_diag('thermal_ai','PACK THERMAL AI','ONLINE','good','Both 1-hour and 3-hour learned pack forecasts are available; these models cover mixed future activity.','1h + 3h')
     elif m1 or m3:_diag('thermal_ai','PACK THERMAL AI','PARTIAL','info','One neural horizon is available; other horizons use retention physics.','PARTIAL')
     else:_diag('thermal_ai','PACK THERMAL AI','LEARNING','warn','Pack outlook is relying on learned retention physics.','PHYSICS')
 
@@ -590,11 +616,11 @@ def build_winter_board(now=None):
     if not_enough_heat:
         _diag('rich_heat_power','L1 THERMAL SUPPORT','POWER LIMITED','bad',
               'Tesla reports that available charging power is not enough to fully support heating demand.',
-              'LIMITED',4.0,'rich_context')
+              'LIMITED')
     elif heater_no_power:
         _diag('rich_heat_power','BATTERY HEATER POWER','NO POWER','bad',
               'Battery-heater demand is present but the car reports no heater power.',
-              'NO POWER',3.0,'rich_context')
+              'NO POWER')
     elif bool(latest['plugged_in']):
         _diag('rich_heat_power','THERMAL SUPPORT','AVAILABLE','good',
               'No direct AC-power limitation for battery heating is currently reported.',
@@ -624,7 +650,9 @@ def build_winter_board(now=None):
     score_breakdown['human_penalties']=active_human
     score_breakdown['human_checks']=diagnostics
     score_breakdown['human_penalty_total']=round(sum(float(x['score_penalty']) for x in active_human),2)
-    score_breakdown['human_note']='Only cards marked PENALTY remove Winter Score points. WATCH / LEARNING / COLD cards are context unless a point value is shown.'
+    if projected.get('available') and abs(score_breakdown['human_penalty_total']-score_breakdown['total_penalty'])>=0.06:
+        raise ValueError('Shared score penalty cards do not sum to numeric score')
+    score_breakdown['human_note']='Shared 55/35/10 scale. Only scored deductions affect this readiness number; commute, weather, and evidence advisories do not alter it.'
 
     if not_enough_heat or heater_no_power:
         thermal_support_state='POWER LIMITED'; thermal_support_severity='bad'
@@ -652,7 +680,7 @@ def build_winter_board(now=None):
         balance_state='WIDE'; balance_severity='bad'
 
     readiness_context={
-        'score_penalty':round(rich_penalty,2),
+        'score_penalty':round(condition_pen,2),
         'charging_path':{
             'state':charging_state_label,
             'actual_a':actual_a,'requested_a':request_a,'pilot_a':pilot_a,
@@ -671,7 +699,7 @@ def build_winter_board(now=None):
             'pack_f':cur_pack,'module_min_f':module_min_f,'module_max_f':module_max_f,
             'spread_f':None if module_spread_f is None else round(module_spread_f,1),
         },
-        'penalties':rich_penalties,
+        'penalties':rich_penalties,  # details are advisory; system-condition score is already accounted for above
     }
 
     live_warmup=_live_warmup(latest['car_id'],latest,now)
@@ -682,12 +710,12 @@ def build_winter_board(now=None):
                    'charging_state':latest['charging_state'],'plugged_in':bool(latest['plugged_in']),'module_min_f':mn,'module_max_f':mx,'module_spread_f':spread,
                    'pack_move_30m_f':pack_move,'pack_voltage_v':_f(latest['pack_voltage_v']),'pack_current_a':_f(latest['pack_current_a']),
                    'wall_kw':wall_kw,'pack_kw':pack_kw,'nonpack_kw':nonpack,'pack_share_pct':pack_share},
-        'forecast':[f1,f3,f6], 'coldest':cold,
-        'weather':{'status':weather.get('status'),'source':weather.get('source'),'fetched_at':weather.get('fetched_at'),'forecast_low_f':round(forecast_low,1) if forecast_low is not None else None},
+        'forecast':[f1,f3,f6], 'coldest':cold, 'parked_scenario_active':parked_scenario,
+        'weather':{'status':weather.get('status'),'source':weather.get('source'),'fetched_at':weather.get('fetched_at'),'forecast_low_f':round(forecast_low,1) if forecast_low is not None else None,'outlook':[_ghost_weather_at(weather,now,h) for h in (3,6,12)]},
         'thermal':{'retention_k_per_hr':None if k is None else round(k,4),'retention_samples':nk,'target_pack_f':target_pack,'season':season,
                    'current_margin_f':None if cur_pack is None or cur_out is None else round(cur_pack-cur_out,1),'coldest_margin_f':cold.get('margin_f')},
         'departure':{'status':ready.get('status'),'confidence':ready.get('confidence'),'departure_ts':ready.get('departure_ts'),'current_soc':ready.get('current_soc'),
-                     'departure_soc':ready.get('predicted_departure_soc'),'arrival_soc':ready.get('predicted_arrival_soc'),'departure_pack_f':ready.get('predicted_departure_pack_f'),
+                     'departure_soc':ready.get('predicted_departure_soc'),'arrival_soc':ready.get('predicted_arrival_soc'),'departure_pack_f':ready.get('predicted_departure_pack_f'),'departure_outside_f':ready.get('predicted_departure_outside_f'),'hourly_forecast_used':ready.get('hourly_forecast_used'),'arrival_soc_buffered':(ready.get('trip_prediction') or {}).get('arrival_soc_buffered'),
                      'precondition_start_ts':ready.get('suggested_precondition_start_ts'),'precondition_minutes':ready.get('suggested_precondition_minutes'),
                      'charge_target_soc':ready.get('charge_target_soc'),'charge_target_ts':ready.get('charge_target_ts'),'charging_now':ready.get('charging_now'),
                      'probability':ready.get('departure_probability'),'departure_class':ready.get('departure_class'),'departure_source':ready.get('departure_source'),
@@ -695,5 +723,5 @@ def build_winter_board(now=None):
                      'routine':ready.get('routine',{}),'trip_prediction':ready.get('trip_prediction',{}),'reasons':ready.get('reasons',[])},
         'history':_thermal_history(latest['car_id'],now),'timeline':_timeline(now),'live_warmup':live_warmup,
         'readiness_context':readiness_context,
-        'notes':['Readiness score is a transparent operational score, not model accuracy.','Weather is fetched only for forecast temperatures; model training and inference remain local on GHOST.']
+        'notes':['Shared score v1: same 55/35/10 formula as Right Now; future SOC/temp are forecast, vehicle limits provisional; commute/arrival and evidence are separate advisories.','Readiness score is a transparent operational score, not model accuracy.','Parked forecast assumes vehicle remains unplugged and unheated; 1h/3h tree predictions are separate mixed-state benchmarks.','Hourly weather contributes to departure temperature; comparable completed drives can apply a conservative trip SOC floor without altering the trained model.']
     }

@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="650" viewBox="0 0 1180 650" role="img" aria-label="Tesla Intelligence Core v1 architecture: Tesla telemetry and outdoor weather feed local history, thermal and trip intelligence, prediction models, independent quality checks and read-only dashboards">
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#06131b"/><stop offset="1" stop-color="#0a2534"/></linearGradient>
+  <linearGradient id="card" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0e2c3d"/><stop offset="1" stop-color="#0a1d29"/></linearGradient>
+  <style>text{font-family:Inter,Arial,sans-serif;fill:#eaf8fc}.muted{fill:#91b1c0}.title{font-size:31px;font-weight:800}.headline{font-size:22px;font-weight:750}.small{font-size:14px}.sub{font-size:15px}.tag{fill:#61e3b0;font-weight:700}.edge{stroke:#397389;stroke-width:3;fill:none;stroke-linecap:round}.card{fill:url(#card);stroke:#2b6077;stroke-width:1.6}</style>
+</defs>
+<rect width="1180" height="650" rx="28" fill="url(#bg)"/>
+<rect x="0" y="0" width="10" height="650" rx="5" fill="#ffc15c"/>
+<text class="title" x="44" y="60">Tesla Intelligence Core</text>
+<text class="sub muted" x="44" y="88">Local-first vehicle learning | Winter readiness remains the central mission</text>
+<rect x="1010" y="32" width="120" height="34" rx="17" fill="#103f39" stroke="#24866c"/>
+<text x="1070" y="54" font-size="14" text-anchor="middle" class="tag">v1 scope</text>
+
+<rect class="card" x="44" y="133" width="315" height="122" rx="16"/>
+<text class="headline" x="67" y="174">Vehicle observations</text>
+<text class="small muted" x="67" y="204">Tessie or TeslaMate | SOC, pack, power</text>
+<text class="small muted" x="67" y="229">All drives, charging, parking, Sentry</text>
+<rect class="card" x="44" y="290" width="315" height="122" rx="16"/>
+<text class="headline" x="67" y="331">Environmental context</text>
+<text class="small muted" x="67" y="361">Outside forecast | 3h / 6h / 12h</text>
+<text class="small muted" x="67" y="386">Cold soak | measured temperatures</text>
+
+<path class="edge" d="M359 194 H406 V251 H441"/><path class="edge" d="M359 350 H406 V292 H441"/>
+<rect class="card" x="441" y="190" width="308" height="175" rx="17"/>
+<text class="headline" x="465" y="230">Private local history</text>
+<text class="small muted" x="465" y="257">SQLite events and telemetry</text>
+<text class="small muted" x="465" y="282">Trip chains and route evidence</text>
+<text class="small muted" x="465" y="307">Charge-rate and thermal retention</text>
+<text class="small muted" x="465" y="332">No raw data published to GitHub</text>
+
+<path class="edge" d="M749 255 H807 V194 H837"/>
+<path class="edge" d="M749 296 H807 V359 H837"/>
+<rect class="card" x="837" y="129" width="298" height="132" rx="16"/>
+<text class="headline" x="862" y="171">Predictive models</text>
+<text class="small muted" x="862" y="201">Thermal, charge, SOC and trip energy</text>
+<text class="small muted" x="862" y="227">Challenger / governor safeguards</text>
+<rect class="card" x="837" y="294" width="298" height="132" rx="16"/>
+<text class="headline" x="862" y="334">Independent evaluation</text>
+<text class="small muted" x="862" y="364">Forecast quality | trip quality</text>
+<text class="small muted" x="862" y="390">Completed journeys and uncertainty</text>
+
+<path class="edge" d="M989 261 V293"/>
+<path class="edge" d="M988 426 V457 H587 V479"/>
+<rect class="card" x="45" y="480" width="1090" height="117" rx="17"/>
+<text class="headline" x="71" y="523">Read-only dashboards: winter readiness, forecast accuracy, trip quality and vehicle sensors</text>
+<text class="small muted" x="71" y="554">Automatic services and scheduled shadow learners | No Tesla climate, charge, lock or driving control commands</text>
+<text class="small tag" x="71" y="578">Learning evidence is separated from proven accuracy; every-trip usage is included.</text>
+<text class="small muted" x="47" y="629">Architecture illustration (not a live screenshot) | Draft v1 major release</text>
+</svg>

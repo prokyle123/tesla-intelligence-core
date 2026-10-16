@@ -1,0 +1,12 @@
+[Unit]
+Description=Hourly shadow forecast accuracy evaluation
+
+[Timer]
+OnBootSec=6min
+OnUnitActiveSec=1h
+Persistent=true
+AccuracySec=2min
+Unit=ghost-forecast-quality-v2.service
+
+[Install]
+WantedBy=timers.target

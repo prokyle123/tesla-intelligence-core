@@ -14,6 +14,7 @@ import json
 import math
 import os
 from pathlib import Path
+from . import config
 import sqlite3
 import statistics
 import time
@@ -396,8 +397,8 @@ def self_test():
 def main():
     pa = argparse.ArgumentParser()
     pa.add_argument('--self-test', action='store_true')
-    pa.add_argument('--db', default='/var/lib/ghost-tesla-ai/ghost_ai.sqlite3')
-    pa.add_argument('--out', default='/home/ghost/ghost-trip-sequence')
+    pa.add_argument('--db', default=str(config.DB_PATH))
+    pa.add_argument('--out', default=str(config.DATA_DIR / 'trip-sequence'))
     pa.add_argument('--days', type=int, default=60)
     args = pa.parse_args()
     if args.self_test:

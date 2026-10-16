@@ -18,8 +18,11 @@ import tempfile
 import time
 
 VERSION = 'prospective-trip-outcomes-v3.2.0'
-ROOT = Path('/home/ghost/ghost-trip-sequence')
-GHOST_DB = Path('/var/lib/ghost-tesla-ai/ghost_ai.sqlite3')
+SCORING_PATCH = '2026-10-13-segment-arrival-v1.2'  # keep API version used by v5
+MAX_SEGMENT_GAP_SEC = 420.0
+from . import config
+ROOT = Path(config.get('GHOST_TRIP_SHADOW_DIR', str(config.DATA_DIR / 'trip-sequence')))
+GHOST_DB = config.DB_PATH
 # Avoid scoring stale predictions or treating a sleeping car as a verified location.
 MAX_SOURCE_AGE_MIN = 55.0
 MAX_CURRENT_GPS_AGE_MIN = 35.0
@@ -123,7 +126,7 @@ def site_for_end(live, car, end_ts, site_registry):
                            WHERE car_id=? AND ts BETWEEN ? AND ? ORDER BY ts LIMIT 350''',
                         (car,lo,hi)).fetchall()
     try:
-        from trip_sequence_shadow import gps_from_raw
+        from .trip_sequence_shadow import gps_from_raw
     except ImportError:
         return None
     possibilities=[]
@@ -229,19 +232,87 @@ def capture(forecasts, context, now, live=None, car=None):
     info['reason']='new prediction frozen' if info['captured'] else 'prediction already frozen; original preserved'
     return info
 
-def candidate_drive(live, car, snap, now):
-    start=max(snap['captured_at'], snap['predicted_ts']-EARLY_WINDOW_MIN*60)
-    end=min(now, snap['predicted_ts']+LATE_WINDOW_MIN*60)
-    if end<=start:
+def _event_number(row, key):
+    try:
+        return num(row[key])
+    except (IndexError, KeyError, TypeError):
         return None
-    # First qualifying vehicle trip after snapshot, not nearest to predicted time:
-    # this prevents selectively matching only trips that make GHOST look accurate.
-    return live.execute('''SELECT start_ts,end_ts,distance_km,soc_change,wh_per_mile
-        FROM vehicle_events
-        WHERE car_id=? AND event_type='drive' AND start_ts>=? AND start_ts<=?
-          AND distance_km>=5 AND distance_km<=250
-          AND end_ts>start_ts AND (end_ts-start_ts)<=14400
-        ORDER BY start_ts ASC LIMIT 1''',(car,start,end)).fetchone()
+
+
+def _compatible_segments(live, car, previous, following):
+    '''Do not join separate trips across a parked/charging stop or telemetry motion gap.'''
+    gap = float(following['start_ts']) - float(previous['end_ts'])
+    if gap < -5 or gap > MAX_SEGMENT_GAP_SEC:
+        return False
+    if _event_number(previous, 'distance_km') is None or _event_number(following, 'distance_km') is None:
+        return False
+    # Only accept nontrivial, measured pieces, not a zero-distance wake-up.
+    if min(float(previous['distance_km']), float(following['distance_km'])) < 1.0:
+        return False
+    # A known park/charge event is an explicit trip boundary even if short.
+    boundary = live.execute('''SELECT 1 FROM vehicle_events WHERE car_id=?
+        AND event_type IN ('park','charge') AND start_ts < ? AND end_ts > ? LIMIT 1''',
+        (car, float(following['start_ts']), float(previous['end_ts']))).fetchone()
+    if boundary:
+        return False
+    # Don't bridge gaps where SOC inexplicably rose (e.g. charged without a recorded event).
+    old_soc = _event_number(previous, 'end_soc')
+    new_soc = _event_number(following, 'start_soc')
+    if old_soc is not None and new_soc is not None and new_soc > old_soc + 1.0:
+        return False
+    return True
+
+
+def _combined_drive(segments):
+    '''A joined trip is read-only. Original vehicle_events are never rewritten.'''
+    first, last = segments[0], segments[-1]
+    distance = sum(float(x['distance_km']) for x in segments)
+    start_soc = _event_number(first, 'start_soc')
+    end_soc = _event_number(last, 'end_soc')
+    if start_soc is not None and end_soc is not None:
+        soc_change = end_soc - start_soc
+    else:
+        vals = [_event_number(x, 'soc_change') for x in segments]
+        soc_change = sum(vals) if all(x is not None for x in vals) else None
+    energy = [_event_number(x, 'energy_used_kwh') for x in segments]
+    if all(x is not None and x >= 0 for x in energy) and distance > 0:
+        whmi = 1000 * sum(energy) / (distance / 1.609344)
+    else:
+        vals = [(_event_number(x, 'wh_per_mile'), _event_number(x, 'distance_km')) for x in segments]
+        whmi = sum(a*b for a,b in vals)/distance if all(a is not None and b is not None for a,b in vals) else None
+    return {'start_ts': float(first['start_ts']), 'end_ts': float(last['end_ts']),
+            'distance_km': distance, 'soc_change': soc_change,
+            'wh_per_mile': whmi, 'segment_count': len(segments)}
+
+
+def _drive_groups(live, car, start, end):
+    # Start with every nontrivial segment so a short initial movement is retained.
+    # Only groups containing >=5km and <=250km qualify as commutes.
+    rows = live.execute('''SELECT * FROM vehicle_events WHERE car_id=? AND event_type='drive'
+        AND start_ts BETWEEN ? AND ? AND end_ts>start_ts
+        AND distance_km>=1 AND distance_km<=250 AND end_ts-start_ts<=14400
+        ORDER BY start_ts''', (car, start - MAX_SEGMENT_GAP_SEC, end)).fetchall()
+    groups = []
+    for row in rows:
+        if groups and _compatible_segments(live, car, groups[-1][-1], row):
+            groups[-1].append(row)
+        else:
+            groups.append([row])
+    for group in groups:
+        combined = _combined_drive(group)
+        if (combined['start_ts'] >= start and combined['start_ts'] <= end
+                and 5 <= combined['distance_km'] <= 250
+                and 0 < combined['end_ts'] - combined['start_ts'] <= 14400):
+            yield combined
+
+
+def candidate_drive(live, car, snap, now):
+    start = max(float(snap['captured_at']), float(snap['predicted_ts']) - EARLY_WINDOW_MIN*60)
+    end = min(now, float(snap['predicted_ts']) + LATE_WINDOW_MIN*60)
+    if end <= start:
+        return None
+    # Always take FIRST qualifying trip, not the most prediction-friendly trip.
+    return next(_drive_groups(live, car, start, end), None)
 
 
 def score_one(forecasts, snap, drive, live, car, sites, now):
@@ -311,6 +382,131 @@ def trip_complete(live,car,drive,now):
         return False
     return True
 
+def _event_confirmed_park(live, car, drive, now):
+    """Corroborated Park-event fallback for unreliable/missing gear telemetry.
+
+    Source of truth is an independent long-duration, near-zero-distance Park
+    event plus sequential raw telemetry. Explicit meaningful Drive/Reverse,
+    moving speed, moving odometer, an intervening trip/charge, sparse samples,
+    or a short event all cause fail-closed. No synthetic drive/GPS is created.
+    """
+    ok, _ = _park_event_verification(live, car, drive, now)
+    return ok
+
+
+def _park_event_verification(live, car, drive, now):
+    """Return bool and coordinate-free verification trace for live preflight."""
+    end = num(drive['end_ts'])
+    if end is None or now < end + DRIVE_SETTLE_MIN * 60:
+        return False, 'drive is not settled for 20 minutes'
+    try:
+        parks = live.execute("""SELECT start_ts,end_ts,distance_km,source_points
+            FROM vehicle_events WHERE car_id=? AND event_type='park'
+            AND start_ts BETWEEN ? AND ? ORDER BY start_ts LIMIT 5""",
+            (car, end-90, end+300)).fetchall()
+    except sqlite3.OperationalError:
+        return False, 'Park event schema unavailable'
+    if not parks:
+        return False, 'no adjacent independent Park event'
+    columns = {r[1] for r in live.execute('PRAGMA table_info(telemetry)').fetchall()}
+    odo_expr = 'odometer_km' if 'odometer_km' in columns else 'NULL AS odometer_km'
+    findings = []
+    for park in parks:
+        begin, finish = float(park['start_ts']), float(park['end_ts'])
+        park_distance = _event_number(park, 'distance_km')
+        count = _event_number(park, 'source_points')
+        minutes = (finish-begin)/60
+        if not (finish >= end+1200 and minutes >= 20 and
+                park_distance is not None and 0 <= park_distance <= .2 and
+                count is not None and count >= 8):
+            findings.append('Park event duration/distance/source-point threshold failed')
+            continue
+        # Check the FULL recorded Park interval, not just the first 20 min.
+        # This matters with sleeping cars producing sparse telemetry.
+        other = live.execute("""SELECT event_type FROM vehicle_events WHERE car_id=?
+            AND event_type IN ('drive','charge') AND start_ts < ? AND end_ts > ? LIMIT 1""",
+            (car, finish, end)).fetchone()
+        if other:
+            findings.append('intervening drive/charge event')
+            continue
+        # The drive event END timestamp may be its final MOVING telemetry point.
+        # Never apply parked-speed rules to that driving endpoint.  Instead
+        # corroborate the *independent* Park event with telemetry within its
+        # own start/end bounds, and check any interval between the events for
+        # a distinct movement (not a brief arrival maneuver).
+        if begin > end + 180:
+            findings.append('Park event starts >3 minutes after end of drive')
+            continue
+        gap_rows = live.execute(f"""SELECT ts,shift_state,speed_kmh,{odo_expr} FROM telemetry
+            WHERE car_id=? AND ts > ? AND ts < ? ORDER BY ts""",
+            (car, end, begin)).fetchall()
+        gap_speeds = [num(r['speed_kmh']) for r in gap_rows]
+        gap_odos = [num(r['odometer_km']) for r in gap_rows]
+        valid_gap_odometer = [x for x in gap_odos if x is not None]
+        # A short low-speed final parking maneuver is not an extra commute.
+        # Significant or repeated intervening movement still fails closed.
+        if (any(s is not None and abs(s)>30 for s in gap_speeds)
+                or sum(s is not None and abs(s)>10 for s in gap_speeds)>=2
+                or (len(valid_gap_odometer)>=2 and max(valid_gap_odometer)-min(valid_gap_odometer)>.12)):
+            findings.append('distinct movement observed between driving and parking')
+            continue
+        rows = live.execute(f"""SELECT ts,shift_state,speed_kmh,{odo_expr} FROM telemetry
+            WHERE car_id=? AND ts BETWEEN ? AND ? ORDER BY ts""",
+            (car, begin, min(finish, now))).fetchall()
+        if len(rows) < 6 or float(rows[-1]['ts'])-float(rows[0]['ts']) < 600:
+            findings.append(f'telemetry in Park event too sparse: {len(rows)} samples')
+            continue
+        observed_speed = [num(r['speed_kmh']) for r in rows]
+        speeds = [x for x in observed_speed if x is not None]
+        odos = [num(r['odometer_km']) for r in rows]
+        odos = [x for x in odos if x is not None]
+        shifts = [str(r['shift_state'] or '').strip().upper() for r in rows]
+        drive_gears = {'D','DRIVE','R','REVERSE'}
+        if any(abs(speed)>3 for speed in speeds):
+            findings.append('movement measured by speed DURING independently recorded Park event')
+            continue
+        if len(odos)>=2 and max(odos)-min(odos)>.12:
+            findings.append('post-arrival odometer movement >120 meters')
+            continue
+        if any(shift in drive_gears and ((observed_speed[i] is not None and
+              abs(observed_speed[i])>1) or float(rows[i]['ts'])>begin+180)
+              for i,shift in enumerate(shifts)):
+            findings.append('active Drive/Reverse observed after parking')
+            continue
+        if sum(shift in drive_gears for shift in shifts)>3:
+            findings.append('repeated Drive/Reverse gear evidence')
+            continue
+        if len(speeds)<6 or float(rows[-1]['ts'])-float(rows[0]['ts'])<600:
+            findings.append('insufficient speed corroboration')
+            continue
+        parked = [float(r['ts']) for r,shift in zip(rows,shifts)
+                  if shift in {'P','PARK','PARKED'} and float(r['ts'])>=begin]
+        explicit_park = len(parked)>=3 and parked[-1]-parked[0]>=300
+        # If gear is unknown, demand STRONGER independent evidence, never
+        # silently treat a car in Drive as Park.
+        if not explicit_park:
+            benign = {'','UNKNOWN','NONE','N','NEUTRAL','P','PARK','PARKED'}
+            if (any(shift not in benign and shift not in drive_gears for shift in shifts)
+                or minutes<25 or count<12 or park_distance>.05
+                or len(speeds)<8 or float(rows[-1]['ts'])-float(rows[0]['ts'])<900):
+                findings.append('unknown gear with insufficient stronger parked proof')
+                continue
+        return True, ('PASS: independent Park %.1fmin / %.3fkm / %d event points; '
+                      '%d telemetry samples / %d speed samples / %d Park-gear samples; '
+                      'odometer range=%s km; gear=%s' %
+                      (minutes,park_distance,count,len(rows),len(speeds),len(parked),
+                       ('%.3f' % (max(odos)-min(odos))) if len(odos)>=2 else 'missing',
+                       'explicit Park' if explicit_park else 'sensor-limited, corroborated'))
+    return False, '; '.join(findings[:3])
+
+
+_trip_complete_strict = trip_complete
+
+
+def trip_complete(live, car, drive, now):
+    return _trip_complete_strict(live, car, drive, now) or _event_confirmed_park(live, car, drive, now)
+
+
 def quarantine_in_motion(forecasts,live,car,now):
     """Retain prediction but exclude it from accuracy if captured mid-drive."""
     for snap in forecasts.execute("SELECT * FROM forecasts WHERE status='PENDING'").fetchall():
@@ -324,10 +520,11 @@ def reconcile_premature_scores(forecasts,live,car,sites,now):
     """Correct known v3 partial-trip scores, keep an auditable record."""
     all_scored=forecasts.execute("SELECT * FROM forecasts WHERE status='SCORED' AND actual_start_ts IS NOT NULL").fetchall()
     for snap in all_scored:
-        drive=live.execute('''SELECT start_ts,end_ts,distance_km,soc_change,wh_per_mile
-          FROM vehicle_events WHERE car_id=? AND event_type='drive'
-          AND ABS(start_ts-?)<=5 ORDER BY ABS(start_ts-?) LIMIT 1''',
-          (car,snap['actual_start_ts'],snap['actual_start_ts'])).fetchone()
+        # Reconstruct the first full commute from its original scored start.
+        # This also corrects historical scores that captured only the first leg.
+        anchor=float(snap['actual_start_ts'])
+        drive=next((trip for trip in _drive_groups(live,car,anchor-2,anchor+2)
+                    if abs(trip['start_ts']-anchor)<=2), None)
         if not drive or not trip_complete(live,car,drive,now):
             continue
         old_end=num(snap['actual_end_ts']) or 0
@@ -365,8 +562,11 @@ def evaluate(forecasts,live,car,sites,now):
             result=score_one(forecasts,snap,trip,live,car,sites,now)
             if result:scored.append(result)
         elif trip:
-            # A partial or unverified event is never a completed trip.
-            pass
+            # Keep the frozen forecast eligible for late-arriving evidence;
+            # explain why it is pending instead of silently leaving it stuck.
+            forecasts.execute('''UPDATE forecasts SET evaluation_note=?
+                WHERE id=? AND status='PENDING' ''',
+                ('Observed drive, but settled arrival was not independently verified; excluded from accuracy', snap['id']))
         elif now>snap['predicted_ts']+LATE_WINDOW_MIN*60:
             forecasts.execute('''UPDATE forecasts SET status='UNVERIFIED_NO_TRIP',evaluated_at=?,
                 evaluation_note='No verified drive inside window; telemetry coverage not proven'
@@ -383,6 +583,7 @@ def make_report(con, info, now):
     done=[x for x in allrows if x['status']=='SCORED']
     pending=[x for x in allrows if x['status']=='PENDING']
     unverified=[x for x in allrows if x['status']=='UNVERIFIED_NO_TRIP']
+    awaiting_arrival=sum(x['status']=='PENDING' and 'settled arrival' in (x['evaluation_note'] or '') for x in allrows)
     invalid=[x for x in allrows if x['status']=='INVALID_CAPTURE_IN_MOTION']
     corrections=con.execute('SELECT COUNT(*) FROM scoring_corrections').fetchone()[0]
     mae=statistics.mean(abs(x['error_min']) for x in done) if done else None
@@ -390,13 +591,13 @@ def make_report(con, info, now):
     verified=[x for x in done if x['destination_match'] is not None]
     energy=[x for x in done if x['soc_error'] is not None]
     soc_mae=statistics.mean(abs(x['soc_error']) for x in energy) if energy else None
-    out=[f'GHOST PREDICTION ACCOUNTABILITY {VERSION}',f'Updated: {fmt_time(now)}',
+    out=[f'GHOST PREDICTION ACCOUNTABILITY {VERSION} ({SCORING_PATCH})',f'Updated: {fmt_time(now)}',
          'SHADOW ONLY — forward predictions captured BEFORE actual trips.',
          'Source AI, trained neural models, Tesla controls, winter readiness unchanged.',
          '', '=== PROSPECTIVE MEASUREMENT ===',
          f'Frozen pre-trip forecasts: {len(allrows)}',
          f'Actual departures scored: {len(done)}',
-         f'Pending outcomes: {len(pending)}',
+         f'Pending outcomes: {len(pending)} (including {awaiting_arrival} observed drives awaiting arrival proof)',
          f'Invalidated captures while moving: {len(invalid)} (excluded)',
          f'Audited corrections to premature v3 scores: {corrections}',
          f'No verified trip outcome: {len(unverified)} (NOT counted as wrong predictions)',

@@ -20,7 +20,8 @@ from zoneinfo import ZoneInfo
 
 VERSION = 'relationship-coverage-shadow-v6.0.0'
 TZ = ZoneInfo('America/Chicago')
-ROOT = Path('/home/ghost/ghost-trip-sequence')
+from . import config
+ROOT = Path(config.get('GHOST_TRIP_SHADOW_DIR', str(config.DATA_DIR / 'trip-sequence')))
 NEARBY_MAX_KM = 2.5
 MIN_LINK_DAYS = 4
 MIN_CHAIN_DAYS = 3
@@ -283,7 +284,7 @@ def verified_parked(live_path, now):
         con.close()
 
 
-def execute(root, now=None, live_path=Path('/var/lib/ghost-tesla-ai/ghost_ai.sqlite3')):
+def execute(root, now=None, live_path=config.DB_PATH):
     now=time.time() if now is None else float(now)
     ctx=read_json(root/'latest-location-context.json')
     route=read_db(root/'prediction-eval-v3.sqlite3','forecasts',
@@ -372,7 +373,7 @@ def main():
     p=argparse.ArgumentParser()
     p.add_argument('--self-test',action='store_true')
     p.add_argument('--root',type=Path,default=ROOT)
-    p.add_argument('--db',type=Path,default=Path('/var/lib/ghost-tesla-ai/ghost_ai.sqlite3'))
+    p.add_argument('--db',type=Path,default=config.DB_PATH)
     args=p.parse_args()
     if args.self_test:self_test()
     else:

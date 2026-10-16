@@ -2,11 +2,11 @@
 
 # Tesla Intelligence Core
 
-### A self-hosted Tesla learning system that predicts what happens next — not just what is happening now.
+### Winter readiness, overnight charging intelligence, and a continuously learning view of your Tesla.
 
 **Telemetry → local history → learned behavior → neural forecasting → truth validation → readiness**
 
-**Built for cold-soaked batteries, slow home charging, long commutes, and people who want evidence instead of guesses.**
+**Built for cold-soaked batteries, slow home charging, everyday vehicle use, and people who want evidence instead of guesses.**
 
 [![Release](https://img.shields.io/github/v/release/prokyle123/tesla-intelligence-core?display_name=tag&sort=semver)](https://github.com/prokyle123/tesla-intelligence-core/releases)
 [![Smoke](https://github.com/prokyle123/tesla-intelligence-core/actions/workflows/smoke.yml/badge.svg)](https://github.com/prokyle123/tesla-intelligence-core/actions/workflows/smoke.yml)
@@ -83,85 +83,91 @@ Tesla Intelligence Core is especially useful when **time, temperature and chargi
 
 > **For people who depend on the car every day, the useful question is not “what does the telemetry say right now?” It is “what is this car likely to look like when I actually need it?”**
 
+
 <p align="center">
-  <a href="docs/images/dashboard-overview.png">
-    <img src="docs/images/dashboard-overview.png" alt="Tesla Intelligence Core dashboard" width="96%">
+  <a href="docs/images/v1/v1-home-winter.webp">
+    <img src="docs/images/v1/v1-home-winter.webp" alt="Tesla Intelligence Core v1 Winter Readiness live operations dashboard with outdoor weather, pack temperature, battery heater, cabin HVAC and power path" width="98%">
   </a>
 </p>
-<p align="center"><sub><b>Main operations dashboard</b> — winter readiness, live thermal state, charging, learned departure context and forward pack-temperature outlook in one view.</sub></p>
+<p align="center"><sub><b>Real running dashboard • v1 preview</b> — battery readiness, pack forecasts, 3/6/12-hour outdoor weather and thermal power analysis. Displayed values are an example captured at one instant, not guaranteed for other cars.</sub></p>
 
 ---
 
-<!-- GHOST-OCT-2026-UPDATES -->
-> **October 2026 development update:** GHOST now includes multi-trip shadow learning, audited departure forecasts, recorded readiness-score history, and protection against DC fast-charging events contaminating Level 1 charge-rate learning. See [October 2026 development notes](docs/OCTOBER_2026_UPDATES.md). Vehicle controls remain read-only.
+## What's inside v1.0
+
+| Core intelligence | What it actually measures and learns |
+| --- | --- |
+| ❄️ **Winter readiness** | Overnight cold-soak, pack heating, module temperature, readiness for the next departure and thermal forecast ranges |
+| 🔌 **Charging intelligence** | Wall input versus derived pack electrical power, slow Level 1 charging performance, charging transitions and optional home-power context |
+| 🌦️ **Outdoor weather** | Hourly Open-Meteo conditions and 3 / 6 / 12-hour weather forecasts alongside pack-temperature projections |
+| 🚗 **Every-trip learning** | All observed drives, multi-leg journeys, short errands, weekends, charging stops and repeat routes—not just work commutes |
+| 📉 **Forecast and journey quality** | Frozen forecasts compared against later observations; separate error, confidence, missing-data and invalid-comparison states |
+| 🧠 **Machine-learning ecosystem** | Classical baselines, sequence neural challenger, model generations, held-out validation and governed production selection |
+| 🛡️ **Read-only vehicle sensors** | Tessie TPMS pressure in PSI, Sentry, lock, charge port, cabin fan and stale-data flags when available |
+| 🏠 **Local-first control plane** | Raspberry Pi systemd services, local SQLite telemetry and model files; vehicle-command functions intentionally excluded |
+
+> [!IMPORTANT]
+> **Winter impact and overnight charging are the original mission.** The broader driving models give thermal and departure forecasts realistic demand context. Readiness scores and model “confidence” displays are not proofs of cold-weather accuracy; real winter validation accumulates over time.
 
 ## Visual tour
 
-### 🧠 Live Neural Engine Atlas
+All panels shown below are **screenshots of a running Ghost development system**. Private route identifiers in the departure screenshot were removed. Colors, model generations and instantaneous values vary by installation.
 
-This is the **actual Neural Engine dashboard from a running instance**, not a conceptual mock-up. The live atlas exposes the full prediction path: rolling sequence history, normalized feature lanes, preprocessing, two GRU layers, recurrent memory, shared latent state, multitask outputs, Truth qualification, challenger/production comparison, governor state, and rollback protection.
+### 🧠 Neural Engine Atlas
 
 <p align="center">
-  <a href="docs/images/neural-engine-atlas.png">
-    <img src="docs/images/neural-engine-atlas.png" alt="Tesla Intelligence Core Neural Engine Atlas" width="96%">
+  <a href="docs/images/v1/v1-neural-engine.webp">
+    <img src="docs/images/v1/v1-neural-engine.webp" alt="Neural engine showing temporal input lanes, GRU blocks, shared latent state, output heads and production governor" width="98%">
+  </a>
+</p>
+<p align="center"><sub>Real-time sequence features, recurrent processing, multiple prediction heads and separate truth/governor paths.</sub></p>
+
+<table>
+<tr><td width="50%" valign="top">
+<h3>❄️ Pack forecast + 3 / 6 / 12-hour weather</h3>
+<a href="docs/images/v1/v1-pack-weather.webp"><img src="docs/images/v1/v1-pack-weather.webp" alt="Actual pack temperature outlook with hourly outdoor weather" width="100%"></a>
+<p>Future pack temperature, outside air and estimated thermal margin, alongside current hourly weather forecast.</p>
+</td><td width="50%" valign="top">
+<h3>⚡ Thermal power path</h3>
+<a href="docs/images/v1/v1-thermal-power.webp"><img src="docs/images/v1/v1-thermal-power.webp" alt="Wall power split into derived pack and non-pack electrical loads" width="100%"></a>
+<p>Shows measured wall input and derived electrical power estimates. Differences are not proof of a specific heater load.</p>
+</td></tr>
+<tr><td valign="top">
+<h3>🕒 Learned departure planning</h3>
+<a href="docs/images/v1/v1-departure-planning.webp"><img src="docs/images/v1/v1-departure-planning.webp" alt="Learned departure and readiness card, with private site identifiers redacted" width="100%"></a>
+<p>Trip-history timing priors, departure pack/SOC projection and conditional multi-leg energy demand.</p>
+</td><td valign="top">
+<h3>📊 AI Operations Workspace</h3>
+<a href="docs/images/v1/v1-ai-workspace.webp"><img src="docs/images/v1/v1-ai-workspace.webp" alt="AI operations workspace showing readiness trends, promoted models and training evidence" width="100%"></a>
+<p>At-a-glance operational readiness, training evidence, truth quality and per-model status.</p>
+</td></tr>
+<tr><td valign="top">
+<h3>🧪 Model Lab</h3>
+<a href="docs/images/v1/v1-models.webp"><img src="docs/images/v1/v1-models.webp" alt="Model Lab grid of production and collecting prediction models" width="100%"></a>
+<p>Individual horizons, live output, model validation error, readiness trend and generation history.</p>
+</td><td valign="top">
+<h3>✅ Prediction Truth Lab</h3>
+<a href="docs/images/v1/v1-truth-lab.webp"><img src="docs/images/v1/v1-truth-lab.webp" alt="Prediction Truth Lab trust and measured forecast-error dashboard" width="100%"></a>
+<p>Frozen predictions are evaluated after the measurement arrives, including missed, pending and resolved results.</p>
+</td></tr>
+</table>
+
+<details>
+<summary><b>More screenshots: production selection and prediction safety</b></summary>
+<p><a href="docs/images/v1/v1-production.webp"><img src="docs/images/v1/v1-production.webp" alt="Production model selection, live outputs and observation-only safety boundary" width="98%"></a></p>
+<p>Promoted serving models and model-selection safeguards, with vehicle commands disabled.</p>
+</details>
+
+### System architecture
+
+<p align="center">
+  <a href="docs/images/v1-architecture.svg">
+    <img src="docs/images/v1-architecture.svg" alt="Local-first vehicle telemetry, weather, private history, predictive models, independent evaluation and read-only dashboards" width="90%">
   </a>
 </p>
 
-<table>
-<tr>
-<td width="50%" valign="top">
-
-### ❄️ Winter readiness
-
-The main readiness feature combines live pack temperature, outside air, departure context and an explainable readiness score. The score is operational guidance — not model accuracy.
-
-<a href="docs/images/winter-readiness-feature.png">
-  <img src="docs/images/winter-readiness-feature.png" alt="Tesla Intelligence Core Winter Readiness" width="100%">
-</a>
-
-</td>
-<td width="50%" valign="top">
-
-### 🌡️ Pack-temperature forecasting
-
-Hour-ahead and multi-hour forecasts show expected pack temperature, outside air, thermal margin and estimate ranges — not just a single unexplained prediction.
-
-<a href="docs/images/temperature-forecast-feature.png">
-  <img src="docs/images/temperature-forecast-feature.png" alt="Tesla Intelligence Core future pack-temperature forecast" width="100%">
-</a>
-
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-### 🕒 Learned departure planning
-
-Observed drive history learns recurring departure behavior. A configured departure time is only a fading prior, while the dashboard separately exposes learned schedule confidence and next-trip confidence.
-
-<a href="docs/images/departure-planning-feature.png">
-  <img src="docs/images/departure-planning-feature.png" alt="Tesla Intelligence Core learned departure planning" width="100%">
-</a>
-
-</td>
-<td width="50%" valign="top">
-
-### ⚡ Thermal power path
-
-The thermal power-path view compares wall input with derived non-pack and pack electrical power so charging and thermal behavior can be interpreted together.
-
-<a href="docs/images/thermal-power-path-feature.png">
-  <img src="docs/images/thermal-power-path-feature.png" alt="Tesla Intelligence Core thermal charging power path" width="100%">
-</a>
-
-</td>
-</tr>
-</table>
-
-> **The important part is the connection between the views:** live telemetry becomes history, history becomes learned behavior, learned behavior becomes forecasts, and the readiness layer explains what those forecasts mean for the next trip.
-
 > [!NOTE]
-> These images come from a real development instance, so live values will differ from car to car. Some UI screens still carry the project's original **GHOST** internal branding; the public project name is **Tesla Intelligence Core**.
+> v1.0 is initially published with **limited installation validation**. The major source consolidation and automated regression checks have passed, but a clean install on a second Raspberry Pi was not available for end-to-end verification. See [release notes](docs/V1_RELEASE_NOTES.md), [installation guide](docs/INSTALL.md) and [compatibility](docs/COMPATIBILITY.md).
 
 ---
 
@@ -602,7 +608,7 @@ The uninstaller asks before removing learned data, models and configuration.
 
 # Project status
 
-**Current public release: v0.8.27.6**
+**Version 1.0.0 — Major winter and whole-vehicle intelligence release.**
 
 This is an experimental enthusiast project, not a Tesla product and not a safety system.
 

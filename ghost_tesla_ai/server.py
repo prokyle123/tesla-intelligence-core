@@ -35,6 +35,12 @@ from .v3_api import bp as v3_bp
 app.register_blueprint(v3_bp)
 from .v4_api import bp as v4_bp
 app.register_blueprint(v4_bp)
+from .vehicle_sensors_v1 import bp as ghost_vehicle_sensors_v1_bp
+app.register_blueprint(ghost_vehicle_sensors_v1_bp)
+from .forecast_quality_v2_api import bp as ghost_forecast_quality_v2_bp
+app.register_blueprint(ghost_forecast_quality_v2_bp)
+from .trip_quality_v3_api import bp as ghost_trip_quality_v3_bp
+app.register_blueprint(ghost_trip_quality_v3_bp)
 
 MAE_GOALS = {
     "soc_60m": 2.0,

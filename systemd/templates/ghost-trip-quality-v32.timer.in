@@ -1,0 +1,12 @@
+[Unit]
+Description=Hourly shadow multi-leg journey quality evaluation
+
+[Timer]
+OnBootSec=8min
+OnUnitActiveSec=1h
+Persistent=true
+AccuracySec=2min
+Unit=ghost-trip-quality-v32.service
+
+[Install]
+WantedBy=timers.target

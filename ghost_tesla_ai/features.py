@@ -118,8 +118,12 @@ def classify_regime(row, prev=None, nxt=None) -> str:
     shift=str(_get(row,'shift_state','') or '').upper()
     speed=_finite(_get(row,'speed_kmh')) or 0.0
     charge_state=str(_get(row,'charging_state','') or '').lower()
-    charge_kw=_finite(_get(row,'charge_input_kw'))
-    if charge_kw is None: charge_kw=_finite(_get(row,'charger_power_kw')) or 0.0
+# GHOST-DC-L1-CLASSIFIER-GUARD-20261014
+    # Tesla DC fast charging can report charge_input_kw=0 while charger_power_kw is positive.
+    # Use both live power signals, not a fallback that only runs for None.
+    charge_input_kw=_finite(_get(row,'charge_input_kw'))
+    charger_power_kw=_finite(_get(row,'charger_power_kw'))
+    charge_kw=max([0.0]+[v for v in (charge_input_kw, charger_power_kw) if v is not None])
     driving = state=='driving' or shift in {'D','R','N'} or speed>2.0
     if not driving and prev is not None and nxt is not None:
         a=_finite(_get(prev,'odometer_km')); b=_finite(_get(nxt,'odometer_km'))
@@ -128,8 +132,11 @@ def classify_regime(row, prev=None, nxt=None) -> str:
     preconditioning = _truth(_get(row,'preconditioning')) or (_truth(_get(row,'climate_on')) and _truth(_get(row,'battery_heater_on')))
     if driving: return 'driving'
     if charging:
-        volts=_finite(_get(row,'charger_voltage')) or 0.0
-        return 'l1_charging' if (charge_kw<=2.5 and (volts==0 or volts<180)) else 'charging'
+        volts=_finite(_get(row,'charger_voltage'))
+        # Require positive low power AND valid household AC voltage for L1.
+        # Missing/zero voltage or power is unknown, NOT evidence of Level 1.
+        # DC/ambiguous charging stays generic ('charging').
+        return 'l1_charging' if (0.15 < charge_kw <= 2.5 and volts is not None and 90 <= volts < 180) else 'charging'
     if preconditioning: return 'preconditioning'
     outside=_finite(_get(row,'outside_temp_c'))
     if outside is not None and outside<=config.COLD_SOAK_THRESHOLD_C: return 'cold_soak'
@@ -440,6 +447,71 @@ def _regime_match(spec_regime,row,prev,nxt):
     if spec_regime=='parked': return r in {'parked','sleeping','cold_soak'}
     return r==spec_regime
 
+# v1.3 regime-truth: only teach specialist models from uninterrupted,
+# sufficiently observed windows. General-purpose heads remain unchanged.
+_SPECIALIST_MAX_GAP_S = 600.0
+_SPECIALIST_TARGET_LATE_S = 180.0
+
+
+def _parked_unplugged_unheated(row) -> bool:
+    state = str(_get(row, 'state', '') or '').lower()
+    shift = str(_get(row, 'shift_state', '') or '').upper()
+    speed = _finite(_get(row, 'speed_kmh'))
+    # Unknown gear while online isn't proof the vehicle stayed in Park.
+    if shift != 'P' and not (state in {'asleep', 'sleeping'} and shift == ''):
+        return False
+    if state == 'driving' or (speed is not None and speed > 2.0):
+        return False
+    if _truth(_get(row, 'plugged_in')) or _truth(_get(row, 'preconditioning')):
+        return False
+    if _truth(_get(row, 'battery_heater_on')) or _truth(_get(row, 'climate_on')):
+        return False
+    if str(_get(row, 'charging_state', '') or '').lower() == 'charging':
+        return False
+    for field in ('charger_power_kw', 'charge_input_kw'):
+        power = _finite(_get(row, field))
+        if power is not None and power > 0.15:
+            return False
+    return True
+
+
+def _actively_preconditioning(row) -> bool:
+    """An observed battery-heating *specialist* session, not cabin-only climate.
+
+    Tessie's preconditioning flag can represent cabin warming. Do not label
+    it as direct battery heat unless the battery-heater sensor agrees. This
+    changes only the 30-minute specialist; general regime labels are intact.
+    """
+    state = str(_get(row, 'state', '') or '').lower()
+    shift = str(_get(row, 'shift_state', '') or '').upper()
+    speed = _finite(_get(row, 'speed_kmh'))
+    if state == 'driving' or shift in {'D', 'R', 'N'} or (speed is not None and speed > 2):
+        return False
+    return bool(_truth(_get(row, 'battery_heater_on')) and
+                (_truth(_get(row, 'preconditioning')) or _truth(_get(row, 'climate_on'))))
+
+
+def _specialist_window_ok(model_name: str, rows, times, i: int, j: int) -> bool:
+    """True only if *each* observed sample supports the claimed future regime.
+
+    Reject gaps rather than imagining what the car did while telemetry was absent.
+    Precondition model predicts *continuous* preconditioning for 30 minutes;
+    if all real sessions end sooner, training waits instead of inventing labels.
+    """
+    if model_name not in {'park_soc_180m', 'precondition_pack_30m'}:
+        return True
+    check = (_parked_unplugged_unheated if model_name == 'park_soc_180m'
+             else _actively_preconditioning)
+    previous = times[i]
+    for k in range(i, j + 1):
+        if times[k] - previous > _SPECIALIST_MAX_GAP_S:
+            return False
+        if not check(rows[k]):
+            return False
+        previous = times[k]
+    return True
+
+
 def build_dataset(model_name: str):
     spec=MODEL_SPECS[model_name]; horizon=int(spec['horizon'])*60
     cutoff=time.time()-config.TRAIN_LOOKBACK_DAYS*86400
@@ -457,6 +529,9 @@ def build_dataset(model_name: str):
         want=times[i]+horizon
         j=bisect.bisect_left(times,want,i+1)
         if j>=len(rows) or times[j]-want>tolerance: continue
+        if model_name in {'park_soc_180m', 'precondition_pack_30m'}:
+            if times[j]-want > _SPECIALIST_TARGET_LATE_S: continue
+            if not _specialist_window_ok(model_name, rows, times, i, j): continue
         if _get(rows[j],target) is None: continue
         # Regime-specific models should not train across an intervening drive, which
         # otherwise makes parked/cold predictions deceptively easy or noisy.
@@ -473,6 +548,10 @@ def build_dataset(model_name: str):
 def spec_applicable(spec: dict, row) -> bool:
     regime=spec.get('regime') if spec else None
     if not regime:return True
+    # v1.4: never present the legacy +30m pack-heating estimate as active
+    # during cabin-only preconditioning. A true heater sensor is required.
+    if spec.get('target') == 'battery_temp_c' and spec.get('horizon') == 30 and regime == 'preconditioning':
+        return _actively_preconditioning(row) and classify_regime(row) == 'preconditioning'
     current=classify_regime(row)
     if regime=='parked':return current in {'parked','sleeping','cold_soak'}
     if regime=='cold_soak':return current=='cold_soak'

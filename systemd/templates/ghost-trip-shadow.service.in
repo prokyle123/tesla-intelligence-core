@@ -1,0 +1,17 @@
+[Unit]
+Description=Tesla Intelligence Core shadow trip learning
+After=ghost-tesla-ai-collector.service
+Wants=ghost-tesla-ai-collector.service
+
+[Service]
+Type=oneshot
+User=__GHOST_USER__
+Group=__GHOST_USER__
+WorkingDirectory=/opt/ghost-tesla-ai
+Environment=PYTHONPATH=/opt/ghost-tesla-ai
+ExecStart=/opt/ghost-tesla-ai/venv/bin/python -m ghost_tesla_ai.trip_shadow_runner
+NoNewPrivileges=true
+PrivateTmp=true
+UMask=0077
+Nice=10
+TimeoutStartSec=30min

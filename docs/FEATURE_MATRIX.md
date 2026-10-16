@@ -27,6 +27,17 @@ This page maps the main Tesla Intelligence Core features to the data or learning
 | Remote | Tailscale (optional) | Tailnet | How can the dashboard be reached privately? |
 | Remote | PIN Funnel gateway (optional) | Tailscale Funnel + local gateway | How can public HTTPS be gated? |
 
+## v1 release-candidate features
+
+| Area | Feature | Evidence | Limitation |
+| --- | --- | --- | --- |
+| Forecast Quality | v2 evaluator with activity context | Resolved frozen windows and independent origin episodes | Overlapping windows aren't independent trips |
+| Trip Quality | v3.2.1 charge-aware whole-journey scorer | Candidate journeys, observed coverage, optional GPS-verified endpoints | Time-of-day is not destination truth |
+| All-trip learning | Six shadow trip stages and every-drive reporting | Weekend, unfamiliar and multi-leg drives | Requires sufficient observed history |
+| Vehicle sensors | TPMS in PSI, Sentry, lock, charge port, climate fan | Existing Tessie state payload | Values can be stale while parked |
+| Outdoor weather | 3h, 6h, 12h outlook | Open-Meteo hourly forecast | This is outside air, not actual pack temperature |
+| Operations | Periodic local quality and trip jobs | Portable systemd timers | Shadow evaluations cannot promote live models |
+
 ## Technology stack
 
 - **Python 3.11+** — collection, event intelligence, forecasting, API and control plane

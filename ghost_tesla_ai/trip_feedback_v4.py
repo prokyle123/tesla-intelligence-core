@@ -20,7 +20,8 @@ from zoneinfo import ZoneInfo
 
 VERSION = 'trip-feedback-shadow-v4.0.0'
 TZ = ZoneInfo('America/Chicago')
-ROOT = Path('/home/ghost/ghost-trip-sequence')
+from . import config
+ROOT = Path(config.get('GHOST_TRIP_SHADOW_DIR', str(config.DATA_DIR / 'trip-sequence')))
 MIN_ROUTE_TRIPS = 10
 MIN_ROUTE_DAYS = 5
 MIN_BACKTEST_POINTS = 5
