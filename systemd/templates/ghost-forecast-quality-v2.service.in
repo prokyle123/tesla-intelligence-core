@@ -2,7 +2,6 @@
 Description=Tesla Intelligence Core Shadow Forecast Quality v2
 After=ghost-tesla-ai-collector.service
 Wants=ghost-tesla-ai-collector.service
-ConditionPathExists=/var/lib/ghost-tesla-ai/ghost_ai.sqlite3
 
 [Service]
 Type=oneshot
