@@ -4,7 +4,7 @@ Tesla Intelligence Core is a **vehicle telemetry** product. Its dashboards may d
 
 ## Current screenshots
 
-The existing [README visual tour](../README.md#visual-tour) uses actual captures of earlier working releases. They are still useful for demonstrating the overall style, but **do not show every v1 feature**. Do not describe an earlier screenshot as proof that a new build was installed.
+The [README visual tour](../README.md#visual-tour) uses privacy-reviewed screenshots captured from the running Ghost development dashboard in October 2026. Private stable-location references were redacted from departure planning. These captures demonstrate the live UI, not independent validation of model accuracy.
 
 New captures needed for the v1 release notes:
 
