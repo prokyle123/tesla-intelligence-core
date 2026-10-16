@@ -17,11 +17,19 @@ CORE = (
 )
 V1 = (
     "web/templates/forecast_quality_v2.html",
-    "web/templates/trip_quality_v32.html",
+    "web/templates/trip_quality_v31.html",
     "web/templates/ghost_vehicle_sensors.html",
     "ghost_tesla_ai/vehicle_sensors_v1.py",
     "ghost_tesla_ai/forecast_quality_v2_api.py",
     "ghost_tesla_ai/trip_quality_v3_api.py",
+    "ghost_tesla_ai/quality_runner.py",
+    "release-sidecars/evaluate.py",
+    "release-sidecars/evaluate_v2.py",
+    "release-sidecars/evaluate_v32.py",
+    "systemd/templates/ghost-forecast-quality-v2.service.in",
+    "systemd/templates/ghost-forecast-quality-v2.timer.in",
+    "systemd/templates/ghost-trip-quality-v32.service.in",
+    "systemd/templates/ghost-trip-quality-v32.timer.in",
 )
 
 def main():
