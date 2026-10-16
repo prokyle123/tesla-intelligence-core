@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — v1.0 consolidation (draft)
+
+- Audited the current Ghost development Pi against public `main`: 33 matching source files, 12 modified tracked files, and 14 new source/evaluator files; the existing `requirements.txt` was not part of that comparison.
+- v1.0 scope covers winter/overnight charging readiness, all-trip energy learning, multi-leg trip reconstruction, shadow forecast-truth evaluation, tire-pressure/Sentry/vehicle sensor monitoring, Open-Meteo hourly outlook, and a first-install / upgrade workflow.
+- Started source-only staging and secret review. Systemd unit templates and independent clean install tests **remain release blockers**.
+- Improved draft installer so existing credentials are detected before setup prompts, and installed features missing from the checkout are not silently removed.
+
+**Status:** draft PR, not a public v1.0 tag, production install or verified upgrade.
+
+
 Notable changes to **Tesla Intelligence Core (GHOST)**, grouped by development snapshot or public release.
 
 [Project overview](README.md) · [October 2026 detailed update](docs/OCTOBER_2026_UPDATES.md) · [Releases](https://github.com/prokyle123/tesla-intelligence-core/releases)
