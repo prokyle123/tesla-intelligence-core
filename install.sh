@@ -134,7 +134,8 @@ for extra in \
   ghost_tesla_ai/trip_quality_v3_api.py \
   ghost_tesla_ai/vehicle_sensors_v1.py \
   web/templates/forecast_quality_v2.html \
-  web/templates/trip_quality_v32.html \
+  web/templates/trip_quality_v3.html \
+  web/templates/trip_quality_v31.html \
   web/templates/ghost_vehicle_sensors.html; do
   if [[ -f "$INSTALL_DIR/$extra" && ! -f "$ROOT/$extra" ]]; then
     fail "Release is missing installed feature $extra; refusing to overwrite your working dashboard. Update the release source first."
@@ -148,10 +149,11 @@ if [[ -d "$INSTALL_DIR" ]]; then
   echo "Code backup: $BACKUP"
 fi
 $SUDO mkdir -p "$INSTALL_DIR" "$DATA_DIR/models" "$CONF_DIR"
-$SUDO rm -rf "$INSTALL_DIR/ghost_tesla_ai" "$INSTALL_DIR/web" "$INSTALL_DIR/systemd"
+$SUDO rm -rf "$INSTALL_DIR/ghost_tesla_ai" "$INSTALL_DIR/web" "$INSTALL_DIR/systemd" "$INSTALL_DIR/release-sidecars"
 $SUDO cp -a "$ROOT/ghost_tesla_ai" "$INSTALL_DIR/"
 $SUDO cp -a "$ROOT/web" "$INSTALL_DIR/"
 $SUDO cp -a "$ROOT/systemd" "$INSTALL_DIR/"
+$SUDO cp -a "$ROOT/release-sidecars" "$INSTALL_DIR/"
 $SUDO cp "$ROOT/VERSION" "$ROOT/requirements.txt" "$ROOT/requirements-starlink.txt" "$INSTALL_DIR/"
 
 if [[ ! -x "$INSTALL_DIR/venv/bin/python" ]]; then
@@ -220,6 +222,10 @@ ECOFLOW_RIVER3_SN=$ECOFLOW_RIVER3_SN
 ECOFLOW_APP_CREDENTIALS_FILE=$DATA_DIR/ecoflow_app.json
 WEATHER_ENABLED=true
 WEATHER_CACHE_MINUTES=20
+# Shadow-quality report location; model/training data stays separate.
+GHOST_QUALITY_DIR=$DATA_DIR/quality
+# Optional: override with an existing private GPS-verified trip-sidecar DB.
+GHOST_TRIP_OUTCOMES_DB=$DATA_DIR/trip-sequence/prediction-eval-v3.sqlite3
 ENV
   $SUDO install -m 640 -o root -g "$INSTALL_USER" "$TMP_ENV" "$ENV_FILE"
   rm -f "$TMP_ENV"
@@ -250,7 +256,13 @@ $SUDO chmod 755 /usr/local/bin/ghost-ai
 
 $SUDO -u "$INSTALL_USER" env PYTHONPATH="$INSTALL_DIR" "$INSTALL_DIR/venv/bin/python" -m ghost_tesla_ai.cli init-db >/dev/null
 $SUDO systemctl daemon-reload
-$SUDO systemctl enable --now ghost-tesla-ai-collector.service ghost-tesla-ai-web.service ghost-tesla-ai-train.timer ghost-tesla-ai-intelligence.timer ghost-tesla-ai-neural.timer
+$SUDO systemctl enable --now ghost-tesla-ai-collector.service ghost-tesla-ai-web.service ghost-tesla-ai-train.timer ghost-tesla-ai-intelligence.timer ghost-tesla-ai-neural.timer ghost-forecast-quality-v2.timer ghost-trip-quality-v32.timer
+# Quality jobs write read-only assessment reports. A fresh installation may not
+# have sufficient telemetry yet; hourly timers will retry automatically.
+if [[ -f "$DATA_DIR/ghost_ai.sqlite3" ]]; then
+  $SUDO systemctl start ghost-forecast-quality-v2.service || echo "NOTE: Forecast Quality awaits sufficient history."
+  $SUDO systemctl start ghost-trip-quality-v32.service || echo "NOTE: Trip Quality awaits sufficient history."
+fi
 sleep 3
 
 if $CONFIG_ECOFLOW; then
@@ -289,7 +301,11 @@ IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
 echo
 echo "===== VALIDATION ====="
 if curl -fsS "http://127.0.0.1:${DASH_PORT}/api/health" >/dev/null; then echo "Dashboard/API : PASS"; else echo "Dashboard/API : STARTING (check: sudo journalctl -u ghost-tesla-ai-web -n 80)"; fi
-$SUDO systemctl --no-pager --plain is-active ghost-tesla-ai-collector.service ghost-tesla-ai-web.service ghost-tesla-ai-intelligence.timer ghost-tesla-ai-neural.timer || true
+$SUDO systemctl --no-pager --plain is-active ghost-tesla-ai-collector.service ghost-tesla-ai-web.service ghost-tesla-ai-intelligence.timer ghost-tesla-ai-neural.timer ghost-forecast-quality-v2.timer ghost-trip-quality-v32.timer || true
+for p in /forecast-quality /trip-quality /vehicle-sensors; do
+  status="$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:${DASH_PORT}$p" || true)"
+  echo "Dashboard $p : HTTP $status"
+done
 
 echo
 echo "============================================================"
