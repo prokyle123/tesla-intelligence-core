@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-VERSION="0.8.27.6"
+VERSION="1.0.0"
 REPO_URL="${GHOST_REPO_URL:-https://github.com/prokyle123/tesla-intelligence-core.git}"
 INSTALL_DIR="/opt/ghost-tesla-ai"
 DATA_DIR="/var/lib/ghost-tesla-ai"
