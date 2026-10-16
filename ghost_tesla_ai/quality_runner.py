@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import sqlite3
 from pathlib import Path
 import subprocess
 import sys
@@ -53,6 +54,16 @@ def main(argv=None) -> int:
         parser.error("No telemetry DB yet (wait for collector): " + str(config.DB_PATH))
     if not Path(cmd[1]).is_file():
         parser.error("Missing installed evaluator: " + cmd[1])
+    # A fresh install starts with an empty database. Waiting for real records
+    # is normal, and must not mark a scheduled one-shot evaluation as failed.
+    try:
+        with sqlite3.connect("file:" + str(config.DB_PATH) + "?mode=ro", uri=True, timeout=4) as con:
+            has_telemetry = con.execute("SELECT 1 FROM telemetry LIMIT 1").fetchone() is not None
+    except sqlite3.Error:
+        has_telemetry = False
+    if not has_telemetry:
+        print("WAITING: collector has not recorded usable telemetry yet.")
+        return 0
     if args.kind == "forecast" and not (SCRIPTS / "evaluate.py").is_file():
         parser.error("Missing base forecast evaluator")
     if args.check:
