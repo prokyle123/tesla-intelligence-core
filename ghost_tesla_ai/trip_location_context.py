@@ -13,6 +13,7 @@ import json
 import math
 import os
 from pathlib import Path
+from . import config
 import shutil
 import tempfile
 import time
@@ -288,7 +289,7 @@ def self_test():
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--self-test', action='store_true')
-    ap.add_argument('--root', default='/home/ghost/ghost-trip-sequence')
+    ap.add_argument('--root', default=str(config.DATA_DIR / 'trip-sequence'))
     args = ap.parse_args()
     if args.self_test:
         self_test()
