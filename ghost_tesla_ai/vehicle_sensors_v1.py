@@ -2,8 +2,9 @@
 from __future__ import annotations
 import json,math,sqlite3,time
 from flask import Blueprint,jsonify,render_template
+from . import config
 bp=Blueprint('ghost_vehicle_sensors_v1',__name__)
-DB='/var/lib/ghost-tesla-ai/ghost_ai.sqlite3'
+DB=str(config.DB_PATH)
 BAR_TO_PSI=14.5037738
 
 def dig(v,*keys):
