@@ -20,8 +20,9 @@ import time
 VERSION = 'prospective-trip-outcomes-v3.2.0'
 SCORING_PATCH = '2026-10-13-segment-arrival-v1.2'  # keep API version used by v5
 MAX_SEGMENT_GAP_SEC = 420.0
-ROOT = Path('/home/ghost/ghost-trip-sequence')
-GHOST_DB = Path('/var/lib/ghost-tesla-ai/ghost_ai.sqlite3')
+from . import config
+ROOT = Path(config.get('GHOST_TRIP_SHADOW_DIR', str(config.DATA_DIR / 'trip-sequence')))
+GHOST_DB = config.DB_PATH
 # Avoid scoring stale predictions or treating a sleeping car as a verified location.
 MAX_SOURCE_AGE_MIN = 55.0
 MAX_CURRENT_GPS_AGE_MIN = 35.0
