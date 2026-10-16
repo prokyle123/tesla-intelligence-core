@@ -282,6 +282,27 @@ def report(db,sidecar,now,days):
                      'departure_timing':metric([x['departure_error_min'] for x in matches]),
                      'energy':metric([x['energy_error_kwh'] for x in matches]),
                      'withheld_advance':sum(any(x['bucket']=='advance' for x in j['forecasts_withheld']) for j in js)}
+    # Whole-fleet/vehicle usage across ALL observed journeys: weekday and
+    # weekend, familiar and unfamiliar destinations. The time-of-day group is
+    # diagnostic context, never a condition for inclusion.
+    all_advance=[q for j in items for q in j['forecasts_scored'] if q['bucket']=='advance']
+    all_usage={
+        'journeys':len(items),
+        'miles':round(sum(j['distance_mi'] for j in items),1),
+        'weekend_journeys':sum(dt.datetime.fromtimestamp(j['start_ts']).weekday()>=5 for j in items),
+        'multi_leg':sum(j['legs']>1 for j in items),
+        'advance_matches':len(all_advance),
+        'withheld_advance':sum(any(q['bucket']=='advance' for q in j['forecasts_withheld']) for j in items),
+        'arrival_soc':metric([q['arrival_error_pp'] for q in all_advance]),
+        'departure_timing':metric([q['departure_error_min'] for q in all_advance]),
+        'departure_soc':metric([q['departure_soc_error_pp'] for q in all_advance]),
+        'energy':metric([q['energy_error_kwh'] for q in all_advance]),
+    }
+    usage_bands={'short_under_10mi':0,'medium_10_30mi':0,'long_30_80mi':0,'extended_80plus_mi':0}
+    for j in items:
+        m=j['distance_mi']
+        k='short_under_10mi' if m<10 else 'medium_10_30mi' if m<30 else 'long_30_80mi' if m<80 else 'extended_80plus_mi'
+        usage_bands[k]+=1
     verified_groups={}
     for j in items:
         name=j.get('verified_route')
@@ -293,7 +314,8 @@ def report(db,sidecar,now,days):
         for name,js in verified_groups.items()}
     return {'version':VERSION,'generated_epoch':now,'generated_local':stamp(now),'lookback_days':days,'mode':'READ_ONLY_SHADOW',
             'event_segments_seen':len(events),'candidate_journeys':len(items),'multi_leg_journeys':sum(j['legs']>1 for j in items),
-            'completed_journeys':list(reversed(items))[:150],'by_candidate':groups,'gps_matched_journeys':verified_stats,
+            'completed_journeys':list(reversed(items))[:150],'by_candidate':groups,
+            'all_journeys':all_usage,'usage_bands':usage_bands,'gps_matched_journeys':verified_stats,
             'gps_verified_sidecar':{'status':verified['status'],'verified_outcomes':len(verified['outcomes']), 'note':'Confirmed site label attached only when BOTH frozen GPS trip endpoints match this journey.'},
             'sensors':sensors,'scoring_policy':'CHARGE_AWARE_ACTIVITY_GUARD_V321',
             'notes':['A journey groups drives separated by <=15-minute stops; no merging across charging.',
@@ -318,6 +340,12 @@ def human(data):
     for cat,g in data['by_candidate'].items():
         ln+= [f" {cat} | journeys {g['journeys']} | multi-leg {g['multi_leg']} | valid advance matches {g['advance_matches']} | withheld {g['withheld_advance']}",
               '   Arrival SOC: '+str(g['arrival_soc'])+' | departure: '+str(g['departure_timing'])+' | energy kWh: '+str(g['energy'])]
+    total=data['all_journeys']
+    ln+=['','ALL JOURNEYS / ALL-DAY VEHICLE USE (not just commutes):',
+          f"  {total['journeys']} journeys; {total['miles']} mi; {total['weekend_journeys']} on weekends; {total['multi_leg']} multi-leg",
+          f"  {total['advance_matches']} valid advance matches; {total['withheld_advance']} withheld",
+          f"  Arrival SOC: {total['arrival_soc']} | departure SOC: {total['departure_soc']} | energy kWh: {total['energy']}",
+          '  Usage distances: '+str(data['usage_bands'])]
     ln+=['','GPS-MATCHED COMPLETED JOURNEYS (SITE IDS ONLY):']
     if not data['gps_matched_journeys']:ln.append('  No direct GPS-to-whole-journey matches established in current window.')
     for route,group in data['gps_matched_journeys'].items():ln.append('  '+route+' '+str(group))
