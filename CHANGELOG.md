@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased — v1.0 consolidation (draft)
+## v1.0.0 — Major winter & whole-vehicle intelligence release (2026-10-16)
 
-### Major release candidate — additions not yet field verified
+### Delivered features (new-install hardware test deferred)
 
 - Synced 26 live application source changes into a draft PR and integrated vehicle-sensor, Forecast Quality v2, and Trip Quality v3.2.1 endpoints.
 - Added all-journey/weekend summary alongside time-of-day context. Charge sessions already in progress when a forecast was frozen no longer automatically invalidate that forecast; newly initiated unverified charging still blocks comparisons.
@@ -18,7 +18,7 @@
 - Started source-only staging and secret review. Systemd unit templates and independent clean install tests **remain release blockers**.
 - Improved draft installer so existing credentials are detected before setup prompts, and installed features missing from the checkout are not silently removed.
 
-**Status:** draft PR, not a public v1.0 tag, production install or verified upgrade.
+**Validation limitation:** Automated regression and source checks passed; a new Raspberry Pi installation and in-place upgrade/reboot validation were not completed before release. See [release notes](docs/V1_RELEASE_NOTES.md).
 
 
 Notable changes to **Tesla Intelligence Core (GHOST)**, grouped by development snapshot or public release.
