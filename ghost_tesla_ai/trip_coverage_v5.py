@@ -23,8 +23,9 @@ from zoneinfo import ZoneInfo
 VERSION='time-only-prospective-v5.0.0'
 SCORING_PATCH='2026-10-13-segment-arrival-v1.2'
 TZ=ZoneInfo('America/Chicago')
-ROOT=Path('/home/ghost/ghost-trip-sequence')
-LIVE=Path('/var/lib/ghost-tesla-ai/ghost_ai.sqlite3')
+from . import config
+ROOT=Path(config.get('GHOST_TRIP_SHADOW_DIR', str(config.DATA_DIR / 'trip-sequence')))
+LIVE=config.DB_PATH
 MIN_SUPPORT_WEEKDAY=6
 MIN_SUPPORT_WEEKEND=4
 MIN_LEAD_MIN=45
