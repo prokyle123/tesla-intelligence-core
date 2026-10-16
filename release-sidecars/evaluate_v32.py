@@ -10,7 +10,7 @@ from urllib.parse import quote
 BASE=Path('/home/ghost/ghost-forecast-quality')
 DB=Path('/var/lib/ghost-tesla-ai/ghost_ai.sqlite3')
 SIDECAR=Path('/home/ghost/ghost-trip-sequence/prediction-eval-v3.sqlite3')
-VERSION='3.2.0'
+VERSION='3.2.1'
 MIPERKM=.621371
 
 def num(x):
@@ -142,11 +142,15 @@ def assess_forecast(j,snaps,coverage,activity=None):
         pred_arr=num(s.get('predicted_arrival_soc'));pred_dep=num(s.get('predicted_departure_soc'))
         trip=(tp.get('trip_prediction') or {})
         predicted_energy=num((trip.get('trip_energy_kwh') or {}).get('value')) if isinstance(trip.get('trip_energy_kwh'),dict) else None
-        # A frozen multi-hour forecast cannot be scored as a stand-alone commute
-        # forecast if another significant DRIVE or CHARGE occurred after capture.
-        # This was the missing Oct 9 guard: driving before the afternoon trip changed
-        # the starting SOC, so the old "advance" comparison was apples-to-oranges.
+        # Observe charging that was already in progress at capture time.
+        # Overnight AC charging can be a *part of* the frozen departure-SOC
+        # forecast, not an unexpected interruption. Do not reject it solely
+        # because the event continues after the forecast was issued.
+        # Charges that genuinely begin after capture still require explicit
+        # evidence that they were planned (currently unavailable), so they
+        # are withheld until a stronger plan-aware comparison is implemented.
         interrupted=[]
+        ongoing_charges=[]
         for ev in activity:
             es=num(ev.get('start_ts')); ee=num(ev.get('end_ts'))
             if es is None or ee is None or ee<=created+60 or es>=j['start_ts']-60:continue
@@ -155,10 +159,16 @@ def assess_forecast(j,snaps,coverage,activity=None):
                 if miles < 1.5 and (ee-es)<300:continue
                 interrupted.append({'type':'drive','distance_mi':round(miles,1),'duration_min':round((ee-es)/60,1)})
             elif str(ev.get('event_type'))=='charge' and min(ee,j['start_ts'])-max(es,created)>=5*60:
-                interrupted.append({'type':'charge','duration_min':round((ee-es)/60,1)})
+                charge={'type':'charge','duration_min':round((ee-es)/60,1)}
+                # Continuous charging observed before the forecast capture
+                # is baseline context, not a newly initiated activity.
+                if es <= created+60:
+                    ongoing_charges.append(charge)
+                else:
+                    interrupted.append(charge)
         reason=None
         if not coverage['ok']:reason='insufficient_telemetry_coverage'
-        elif interrupted:reason='intervening_drive_or_charge'
+        elif interrupted:reason='unexpected_intervening_drive_or_charge'
         elif not valid_distance:reason='forecast_route_distance_mismatch'
         elif pred_arr is None:reason='missing_frozen_arrival_forecast'
         # Note departure SOC mismatch separately without hiding a real model miss.
@@ -170,7 +180,8 @@ def assess_forecast(j,snaps,coverage,activity=None):
               'planned_distance_mi':plan,'actual_journey_distance_mi':j['distance_mi'], 'distance_difference_mi':round(diff,2) if diff is not None else None,
               'predicted_arrival_soc':pred_arr,'actual_arrival_soc':j['end_soc'], 'predicted_departure_soc':pred_dep,
               'status':'scored' if not reason else 'withheld','reason':reason,
-              'intervening_activity':interrupted[:5],'departure_soc_error_pp':soc_start_error,
+              'intervening_activity':interrupted[:5], 'ongoing_charges_at_forecast':ongoing_charges[:5],
+              'departure_soc_error_pp':soc_start_error,
               'arrival_error_pp':round(pred_arr-j['end_soc'],2) if not reason else None,
               'energy_error_kwh':round(predicted_energy-j['energy_kwh'],3) if not reason and predicted_energy is not None and j['energy_kwh'] is not None else None}
         if reason:rejected.append(info)
@@ -284,9 +295,10 @@ def report(db,sidecar,now,days):
             'event_segments_seen':len(events),'candidate_journeys':len(items),'multi_leg_journeys':sum(j['legs']>1 for j in items),
             'completed_journeys':list(reversed(items))[:150],'by_candidate':groups,'gps_matched_journeys':verified_stats,
             'gps_verified_sidecar':{'status':verified['status'],'verified_outcomes':len(verified['outcomes']), 'note':'Confirmed site label attached only when BOTH frozen GPS trip endpoints match this journey.'},
-            'sensors':sensors,'scoring_policy':'STRICT_INTERVENING_ACTIVITY_GUARD',
+            'sensors':sensors,'scoring_policy':'CHARGE_AWARE_ACTIVITY_GUARD_V321',
             'notes':['A journey groups drives separated by <=15-minute stops; no merging across charging.',
-                     'Forecast scored only when captured before departure, no significant intervening drive or charge, departure target within 45 minutes, measured coverage sufficient and planned distance matches complete journey.',
+                     'Forecast scored only when captured before departure, no significant unplanned intervening activity, departure target within 45 minutes, coverage sufficient and planned distance matches complete journey.',
+                     'Charging already underway when forecast captured is baseline context; newly initiated charging without proven plan remains withheld.',
                      'Only frozen persisted readiness predictions used: NO retrospective model inference or model promotion.',
                      'Time-of-day morning/afternoon labels are NOT verified work/home routes.',
                      'Scores count at most one advance forecast per completed candidate journey; GPS status shown independently.',
@@ -361,8 +373,20 @@ def selftest():
     later=dict(morning[0]); later['created_at']=base-27*60
     interrupted=[{'event_type':'drive','start_ts':base-3*3600,'end_ts':base-2*3600,'distance_km':39/MIPERKM}]
     scored,withheld,_,_=assess_forecast(good,[old,later],{'ok':True},interrupted)
-    assert len(withheld)==1 and withheld[0]['reason']=='intervening_drive_or_charge',withheld
+    assert len(withheld)==1 and withheld[0]['reason']=='unexpected_intervening_drive_or_charge',withheld
     assert len(scored)==1 and scored[0]['bucket']=='predrive',scored
+    # Charging at capture is expected context, especially overnight Level 1;
+    # it must not suppress a valid multi-hour prediction. A NEW charge that
+    # starts after capture remains unverified and is withheld.
+    ongoing=[{'event_type':'charge','start_ts':base-9*3600,
+              'end_ts':base-2*60,'distance_km':0}]
+    yes,no,_,_=assess_forecast(good,morning,{'ok':True},ongoing)
+    assert len(yes)==1 and not no, (yes,no)
+    assert yes[0]['ongoing_charges_at_forecast'], yes
+    unexpected=[{'event_type':'charge','start_ts':base-4*3600,
+                 'end_ts':base-90*60,'distance_km':0}]
+    yes,no,_,_=assess_forecast(good,morning,{'ok':True},unexpected)
+    assert not yes and no[0]['reason']=='unexpected_intervening_drive_or_charge',(yes,no)
     assert metric([2,-1,None])['mae']==1.5
     print('SELFTEST PASS: multi-leg, charge barrier, mismatch rejection, no false scoring')
 
