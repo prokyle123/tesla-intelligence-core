@@ -126,7 +126,7 @@ def site_for_end(live, car, end_ts, site_registry):
                            WHERE car_id=? AND ts BETWEEN ? AND ? ORDER BY ts LIMIT 350''',
                         (car,lo,hi)).fetchall()
     try:
-        from trip_sequence_shadow import gps_from_raw
+        from .trip_sequence_shadow import gps_from_raw
     except ImportError:
         return None
     possibilities=[]
