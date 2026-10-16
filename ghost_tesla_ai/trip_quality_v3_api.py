@@ -2,9 +2,11 @@
 from pathlib import Path
 import json,time
 from flask import Blueprint, jsonify, render_template
+from . import config
 
 bp=Blueprint('ghost_trip_quality_v3',__name__)
-REPORT=Path('/home/ghost/ghost-forecast-quality/v3-latest.json')
+REPORT_DIR=Path(config.get('GHOST_QUALITY_DIR', str(config.DATA_DIR / 'quality')))
+REPORT=REPORT_DIR / 'v3-latest.json'
 
 @bp.get('/trip-quality')
 def trip_quality_page():
@@ -25,7 +27,7 @@ def trip_quality_data():
 @bp.get('/api/trip-quality/v31')
 def trip_quality_v31_data():
     try:
-        path=Path('/home/ghost/ghost-forecast-quality/v31-latest.json')
+        path=REPORT_DIR / 'v31-latest.json'
         value=json.loads(path.read_text(encoding='utf-8'))
         value['ok']=True
         value['report_age_min']=round(max(0,time.time()-float(value['generated_epoch']))/60,1)
@@ -37,7 +39,7 @@ def trip_quality_v31_data():
 @bp.get('/api/trip-quality/v32')
 def trip_quality_v32_data():
     try:
-        path=Path('/home/ghost/ghost-forecast-quality/v32-latest.json')
+        path=REPORT_DIR / 'v32-latest.json'
         value=json.loads(path.read_text(encoding='utf-8'))
         value['ok']=True
         value['report_age_min']=round(max(0,time.time()-float(value['generated_epoch']))/60,1)
