@@ -243,12 +243,37 @@ def learned_dynamics(days:int=60):
                 if 0<k<2:ks.append(k)
         if h>0.5 and r['pack_change_c'] is not None:cool.append(r['pack_change_c']*1.8/h)
     charge_rates=[rate for r in charges if (rate := _l1_soc_rate(r)) is not None]
-    pre_heat=[r['pack_change_c']*1.8/((r['duration_min'] or 1)/60) for r in pre if r['pack_change_c'] is not None and r['pack_change_c']>0 and (r['duration_min'] or 0)>=5]
+    # v1.4: only learn a battery warm-up rate from *verified heater-on*
+    # sessions. 'preconditioning' alone often means cabin climate, and
+    # cherry-picking only positive pack deltas inflates the estimated rate.
+    # Include cooling observations in the median and demand independent days.
+    verified_heater_rates=[]
+    for r in pre:
+        duration=_f(r['duration_min'])
+        delta_c=_f(r['pack_change_c'])
+        if duration is None or duration<10 or delta_c is None:
+            continue
+        try:
+            meta=json.loads(r['metadata_json'] or '{}')
+        except (ValueError, TypeError):
+            meta={}
+        heater_fraction=_f(meta.get('heater_fraction')) if isinstance(meta,dict) else None
+        if heater_fraction is None or heater_fraction<0.5:
+            continue
+        rate=delta_c*1.8/(duration/60)
+        if not math.isfinite(rate) or abs(rate)>60:
+            continue
+        verified_heater_rates.append((float(r['start_ts']), rate))
+    heater_days={time.strftime('%Y-%m-%d',time.localtime(ts)) for ts,_ in verified_heater_rates}
+    confirmed_heat_rate=_median([rate for _,rate in verified_heater_rates])
+    if (len(verified_heater_rates)<3 or len(heater_days)<2 or
+            confirmed_heat_rate is None or not (0.5<=confirmed_heat_rate<=35)):
+        confirmed_heat_rate=None
     standby=[-r['soc_change']/((r['duration_min'] or 1)/60) for r in park if r['soc_change'] is not None and r['soc_change']<0 and (r['duration_min'] or 0)>=60]
     pre_soc=[-r['soc_change']/((r['duration_min'] or 1)/60) for r in pre if r['soc_change'] is not None and r['soc_change']<0 and (r['duration_min'] or 0)>=5]
     return {'cold_soak_k_per_hr':_median(ks),'cold_pack_delta_f_hr':_median(cool),'cold_samples':len(ks),
             'l1_soc_pct_hr':_median(charge_rates),'l1_samples':len(charge_rates),
-            'precondition_heat_f_hr':_median(pre_heat),'precondition_samples':len(pre_heat),
+            'precondition_heat_f_hr':confirmed_heat_rate,'precondition_samples':len(verified_heater_rates),
             'precondition_soc_pct_hr':_median(pre_soc),'standby_soc_pct_hr':_median(standby),'standby_samples':len(standby)}
 
 def recent_events(limit:int=80):

@@ -1,4 +1,4 @@
-"""Independent history of actual rendered GHOST winter-readiness scores.
+"""Independent history of actual rendered GHOST readiness scores; shared scale v1.
 
 No score recomputation or adjustment takes place here. Do not use for model training.
 """
@@ -17,6 +17,9 @@ DAY = 86400.0
 
 
 def _score(board):
+    # Do not chart a fake 0 during incomplete departure forecasts.
+    if board.get('state') in ('LEARNING', 'WAITING', 'LAST KNOWN', 'STALE'):
+        return None
     value = (board.get('score_breakdown') or {}).get('score_unrounded', board.get('score'))
     try:
         val = float(value)
@@ -51,15 +54,15 @@ def attach_score_history(board: dict) -> dict:
         HISTORY_DIR.mkdir(parents=True, exist_ok=True)
         with closing(sqlite3.connect(str(HISTORY_DB), timeout=5.0)) as con, con:
             con.execute('PRAGMA busy_timeout=5000')
-            con.execute('CREATE TABLE IF NOT EXISTS score_samples (ts REAL PRIMARY KEY, score REAL NOT NULL CHECK(score >= 0 AND score <= 100))')
+            con.execute('CREATE TABLE IF NOT EXISTS score_samples_shared_v1 (ts REAL PRIMARY KEY, score REAL NOT NULL CHECK(score >= 0 AND score <= 100))')
             con.execute('BEGIN IMMEDIATE')
-            prev = con.execute('SELECT ts, score FROM score_samples ORDER BY ts DESC LIMIT 1').fetchone()
+            prev = con.execute('SELECT ts, score FROM score_samples_shared_v1 ORDER BY ts DESC LIMIT 1').fetchone()
             # A regular once-a-minute sample, or a genuine change after 10 seconds.
             # Avoid artificial noise due only to five-second browser refreshes.
             if fresh and (prev is None or (now - prev[0] >= 60.0) or (now - prev[0] >= 10.0 and abs(current - prev[1]) >= 0.05)):
-                con.execute('INSERT OR REPLACE INTO score_samples(ts,score) VALUES (?,?)', (now, current))
-            con.execute('DELETE FROM score_samples WHERE ts < ?', (now - 8 * DAY,))
-            rows = con.execute('SELECT ts,score FROM score_samples WHERE ts >= ? AND ts <= ? ORDER BY ts', (now - DAY, now + 1)).fetchall()
+                con.execute('INSERT OR REPLACE INTO score_samples_shared_v1(ts,score) VALUES (?,?)', (now, current))
+            con.execute('DELETE FROM score_samples_shared_v1 WHERE ts < ?', (now - 8 * DAY,))
+            rows = con.execute('SELECT ts,score FROM score_samples_shared_v1 WHERE ts >= ? AND ts <= ? ORDER BY ts', (now - DAY, now + 1)).fetchall()
         board['score_history_24h'] = [{'ts': round(float(t), 2), 'score': round(float(s), 2)} for t, s in rows]
         board['score_history_status'] = ('LIVE' if fresh else 'STALE TELEMETRY') if rows else 'COLLECTING'
     except Exception:

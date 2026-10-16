@@ -21,6 +21,7 @@ from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 VERSION='time-only-prospective-v5.0.0'
+SCORING_PATCH='2026-10-13-segment-arrival-v1.2'
 TZ=ZoneInfo('America/Chicago')
 ROOT=Path('/home/ghost/ghost-trip-sequence')
 LIVE=Path('/var/lib/ghost-tesla-ai/ghost_ai.sqlite3')
@@ -178,13 +179,11 @@ def freeze(sidecar,when,p,now):
     return True,'New TIME_ONLY forecast frozen'
 
 
-def first_event(live,car,snap,now):
-    start=max(float(snap['captured_at']),float(snap['predicted_ts'])-EARLY_WINDOW_MIN*60)
-    end=min(now,float(snap['predicted_ts'])+LATE_WINDOW_MIN*60)
-    return live.execute('''SELECT start_ts,end_ts,distance_km,soc_change,wh_per_mile
-      FROM vehicle_events WHERE car_id=? AND event_type='drive' AND start_ts>=? AND start_ts<=?
-      AND end_ts>start_ts AND distance_km BETWEEN 5 AND 250
-      ORDER BY start_ts LIMIT 1''',(car,start,end)).fetchone()
+def first_event(live, car, snap, now):
+    # Reuse v3's conservative joined-drive matcher. Keep time-only metrics
+    # separate: never infer destination, route, or SOC from v5.
+    from trip_outcome_v3 import candidate_drive
+    return candidate_drive(live, car, snap, now)
 
 
 def evaluate(sidecar,live,car,now,complete_fn,motion_fn):
@@ -203,7 +202,12 @@ def evaluate(sidecar,live,car,now,complete_fn,motion_fn):
               WHERE id=? AND status='PENDING' ''',
               (actual,float(event['end_ts']),round(err,2),now,
                'Entire drive settled; departure time scored; route and destination NOT scored',snap['id']))
-        elif not event and now>float(snap['predicted_ts'])+LATE_WINDOW_MIN*60:
+        elif event:
+            # No guessing: leave it pending for possible late-arriving parked
+            # telemetry, with a human-readable reason for the incomplete score.
+            sidecar.execute("UPDATE time_forecasts SET note=? WHERE id=? AND status='PENDING'",
+                ('Drive observed; settled arrival not yet proven. Not counted in accuracy',snap['id']))
+        elif now>float(snap['predicted_ts'])+LATE_WINDOW_MIN*60:
             sidecar.execute("UPDATE time_forecasts SET status='UNVERIFIED_NO_TRIP',scored_at=?,note=? WHERE id=? AND status='PENDING'",
                 (now,'No complete observed drive. NOT counted as prediction wrong',snap['id']))
     sidecar.commit()
@@ -225,8 +229,9 @@ def report(sidecar,patterns,info,now):
     scored=[r for r in rows if r['status']=='SCORED_TIME_ONLY']
     pending=[r for r in rows if r['status']=='PENDING']
     invalid=[r for r in rows if r['status']=='INVALID_CAPTURE_IN_MOTION']
+    awaiting_arrival=sum(r['status']=='PENDING' and 'settled arrival' in (r['note'] or '') for r in rows)
     mae=statistics.mean(abs(r['departure_error_min']) for r in scored) if scored else None
-    lines=[f'GHOST TIME-ONLY TRIP COVERAGE {VERSION}',f'Updated: {fmt(now)}',
+    lines=[f'GHOST TIME-ONLY TRIP COVERAGE {VERSION} ({SCORING_PATCH})',f'Updated: {fmt(now)}',
       'SHADOW ONLY. Production departure, v3.2 route scoring, v4 feedback, neural models and vehicle UNCHANGED.',
       '', '=== LEARNED DEPARTURE WINDOWS ===']
     for p in patterns:
@@ -234,7 +239,7 @@ def report(sidecar,patterns,info,now):
     if not patterns:lines.append('  Collecting qualifying trips; no forecast created.')
     lines.extend(['','=== PROSPECTIVE TIME-ONLY FORECASTS ===',
       f'Captured before departure: {len(rows)}',f'Time-only trips scored: {len(scored)}',
-      f'Pending: {len(pending)} | invalid-in-motion: {len(invalid)}',
+      f'Pending: {len(pending)} ({awaiting_arrival} awaiting settled arrival) | invalid-in-motion: {len(invalid)}',
       f'Departure timing MAE: {mae:.1f}m ({len(scored)} scored)' if mae is not None else 'Departure timing MAE: WAITING',
       f'Capture status: {info}', '', '=== MOST RECENT FORECASTS ==='])
     for r in rows[:10]:

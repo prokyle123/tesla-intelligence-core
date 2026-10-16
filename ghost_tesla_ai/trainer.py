@@ -40,60 +40,109 @@ def _day_block_split(source_ts,n):
         return max(1,min(n-20,int(n*.8))),'row-ordered fallback'
     return split,f'day-blocked chronological holdout ({test_days} whole days)'
 
-def _legacy_baseline_mae(old, test_source_ids, yte):
-    """Score a pre-v0.3 champion on the exact v0.3 holdout before replacing it."""
-    if old is None or not old['artifact_path'] or not test_source_ids:return None
+def _paired_champion_mae(old, Xte, yte):
+    """Evaluate the actual incumbent on the *same* rows and feature contract.
+
+    The old training MAE came from a different holdout; comparing to it risks
+    promoting a worse model when weather/driving conditions change. Never
+    manufacture missing history for incompatible legacy feature versions.
+    """
+    if old is None or not old['artifact_path']:
+        return None, 'incumbent artifact missing'
     try:
-        features=json.loads(old['features_json'] or '[]') or LEGACY_FEATURES
-    except Exception:features=LEGACY_FEATURES
+        old_features = json.loads(old['features_json'] or '[]')
+    except (TypeError, ValueError):
+        old_features = []
+    if old_features != list(V3_FEATURES):
+        return None, 'incompatible feature contract; manual review required'
+    if 'feature_version' in old.keys() and old['feature_version'] != FEATURE_VERSION:
+        return None, 'incompatible feature version; manual review required'
     try:
-        model=SklearnHistGBBackend.load(old['artifact_path'])
-        rows={}
-        with db.connect() as con:
-            ids=list(map(int,test_source_ids))
-            for off in range(0,len(ids),800):
-                chunk=ids[off:off+800]; qs=','.join('?' for _ in chunk)
-                for r in con.execute(f'SELECT * FROM telemetry WHERE id IN ({qs})',chunk).fetchall():rows[int(r['id'])]=r
-        X=[]; yy=[]
-        for sid,y in zip(test_source_ids,yte):
-            r=rows.get(int(sid))
-            if r is None:continue
-            X.append(row_to_features(r,features,[r])); yy.append(float(y))
-        if len(yy)<20:return None
-        pr=model.predict(np.asarray(X,dtype=float))
-        return float(mean_absolute_error(np.asarray(yy,dtype=float),pr))
-    except Exception:return None
+        old_pred = SklearnHistGBBackend.load(old['artifact_path']).predict(Xte)
+        metric = float(mean_absolute_error(yte, old_pred))
+        if not math.isfinite(metric):
+            return None, 'nonfinite incumbent holdout metric'
+        return metric, 'paired incumbent holdout MAE'
+    except Exception as exc:
+        return None, f'incumbent could not be evaluated ({type(exc).__name__})'
+
+
+def _specialist_evidence_ok(model_name, source_ts, split, strategy, train_count):
+    if model_name not in {'park_soc_180m', 'precondition_pack_30m'}:
+        return True, 'general model: original evidence gate'
+    # Overlapping samples of one parked event are NOT independent days.
+    train_days = len({time.strftime('%Y-%m-%d', time.localtime(t)) for t in source_ts[:split]})
+    test_days = len({time.strftime('%Y-%m-%d', time.localtime(t)) for t in source_ts[split:]})
+    good = (strategy.startswith('day-blocked') and train_days >= 3 and
+            test_days >= 2 and train_count >= 40 and len(source_ts)-split >= 20)
+    return bool(good), f'specialist evidence train_days={train_days} test_days={test_days} day_blocked={strategy.startswith("day-blocked")}'
+
 
 def train_one(model_name: str):
-    spec=MODEL_SPECS[model_name]
-    X,y,source_ids,source_ts=build_dataset(model_name); n=len(y)
-    need=max(int(spec.get('min_rows',config.MIN_TRAIN_ROWS)),40)
-    if n<need:
-        return {'model':model_name,'status':'waiting','rows':n,'need':need,'regime':spec.get('regime')}
-    split,strategy=_day_block_split(source_ts,n)
-    Xtr,Xte=np.asarray(X[:split],dtype=float),np.asarray(X[split:],dtype=float)
-    ytr,yte=np.asarray(y[:split],dtype=float),np.asarray(y[split:],dtype=float)
-    model=SklearnHistGBBackend().fit(Xtr,ytr); pred=model.predict(Xte)
-    mae=float(mean_absolute_error(yte,pred)); rmse=float(math.sqrt(mean_squared_error(yte,pred)))
-    r2=float(r2_score(yte,pred)) if len(yte)>1 else float('nan')
-    gen=next_gen(model_name); outdir=config.MODEL_DIR/model_name; outdir.mkdir(parents=True,exist_ok=True)
-    artifact=outdir/f'gen-{gen:04d}.joblib'; model.save(artifact)
-    old=active_run(model_name)
-    compare_mae=None
-    if old is not None and ('feature_version' not in old.keys() or old['feature_version']!=FEATURE_VERSION):
-        compare_mae=_legacy_baseline_mae(old,source_ids[split:],yte)
-    baseline=compare_mae if compare_mae is not None else (None if old is None else old['mae'])
-    promote=bool(config.AUTO_PROMOTE and (old is None or baseline is None or mae<=float(baseline)*(1.0-config.PROMOTE_IMPROVEMENT)))
-    comparison_note='same-holdout legacy baseline MAE='+str(round(compare_mae,6)) if compare_mae is not None else 'standard champion comparison'
-    # A brand-new regime specialist is allowed to become production when it clears
-    # its evidence gate; established champions remain until a challenger improves.
+    spec = MODEL_SPECS[model_name]
+    X, y, source_ids, source_ts = build_dataset(model_name)
+    n = len(y)
+    need = max(int(spec.get('min_rows', config.MIN_TRAIN_ROWS)), 40)
+    if n < need:
+        return {'model': model_name, 'status': 'waiting', 'rows': n,
+                'need': need, 'regime': spec.get('regime')}
+    split, strategy = _day_block_split(source_ts, n)
+    # Specialist labels run into the future (30/180 minutes). Purge training
+    # examples whose target reaches the held-out observation period.
+    train_end = split
+    if model_name in {'park_soc_180m', 'precondition_pack_30m'}:
+        holdout_start = float(source_ts[split])
+        horizon_sec = int(spec['horizon']) * 60
+        while train_end > 0 and float(source_ts[train_end - 1]) + horizon_sec >= holdout_start:
+            train_end -= 1
+    evidence_ok, evidence_note = _specialist_evidence_ok(
+        model_name, source_ts, split, strategy, train_end)
+    if train_end < 40 or n - split < 20 or not evidence_ok:
+        return {'model': model_name, 'status': 'waiting_for_clean_validation',
+                'rows': n, 'train_rows': train_end, 'test_rows': n - split,
+                'regime': spec.get('regime'), 'reason': evidence_note,
+                'validation': strategy}
+    Xtr, Xte = np.asarray(X[:train_end], dtype=float), np.asarray(X[split:], dtype=float)
+    ytr, yte = np.asarray(y[:train_end], dtype=float), np.asarray(y[split:], dtype=float)
+    model = SklearnHistGBBackend().fit(Xtr, ytr)
+    pred = model.predict(Xte)
+    mae = float(mean_absolute_error(yte, pred))
+    rmse = float(math.sqrt(mean_squared_error(yte, pred)))
+    r2 = float(r2_score(yte, pred)) if len(yte) > 1 else float('nan')
+    old = active_run(model_name)
+    compare_mae, compare_note = _paired_champion_mae(old, Xte, yte) if old is not None else (None, 'no incumbent')
+    # No automatic replacement if champion cannot be compared on identical
+    # labeled observations. Incompatible old models require manual review.
+    if old is None:
+        promote = bool(config.AUTO_PROMOTE and evidence_ok and math.isfinite(mae))
+    else:
+        promote = bool(config.AUTO_PROMOTE and compare_mae is not None and
+                       math.isfinite(mae) and
+                       mae <= compare_mae * (1.0 - config.PROMOTE_IMPROVEMENT))
+    gen = next_gen(model_name)
+    outdir = config.MODEL_DIR / model_name
+    outdir.mkdir(parents=True, exist_ok=True)
+    artifact = outdir / f'gen-{gen:04d}.joblib'
+    model.save(artifact)
+    notes = ('v1.3 source-state truth and paired holdout; ' + evidence_note +
+             '; ' + compare_note +
+             (' baseline=' + str(round(compare_mae, 6)) if compare_mae is not None else ''))
     with db.connect() as con:
-        if promote: con.execute('UPDATE model_runs SET promoted=0 WHERE model_name=?',(model_name,))
+        if promote:
+            con.execute('UPDATE model_runs SET promoted=0 WHERE model_name=?', (model_name,))
         con.execute('''INSERT INTO model_runs(model_name,backend,generation,trained_at,rows_total,rows_train,rows_test,mae,rmse,r2,promoted,artifact_path,features_json,target,horizon_minutes,notes,validation_strategy,test_start_ts,test_end_ts,regime,feature_version)
                        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',
-                    (model_name,model.name,gen,time.time(),n,len(ytr),len(yte),mae,rmse,r2,int(promote),str(artifact),json.dumps(V3_FEATURES),spec['target'],spec['horizon'],
-                     'v0.3 contextual features + blocked validation; '+comparison_note,strategy,float(source_ts[split]) if split<len(source_ts) else None,float(source_ts[-1]) if source_ts else None,spec.get('regime'),FEATURE_VERSION))
-    return {'model':model_name,'status':'trained','generation':gen,'rows':n,'train_rows':len(ytr),'test_rows':len(yte),'mae':mae,'rmse':rmse,'r2':r2,'promoted':promote,'validation':strategy,'regime':spec.get('regime'),'comparison_baseline_mae':compare_mae}
+                    (model_name, model.name, gen, time.time(), n, len(ytr), len(yte),
+                     mae, rmse, r2, int(promote), str(artifact), json.dumps(V3_FEATURES),
+                     spec['target'], spec['horizon'], notes, strategy,
+                     float(source_ts[split]) if split < len(source_ts) else None,
+                     float(source_ts[-1]) if source_ts else None, spec.get('regime'), FEATURE_VERSION))
+    return {'model': model_name, 'status': 'trained', 'generation': gen,
+            'rows': n, 'train_rows': len(ytr), 'test_rows': len(yte),
+            'mae': mae, 'rmse': rmse, 'r2': r2,
+            'promoted': promote, 'validation': strategy,
+            'regime': spec.get('regime'), 'comparison_baseline_mae': compare_mae,
+            'promotion_reason': compare_note, 'evidence': evidence_note}
 
 def train_all():
     db.init_db(); results=[]; config.DATA_DIR.mkdir(parents=True,exist_ok=True)

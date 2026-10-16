@@ -322,6 +322,44 @@ html.tic-companion.tic-companion-more #ticCompanionMore{
 @media(prefers-reduced-motion:reduce){.winter-score-ring{transition:none}}
 @media(max-width:900px){.winter-spark-card{max-width:350px}}
 
+
+/* GHOST-READINESS-STATUS-THEMES-V1: scoped to readiness hero, no backend score changes. */
+.winter-ready-hero{
+  --wr-accent:var(--green);--wr-soft:rgba(89,224,165,.12);--wr-stroke:#218565;
+  border-left-color:var(--wr-accent);
+  transition:border-left-color .25s ease;
+}
+.winter-ready-hero[data-readiness-level="ready"]{--wr-accent:#59e0a5;--wr-soft:rgba(89,224,165,.12);--wr-stroke:#218565}
+.winter-ready-hero[data-readiness-level="watch"]{--wr-accent:#ffc157;--wr-soft:rgba(255,193,87,.13);--wr-stroke:#a57a29}
+.winter-ready-hero[data-readiness-level="action"]{--wr-accent:#ff9d58;--wr-soft:rgba(255,157,88,.13);--wr-stroke:#ad5f2e}
+.winter-ready-hero[data-readiness-level="critical"]{--wr-accent:#ff6f76;--wr-soft:rgba(255,111,118,.15);--wr-stroke:#ae3944}
+.winter-ready-hero[data-readiness-level="unknown"]{--wr-accent:#80adc4;--wr-soft:rgba(128,173,196,.08);--wr-stroke:#436b80}
+.winter-ready-hero .winter-green,.winter-ready-hero .winter-score-state{color:var(--wr-accent)}
+.winter-ready-hero .winter-score-ring{
+  background:conic-gradient(var(--wr-accent) calc(var(--score)*1%),#173342 0);
+  box-shadow:0 0 28px var(--wr-soft);
+}
+.winter-ready-hero .winter-action{border-color:var(--wr-stroke);background:var(--wr-soft)}
+.winter-ready-hero .winter-mode-switch button[aria-pressed="true"]{
+  background:var(--wr-accent);color:#06151d;box-shadow:0 1px 8px var(--wr-soft)
+}
+.winter-ready-hero .winter-mode-switch button:focus-visible{outline-color:var(--wr-accent)}
+.winter-ready-hero .winter-meta span:before{color:var(--wr-accent)}
+.winter-ready-hero .winter-spark-head b{color:var(--wr-accent)}
+.winter-ready-hero .winter-hit{border-color:var(--wr-stroke);background:var(--wr-soft)}
+.winter-ready-hero .winter-hit .winter-hit-points,
+.winter-ready-hero .winter-hit.bad .winter-hit-points{color:var(--wr-accent)}
+/* Readiness states are different from individual sensor-check warning colors. */
+.winter-level-legend{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin:7px auto 0;width:100%;max-width:330px}
+.winter-level-legend span{padding:3px 2px;border:1px solid #224b5f;border-radius:6px;color:#759daf;background:#071b27;text-align:center;font-size:8px;font-weight:850;letter-spacing:.25px}
+.winter-level-legend span[data-level="ready"]{--wr-level:#59e0a5}
+.winter-level-legend span[data-level="watch"]{--wr-level:#ffc157}
+.winter-level-legend span[data-level="action"]{--wr-level:#ff9d58}
+.winter-level-legend span[data-level="critical"]{--wr-level:#ff6f76}
+.winter-level-legend span.is-active{color:var(--wr-level);border-color:var(--wr-level);background:rgba(255,255,255,.035)}
+.winter-ready-hero[data-readiness-level="unknown"] .winter-level-legend .is-active{border-color:#436b80;color:#80adc4}
+@media(prefers-reduced-motion:reduce){.winter-ready-hero{transition:none}}
+
 /* GHOST-DUAL-DIAL-V1 - one gauge, two independent score histories */
 .winter-mode-switch{display:flex;width:100%;max-width:330px;padding:3px;gap:3px;border:1px solid #27556d;background:#061c2c;border-radius:999px;margin:0 auto 9px;min-height:31px}
 .winter-mode-switch button{min-width:0;flex:1;border:0;border-radius:999px;background:transparent;color:#8baec2;cursor:pointer;font-size:10px;font-weight:850;letter-spacing:.1px;padding:6px 4px;white-space:nowrap}
@@ -330,6 +368,30 @@ html.tic-companion.tic-companion-more #ticCompanionMore{
 .winter-other-preview{margin:7px auto 0;max-width:330px;min-height:26px;padding:5px 8px;border:1px solid #22516a;border-radius:20px;background:#0b2635;color:#a5cee0;font-size:10px;font-weight:700;text-align:center}
 .winter-other-preview b{color:#e8f5ff}
 @media(max-width:420px){.winter-mode-switch button{font-size:9px}.winter-other-preview{font-size:9px}}
+
+/* GHOST-SMART-READINESS-BANNER-V1: score-deduction-driven copy; readiness UI only. */
+.winter-ready-hero .winter-action.winter-smart-banner{display:grid;gap:5px;align-content:center;min-height:78px;padding:11px 14px}
+.winter-ready-hero .winter-smart-kicker{font-size:9px;line-height:1.3;letter-spacing:.85px;font-weight:950;text-transform:uppercase;color:var(--wr-accent)}
+.winter-ready-hero .winter-smart-title{font-size:15px;line-height:1.35;font-weight:900;color:#f6fbff}
+.winter-ready-hero .winter-smart-detail{font-size:11px;line-height:1.48;font-weight:600;color:#c9dfea}
+.winter-ready-hero .winter-smart-context{font-size:9px;line-height:1.4;color:#82aabd;font-weight:600}
+@media(max-width:620px){.winter-ready-hero .winter-smart-title{font-size:13px}.winter-ready-hero .winter-smart-detail{font-size:10px}}
+
+
+/* GHOST-WEATHER-STRIP-V1 - compact three-column extension matching thermal palette */
+.ghost-weather-strip{margin-top:15px;border-top:1px solid #1b465a;padding-top:12px}
+.ghost-weather-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:9px}
+.ghost-weather-head b{font-size:13px;font-weight:850;color:#f2f9ff}
+.ghost-weather-head small{font-size:10px;color:#7cacc5;text-align:right}
+.ghost-weather-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.ghost-weather-mini{--ghostwx:#59e0a5;min-width:0;padding:10px 12px 9px;border-radius:12px;border:1px solid #254d64;background:linear-gradient(155deg,#0b2636,#0b2030);border-left:3px solid var(--ghostwx)}
+.ghost-weather-minihead{display:flex;justify-content:space-between;gap:4px;align-items:baseline}.ghost-weather-minihead b{font-size:12px;color:#edf7fc}.ghost-weather-minihead small{font-size:10px;color:#7cbbeb}
+.ghost-weather-mini strong{display:block;font-size:26px;font-weight:900;line-height:1.22;color:var(--ghostwx);font-variant-numeric:tabular-nums;margin:4px 0}
+.ghost-weather-mini .ghost-weather-state{font-size:10px;letter-spacing:.4px;font-weight:850;color:var(--ghostwx);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ghost-weather-mini>small{display:block;color:#99b7c8;font-size:10px;margin-top:4px;line-height:1.35}
+.ghost-weather-mini.ghostwx-cold{--ghostwx:#4bd1fd}.ghost-weather-mini.ghostwx-mild{--ghostwx:#59e0a5}.ghost-weather-mini.ghostwx-warm{--ghostwx:#ffc157}.ghost-weather-mini.ghostwx-rain{--ghostwx:#54b7fa}.ghost-weather-mini.ghostwx-snow{--ghostwx:#a7a5ff}.ghost-weather-mini.ghostwx-storm{--ghostwx:#ff936e}.ghost-weather-mini.ghostwx-unknown{--ghostwx:#8ba9bb}
+@media(max-width:620px){.ghost-weather-grid{gap:5px}.ghost-weather-mini{padding:8px 7px}.ghost-weather-mini strong{font-size:clamp(20px,5.6vw,26px)}.ghost-weather-minihead{display:block}.ghost-weather-minihead small{display:block}.ghost-weather-mini>small{font-size:9px}}
+
 </style>
 <script>
 (function(){
@@ -436,6 +498,9 @@ html.tic-companion.tic-companion-more #ticCompanionMore{
       <button class="tab" data-view="overview">AI Lab</button>
       <button class="tab" data-view="models">Models</button>
       <button class="tab" data-view="quality">Data Quality</button>
+      <a class="tab" href="/forecast-quality" style="display:inline-flex;align-items:center;text-decoration:none">Forecast Quality</a>
+      <a class="tab" href="/trip-quality" style="display:inline-flex;align-items:center;text-decoration:none">Trip Quality</a>
+      <a class="tab" href="/vehicle-sensors" style="display:inline-flex;align-items:center;text-decoration:none">Vehicle Sensors</a>
       <button class="tab" data-view="sources">Sources</button>
       <button class="tab active" data-view="morning">Home</button>
       <button class="tab" data-view="events">Events</button>
@@ -553,7 +618,7 @@ html.tic-companion.tic-companion-more #ticCompanionMore{
 
 <section id="view-morning" class="view active">
   <div class="winter-top-grid">
-    <section class="panel winter-ready-hero">
+    <section class="panel winter-ready-hero" data-readiness-level="unknown">
       <div class="winter-ready-copy">
         <div class="eyebrow winter-green">Winter readiness · first priority</div>
         <div id="winterHeadline" class="winter-headline">LEARNING WINTER READINESS</div>
@@ -579,6 +644,12 @@ html.tic-companion.tic-companion-more #ticCompanionMore{
          <div id="winterScoreRing" class="winter-score-ring" style="--score:0"><div><b id="winterScore">0</b><span id="winterDialCaption">CURRENT SCORE</span></div></div>
         <div id="winterScoreState" class="winter-score-state">LEARNING</div>
         <div class="winter-score-note">Operational readiness, not model accuracy</div>
+          <div class="winter-level-legend" aria-label="Readiness status levels">
+            <span data-level="ready" title="75–100">READY</span>
+            <span data-level="watch" title="55–74.9">WATCH</span>
+            <span data-level="action" title="35–54.9">ACTION</span>
+            <span data-level="critical" title="Below 35">CRITICAL</span>
+          </div>
          <div class="winter-other-preview" id="winterOtherPreview" aria-live="polite">NEXT DEPARTURE · waiting</div>
         <!-- GHOST-WINTER-SPARKLINE-V1: actual recorded scores only -->
         <div class="winter-spark-card" aria-label="Winter Score last 12 hours">
@@ -598,6 +669,15 @@ html.tic-companion.tic-companion-more #ticCompanionMore{
         <div class="winter-forecast-card coldest"><div><b>Forecast coldest</b><small id="wfcoldtime">—</small></div><strong id="wfcoldpack">—</strong><div class="forecast-kv"><span>Outside</span><b id="wfcoldoutside">—</b></div><div class="forecast-kv"><span>Above outside</span><b id="wfcoldmargin">—</b></div><div class="forecast-kv"><span>Estimate range</span><b id="wfcoldrange">—</b></div></div>
       </div>
       <div class="winter-source-line"><span id="winterWeatherSource">Weather · loading</span><span id="winterThermalSource">Thermal retention · learning</span></div>
+      <!-- GHOST-WEATHER-STRIP-V1: live 3/6/12h outdoor conditions -->
+      <div class="ghost-weather-strip" aria-label="Outdoor weather forecast at three, six and twelve hours">
+        <div class="ghost-weather-head"><b>Outdoor weather forecast</b><small id="ghostWxFreshness">Open-Meteo · refreshing</small></div>
+        <div class="ghost-weather-grid">
+          <div class="ghost-weather-mini" id="ghostWxBox3"><div class="ghost-weather-minihead"><b>In 3 hours</b><small id="ghostWxTime3">—</small></div><strong id="ghostWxTemp3">—</strong><div class="ghost-weather-state" id="ghostWxState3">WAITING</div><small id="ghostWxDetail3">Weather loading</small></div>
+          <div class="ghost-weather-mini" id="ghostWxBox6"><div class="ghost-weather-minihead"><b>In 6 hours</b><small id="ghostWxTime6">—</small></div><strong id="ghostWxTemp6">—</strong><div class="ghost-weather-state" id="ghostWxState6">WAITING</div><small id="ghostWxDetail6">Weather loading</small></div>
+          <div class="ghost-weather-mini" id="ghostWxBox12"><div class="ghost-weather-minihead"><b>In 12 hours</b><small id="ghostWxTime12">—</small></div><strong id="ghostWxTemp12">—</strong><div class="ghost-weather-state" id="ghostWxState12">WAITING</div><small id="ghostWxDetail12">Weather loading</small></div>
+        </div>
+      </div>
     </section>
   </div>
 
@@ -911,6 +991,140 @@ function renderRichReadiness(w){
 
 // GHOST-DUAL-DIAL-V1: switch only what is presented; no backend learning or actuation.
 let winterMode='now',winterLatestPayload=null;
+
+// GHOST-READINESS-STATUS-THEMES-V1: UI-only score severity; does not alter either score.
+const winterThemeColors=Object.freeze({ready:'#59e0a5',watch:'#ffc157',action:'#ff9d58',critical:'#ff6f76',unknown:'#80adc4'});
+function winterReadinessLevel(board){
+  const raw=board?.score_breakdown?.score_unrounded ?? board?.score;
+  const val=raw==null?NaN:Number(raw);
+  const state=String(board?.state||'').toUpperCase();
+  if(board?.__nowUnavailable || ['LEARNING','WAITING','LAST KNOWN','STALE'].includes(state)||!Number.isFinite(val))return 'unknown';
+  return val>=75?'ready':val>=55?'watch':val>=35?'action':'critical';
+}
+function winterApplyReadinessTheme(board){
+  const level=winterReadinessLevel(board);
+  board.__readinessLevel=level;
+  const hero=document.querySelector('.winter-ready-hero');
+  if(hero)hero.setAttribute('data-readiness-level',level);
+  const labels={ready:'READY',watch:'WATCH',action:'ACTION',critical:'CRITICAL',unknown:board?.state||'LEARNING'};
+  const el=$('winterScoreState');
+  if(el){
+    el.textContent=labels[level];
+    el.title='READY: 75–100 · WATCH: 55–74.9 · ACTION: 35–54.9 · CRITICAL: below 35';
+  }
+  document.querySelectorAll('.winter-level-legend [data-level]').forEach(node=>{
+    node.classList.toggle('is-active',node.dataset.level===level);
+  });
+  // Strongest alert gets an explicit headline. Less severe headlines stay as originally authored.
+  if(level==='critical'){
+    board.headline=winterMode==='now'?'CRITICAL READINESS RIGHT NOW':'CRITICAL READINESS AT DEPARTURE';
+    board.action=winterMode==='now'?'CRITICAL READINESS: Review current charge, pack temperature and active limits before driving.':'CRITICAL DEPARTURE OUTLOOK: Review predicted SOC, charging reliability and thermal conditions.';
+    const headline=$('winterHeadline');
+    if(headline)headline.textContent=winterMode==='now'?'CRITICAL READINESS RIGHT NOW':'CRITICAL READINESS AT DEPARTURE';
+  }
+  return level;
+}
+
+
+// GHOST-SMART-READINESS-BANNER-V1: render the main cause of the SELECTED score.
+// Pure formatter. Never consult Next Departure for Right Now explanations.
+function winterBuildSmartMessage(board,mode){
+  const next=mode==='next',level=board?.__readinessLevel||winterReadinessLevel(board);
+  const label=next?'NEXT DEPARTURE':'RIGHT NOW';
+  const N=v=>v===null||v===undefined||v===''?null:(Number.isFinite(Number(v))?Number(v):null);
+  const f=(v,d=0)=>{const x=N(v);return x==null?null:x.toFixed(d)};
+  if(level==='unknown')return {
+    kicker:'DATA UNAVAILABLE · '+label,
+    title:next?'Departure readiness is waiting for reliable data':'Current vehicle measurements are unavailable or stale',
+    detail:next?'The next departure score cannot be explained until fresh forecast inputs arrive.':'Ghost cannot make a current readiness claim without fresh battery measurements.',
+    context:'No score or readiness assumption should be inferred from missing data.'
+  };
+  const sb=board?.score_breakdown||{},current=board?.current||{},departure=board?.departure||{};
+  const parts=Array.isArray(sb.components)?sb.components:[];
+  const ranked=parts.filter(p=>N(p?.penalty)!=null&&Number(p.penalty)>=0.05).sort((a,b)=>Number(b.penalty)-Number(a.penalty));
+  const top=ranked[0]||null,pen=top?Number(top.penalty):0;
+  if(!parts.length)return {kicker:'EXPLANATION PENDING · '+label,title:'Waiting for the score breakdown',detail:'The selected score has no component detail yet; Ghost will not invent a reason for it.',context:next?'LEARNED FORECAST · Explanation pending':'CURRENT MEASUREMENTS · Explanation pending'};
+  const score=N(sb.score_unrounded??board?.score);
+  const soc=N(next?departure.departure_soc:current.soc),pack=N(next?departure.departure_pack_f:current.pack_f);
+  const chargeTarget=N(next?departure.charge_target_soc:null);
+  const arrival=N(next?departure.arrival_soc:null);
+  let title='',detail='',context='';
+  const extra=ranked.slice(1).filter(p=>Number(p.penalty)>=1).slice(0,1);
+  const other=extra.length?` Another deduction: ${String(extra[0].label||extra[0].key||'other condition')} (−${Number(extra[0].penalty).toFixed(1)} pts).`:'';
+  const points=pen.toFixed(1);
+  if(!next){
+    const measuredSOC=f(soc,0),measuredPack=f(pack,1);
+    const tempStatus=pack!=null?` Measured pack ${measuredPack}°F ${pack>=50?'meets':'is below'} the 50°F thermal reference.`:'';
+    if(top?.key==='current_soc'){
+      title='Battery charge is the largest readiness deduction';
+      detail=`Current battery ${measuredSOC??'—'}% SOC versus the 80% reference (−${points} pts).${tempStatus}${other}`;
+    }else if(top?.key==='thermal'){
+      title='Current pack temperature is limiting readiness';
+      detail=`Measured battery pack ${measuredPack??'—'}°F; full thermal credit starts at 50°F (−${points} pts).${soc==null?'':` Current SOC is ${measuredSOC}%.`}${other}`;
+    }else if(top?.key==='vehicle_state'){
+      title='An active measured vehicle condition is reducing readiness';
+      const h=(sb.human_checks||[]).find(x=>String(x.key||'').startsWith('now_')&&String(x.state||'')==='ACTIVE');
+      detail=`Current vehicle-condition deduction: −${points} pts.${h?.detail?' '+String(h.detail):' Review heater power and module temperatures.'}${other}`;
+    }else if(top){
+      title='Current vehicle conditions are reducing readiness';
+      detail=`${String(top.label||'Current score limiter')} (−${points} pts).${top.reason?' '+String(top.reason):''}${other}`;
+    }else{
+      title='Current battery measurements meet readiness references';
+      detail=`Measured SOC ${measuredSOC??'—'}% and pack ${measuredPack??'—'}°F. No measured component is currently deducting score points.`;
+    }
+    context='CURRENT MEASUREMENTS ONLY · No learned trip, predicted SOC or overnight charging credit.';
+  }else{
+    const expected=f(soc,0),predPack=f(pack,1),predArrival=f(arrival,0),target=f(chargeTarget,0);
+    if(top?.key==='thermal'){
+      title='Forecast battery temperature is the main readiness limitation';
+      detail=`Thermal forecast deducts ${points} points.${top.reason?' '+String(top.reason):''}${predPack==null?'':` Predicted departure pack: ${predPack}°F.`}${other}`;
+    }else if(top?.key==='arrival_soc'){
+      title='Predicted arrival reserve is limiting departure readiness';
+      detail=`Projected arrival SOC ${predArrival??'—'}%; full reserve credit begins at 30% (−${points} pts).${expected==null?'':` Expected departure SOC: ${expected}%.`}${other}`;
+    }else if(top?.key==='departure_charge'){
+      title='Expected departure charge is below your charge target';
+      detail=`Projected departure SOC ${expected??'—'}% versus ${target??'80'}% target (−${points} pts).${predArrival==null?'':` Predicted arrival SOC: ${predArrival}%.`}${other}`;
+    }else if(top?.key==='evidence'){
+      title='Learning evidence is limiting forecast confidence';
+      detail=`The forecast evidence component deducts ${points} points; this is evidence coverage, not a proven prediction accuracy rate.${other}`;
+    }else if(top){
+      title='A predicted condition is reducing departure readiness';
+      detail=`${String(top.label||'Forecast limiter')} (−${points} pts).${top.reason?' '+String(top.reason):''}${other}`;
+    }else if(N(sb.rich_context_penalty)!=null&&Number(sb.rich_context_penalty)>=0.05){
+      const active=(Array.isArray(sb.execution_penalties)?sb.execution_penalties:[]).find(p=>N(p.points)>0);
+      title='A reported vehicle condition reduces the departure forecast';
+      detail=active?.reason?String(active.reason):`Active condition deductions total ${f(sb.rich_context_penalty,1)} points.`;
+    }else{
+      title='Projected battery and thermal margins meet score references';
+      detail=`Departure ${expected??'—'}% SOC${predPack==null?'':`, pack ${predPack}°F`}${predArrival==null?'':`, estimated arrival ${predArrival}% SOC`}. No scored readiness limitation is active.`;
+    }
+    const charging=String(current.charging_state||'').trim().toLowerCase();
+    const plugged=current.plugged_in===true||current.plugged_in===1||String(current.plugged_in).toLowerCase()==='true';
+    const chargingStopped=plugged&&['stopped','disconnected','no power'].includes(charging);
+    context=chargingStopped?'CHARGING STOPPED NOW · Departure forecast may change if charging resumes.':'LEARNED FORECAST · Depends on charging, weather and observed commute history.';
+  }
+  if(score!=null&&score<35&&level==='critical')context='CRITICAL SCORE · Review the scored limitation before relying on readiness. '+context;
+  const levelLabel={ready:'READY',watch:'WATCH',action:'ACTION',critical:'CRITICAL'}[level]||'LEARNING';
+  return {kicker:`${levelLabel} · ${label}${top?' · LARGEST DEDUCTION −'+points+' PTS':''}`,title,detail,context};
+}
+function winterRenderSmartBanner(board){
+  const root=$('winterAction');if(!root)return;
+  const m=winterBuildSmartMessage(board,winterMode);
+  // Build real text nodes: never inject vehicle or server-provided text as HTML.
+  if(root.dataset.smartBanner!=='v1'){
+    root.replaceChildren();
+    for(const [cls,id] of [['winter-smart-kicker','winterSmartKicker'],['winter-smart-title','winterSmartTitle'],['winter-smart-detail','winterSmartDetail'],['winter-smart-context','winterSmartContext']]){
+      const el=document.createElement('div');el.className=cls;el.id=id;root.appendChild(el);
+    }
+    root.classList.add('winter-smart-banner');
+    root.dataset.smartBanner='v1';
+    root.setAttribute('role','status');root.setAttribute('aria-live','polite');root.setAttribute('aria-atomic','true');
+  }
+  for(const [id,value] of [['winterSmartKicker',m.kicker],['winterSmartTitle',m.title],['winterSmartDetail',m.detail],['winterSmartContext',m.context]]){
+    const el=$(id);if(el&&el.textContent!==value)el.textContent=value;
+  }
+}
+
 function winterSetMode(mode){
   if(mode!=='now'&&mode!=='next')return;
   winterMode=mode;
@@ -994,7 +1208,8 @@ function winterRenderSpark(board){
   const y=s=>T+Math.max(0,Math.min(1,(yhi-s)/(yhi-ylo)))*(H-T-B);
   const num=v=>Number(v).toFixed(1);
   const text=(pos,value)=>`<text x="${L-5}" y="${pos+3}" font-size="9" fill="#779bae" text-anchor="end">${num(value)}</text>`;
-  let content=`<defs><linearGradient id="winterSparkFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#59e0a5" stop-opacity=".23"/><stop offset="1" stop-color="#59e0a5" stop-opacity="0"/></linearGradient></defs>`;
+  const tone=winterThemeColors[board.__readinessLevel]||winterThemeColors.unknown;
+  let content=`<defs><linearGradient id="winterSparkFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${tone}" stop-opacity=".23"/><stop offset="1" stop-color="${tone}" stop-opacity="0"/></linearGradient></defs>`;
   for(const v of [yhi,(yhi+ylo)/2,ylo])content+=text(y(v),v);
   for(const [time,label] of [[xmin,'12h'],[xmin+21600,'6h'],[xmax,'Now']]){
     content+=`<text x="${x(time).toFixed(1)}" y="${H-5}" font-size="9" text-anchor="${time===xmin?'start':time===xmax?'end':'middle'}" fill="#6995ab">${label}</text>`;
@@ -1004,8 +1219,8 @@ function winterRenderSpark(board){
     const path=coords.map(([xx,yy],i)=>`${i?'L':'M'}${xx.toFixed(2)},${yy.toFixed(2)}`).join(' ');
     const first=coords[0],last=coords[coords.length-1];
     const area=`${path} L${last[0].toFixed(2)},${H-B} L${first[0].toFixed(2)},${H-B} Z`;
-    content+=`<path d="${area}" fill="url(#winterSparkFill)"/><path d="${path}" stroke="#59e0a5" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="${last[0].toFixed(2)}" cy="${last[1].toFixed(2)}" r="3.5" fill="#6cf1b9"/>`;
-  }else if(data.length===1){content+=`<circle cx="${x(data[0].ts).toFixed(2)}" cy="${y(data[0].score).toFixed(2)}" r="3.5" fill="#6cf1b9"/>`}
+    content+=`<path d="${area}" fill="url(#winterSparkFill)"/><path d="${path}" stroke="${tone}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="${last[0].toFixed(2)}" cy="${last[1].toFixed(2)}" r="3.5" fill="${tone}"/>`;
+  }else if(data.length===1){content+=`<circle cx="${x(data[0].ts).toFixed(2)}" cy="${y(data[0].score).toFixed(2)}" r="3.5" fill="${tone}"/>`}
   if(live!=null)content+=`<text x="${W-3}" y="${Math.max(15,Math.min(H-B-2,y(live)+3)).toFixed(2)}" font-size="12" font-weight="850" fill="#e6faf4" text-anchor="end">${num(live)}</text>`;
   svg.innerHTML=content;
   const first=points[0],last=points[points.length-1];
@@ -1024,12 +1239,47 @@ function winterRenderSpark(board){
   delta.style.color=change<-.05?'#ffbd70':change>.05?'#65e5af':'#91bacb';
 }
 
-function renderWinterBoard(sourceBoard){if(!sourceBoard)return;winterLatestPayload=sourceBoard;const w=winterApplyMode(sourceBoard);renderRichReadiness(w);const c=w.current||{},d=w.departure||{},t=w.thermal||{},weather=w.weather||{};$('winterHeadline').textContent=w.headline||'LEARNING WINTER READINESS';const preciseScore=Number((w.score_breakdown||{}).score_unrounded ?? w.score ?? 0);winterDisplayScore(preciseScore);winterRenderSpark(w);
+
+// GHOST-WEATHER-STRIP-V1: purely visual view of the existing winter-board API.
+function ghostWeatherCode(code){
+ if(code==null)return ['CONDITIONS PENDING','unknown'];
+ let c=Number(code);if(c>=95)return ['THUNDERSTORMS','storm'];
+ if([71,73,75,77,85,86].includes(c))return ['SNOW','snow'];
+ if([51,53,55,56,57,61,63,65,66,67,80,81,82].includes(c))return ['RAIN / SHOWERS','rain'];
+ if([45,48].includes(c))return ['FOG','rain'];
+ if(c===0)return ['CLEAR','mild'];if(c===1)return ['MOSTLY CLEAR','mild'];
+ if(c===2)return ['PARTLY CLOUDY','mild'];if(c===3)return ['OVERCAST','mild'];
+ return ['CHANGING','unknown'];
+}
+function ghostRenderWeatherOutlook(weather){
+ const wx=weather||{};const future=wx.outlook||[];
+ const note=document.getElementById('ghostWxFreshness');
+ if(note){let stale=wx.status==='cached';note.textContent='Open-Meteo hourly'+(stale?' · cached':wx.status==='ready'?' · ready':' · waiting');}
+ for(const offset of [3,6,12]){
+  let row=future.find(r=>Number(r.hours)===offset)||{};
+  let box=document.getElementById('ghostWxBox'+offset);
+  let temp=document.getElementById('ghostWxTemp'+offset),label=document.getElementById('ghostWxState'+offset);
+  let at=document.getElementById('ghostWxTime'+offset),detail=document.getElementById('ghostWxDetail'+offset);
+  if(!box||!temp||!label||!at||!detail)continue;
+  let t=row.temp_f==null?null:Number(row.temp_f);let condition=ghostWeatherCode(row.weather_code);
+  let state=condition[1];if(state==='mild'&&t!=null)state=t<40?'cold':t>=83?'warm':'mild';
+  box.className='ghost-weather-mini ghostwx-'+state;
+  temp.textContent=t==null?'—':t.toFixed(1)+'°F';
+  label.textContent=condition[0];
+  at.textContent=row.target_ts?new Date(Number(row.target_ts)*1000).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):'—';
+  let parts=[];let pp=row.precip_probability,wind=row.wind_mph;
+  if(pp!=null&&Number.isFinite(Number(pp)))parts.push('Precip chance '+Math.round(Number(pp))+'%');
+  if(wind!=null&&Number.isFinite(Number(wind)))parts.push('Wind '+Math.round(Number(wind))+' mph');
+  detail.textContent=parts.length?parts.join(' · '):(t==null?'Weather unavailable':'Conditions updating');
+ }
+}
+
+function renderWinterBoard(sourceBoard){if(!sourceBoard)return;ghostRenderWeatherOutlook(sourceBoard.weather||{});winterLatestPayload=sourceBoard;const w=winterApplyMode(sourceBoard);winterApplyReadinessTheme(w);renderRichReadiness(w);const c=w.current||{},d=w.departure||{},t=w.thermal||{},weather=w.weather||{};$('winterHeadline').textContent=w.headline||'LEARNING WINTER READINESS';const preciseScore=Number((w.score_breakdown||{}).score_unrounded ?? w.score ?? 0);winterDisplayScore(preciseScore);winterRenderSpark(w);
   if(w.__nowUnavailable){if(winterScoreFrame!=null){cancelAnimationFrame(winterScoreFrame);winterScoreFrame=null;}winterScoreShown=null;$('winterScore').textContent='—';$('winterScoreRing').style.setProperty('--score',0);$('winterSparkFoot').textContent='Waiting for current vehicle measurements';}
-  else if(winterMode==='now'&&w.__nowReferenceNote){$('winterSparkSvg').setAttribute('aria-label','Actual recorded right-now readiness history; trip reserve based on a generic learned reference drive');}
-  else {$('winterSparkSvg').setAttribute('aria-label','Actual recorded projected-departure readiness history');}
-  $('winterScoreState').textContent=w.state||'LEARNING';$('winterConfidence').textContent=`${w.confidence_label||'LOW'} CONFIDENCE`;$('winterConfidence').className=`tiny-pill ${w.confidence_label==='HIGH'?'good':''}`;$('winterSubline').textContent=`Pack ${wf(c.pack_f)} · outside ${wf(c.outside_f)} · ${t.current_margin_f==null?'margin learning':`${t.current_margin_f>=0?'+':''}${Number(t.current_margin_f).toFixed(1)}°F above outside`}`;$('winterAction').textContent=w.action||'GHOST is building a thermal plan.';$('winterNowMeta').textContent=`● Now · pack ${wf(c.pack_f)} · outside ${wf(c.outside_f)}`;$('winterHeaterMeta').textContent=`● Heater · ${c.heater_on?'ON':'OFF'}${c.preconditioning?' · preconditioning':''}`;$('winterDepartureMeta').textContent=`● Departure · ${d.departure_ts?tm(d.departure_ts):'learning'}`;
-  const sb=w.score_breakdown||{},parts=Array.isArray(sb.components)?sb.components:[],penalty=Number(sb.total_penalty||0),human=Array.isArray(sb.human_penalties)?sb.human_penalties:[],checks=Array.isArray(sb.human_checks)?sb.human_checks:[];const pt=$('winterPenaltyTotal');if(pt){pt.textContent=penalty<.05?'NO SCORE HITS':`-${penalty.toFixed(1)} POINT${Math.abs(penalty-1)<.05?'':'S'}`;pt.className=penalty<.05?'full':'';}const hn=$('winterHumanNote');if(hn){hn.innerHTML=penalty<.05?'<b>No active readiness limiters.</b> GHOST is awarding the full available Winter Score.':`<b>These are the active conditions reducing winter readiness.</b> Every point hit below adds up to the score shown at right.`;}if(winterMode==='now'&&w.__nowReferenceNote&&hn)hn.innerHTML+='<br><small>Current thermal/SOC inputs; arrival reserve is a conditional reference commute, not a verified route.</small>';const pl=$('winterPenaltyList');if(pl){pl.innerHTML=human.length?human.map(x=>`<div class="winter-hit ${esc(x.severity||'warn')}"><div class="winter-hit-top"><span class="winter-hit-label">${esc(x.label||'READINESS LIMITER')}</span><strong class="winter-hit-points">-${Number(x.score_penalty||0).toFixed(1)} PTS</strong></div><span class="winter-hit-value">${esc(x.value||x.state||'')}</span><small class="winter-hit-detail">${esc(x.detail||'')}</small></div>`).join(''):'<div class="winter-hit"><div class="winter-hit-top"><span class="winter-hit-label">NO ACTIVE READINESS LIMITERS</span><strong class="winter-hit-points" style="color:#64e9ac">FULL</strong></div><span class="winter-hit-value">100-point conditions satisfied</span><small class="winter-hit-detail">GHOST is not subtracting points from the Winter Score right now.</small></div>';}const liveChecks=checks.filter(x=>!String(x.key||'').startsWith('score_'));const sideKeys=new Set(['pack_forecast','outside_air','departure_pack','arrival_reserve','departure_soc','schedule','next_trip','telemetry','power_state']);const card=x=>`<div class="winter-check ${esc(x.severity||'info')}" data-key="${esc(x.key||'')}" title="${esc(x.detail||'')}"><div class="winter-check-head"><span class="winter-check-label">${esc(x.label||'CHECK')}</span><span class="winter-check-state">${esc(x.state||'MONITOR')}</span></div><strong class="winter-check-value">${esc(x.value==null?'—':String(x.value))}</strong><small class="winter-check-detail">${esc(x.detail||'')}</small></div>`;const mainChecks=liveChecks.filter(x=>!sideKeys.has(String(x.key||''))),sideChecks=liveChecks.filter(x=>sideKeys.has(String(x.key||'')));const cgm=$('winterCheckGridMain');if(cgm)cgm.innerHTML=mainChecks.length?mainChecks.map(card).join(''):'<div class="empty">Supporting readiness checks are still learning.</div>';const cgs=$('winterCheckGridSide');if(cgs)cgs.innerHTML=sideChecks.length?sideChecks.map(card).join(''):'<div class="empty">Live conditions are still learning.</div>';const sm=$('winterScoreMath');if(sm){sm.innerHTML=`GHOST Winter Score: <b>100</b> − <b>${penalty.toFixed(1)}</b> = <b>${Number(sb.score_unrounded ?? w.score ?? 0).toFixed(1)}</b> · exact score; only active readiness limiters reduce it.`;}
+  else if(winterMode==='now'){$('winterSparkSvg').setAttribute('aria-label','Actual recorded measured-only Right Now readiness history');}
+  else {$('winterSparkSvg').setAttribute('aria-label','Actual recorded learned Next Departure readiness history');}
+  /* Level/status label handled by winterApplyReadinessTheme(). */$('winterConfidence').textContent=`${w.confidence_label||'LOW'} CONFIDENCE`;$('winterConfidence').className=`tiny-pill ${w.confidence_label==='HIGH'?'good':''}`;$('winterSubline').textContent=`Pack ${wf(c.pack_f)} · outside ${wf(c.outside_f)} · ${t.current_margin_f==null?'margin learning':`${t.current_margin_f>=0?'+':''}${Number(t.current_margin_f).toFixed(1)}°F above outside`}`;winterRenderSmartBanner(w);$('winterNowMeta').textContent=`● Now · pack ${wf(c.pack_f)} · outside ${wf(c.outside_f)}`;$('winterHeaterMeta').textContent=`● Heater · ${c.heater_on?'ON':'OFF'}${c.preconditioning?' · preconditioning':''}`;$('winterDepartureMeta').textContent=`● Departure · ${d.departure_ts?tm(d.departure_ts):'learning'}`;
+  const sb=w.score_breakdown||{},parts=Array.isArray(sb.components)?sb.components:[],penalty=Number(sb.total_penalty||0),human=Array.isArray(sb.human_penalties)?sb.human_penalties:[],checks=Array.isArray(sb.human_checks)?sb.human_checks:[];const pt=$('winterPenaltyTotal');if(pt){pt.textContent=penalty<.05?'NO SCORE HITS':`-${penalty.toFixed(1)} POINT${Math.abs(penalty-1)<.05?'':'S'}`;pt.className=penalty<.05?'full':'';}const hn=$('winterHumanNote');if(hn){hn.innerHTML=penalty<.05?'<b>No active readiness limiters.</b> GHOST is awarding the full available Winter Score.':`<b>These are the active conditions reducing winter readiness.</b> Every point hit below adds up to the score shown at right.`;}if(winterMode==='now'&&w.__nowReferenceNote&&hn)hn.innerHTML+='<br><small>Current thermal/SOC inputs; arrival reserve is a conditional reference commute, not a verified route.</small>';const pl=$('winterPenaltyList');if(pl){pl.innerHTML=human.length?human.map(x=>`<div class="winter-hit ${esc(x.severity||'warn')}"><div class="winter-hit-top"><span class="winter-hit-label">${esc(x.label||'READINESS LIMITER')}</span><strong class="winter-hit-points">-${Number(x.score_penalty||0).toFixed(1)} PTS</strong></div><span class="winter-hit-value">${esc(x.value||x.state||'')}</span><small class="winter-hit-detail">${esc(x.detail||'')}</small></div>`).join(''):'<div class="winter-hit"><div class="winter-hit-top"><span class="winter-hit-label">NO ACTIVE READINESS LIMITERS</span><strong class="winter-hit-points" style="color:#64e9ac">FULL</strong></div><span class="winter-hit-value">100-point conditions satisfied</span><small class="winter-hit-detail">GHOST is not subtracting points from the Winter Score right now.</small></div>';}const liveChecks=checks.filter(x=>!String(x.key||'').startsWith('score_'));const sideKeys=new Set(['pack_forecast','outside_air','departure_pack','arrival_reserve','departure_soc','schedule','next_trip','telemetry','power_state']);const card=x=>`<div class="winter-check ${esc(x.severity||'info')}" data-key="${esc(x.key||'')}" title="${esc(x.detail||'')}"><div class="winter-check-head"><span class="winter-check-label">${esc(x.label||'CHECK')}</span><span class="winter-check-state">${esc(x.state||'MONITOR')}</span></div><strong class="winter-check-value">${esc(x.value==null?'—':String(x.value))}</strong><small class="winter-check-detail">${esc(x.detail||'')}</small></div>`;const mainChecks=liveChecks.filter(x=>!sideKeys.has(String(x.key||''))),sideChecks=liveChecks.filter(x=>sideKeys.has(String(x.key||'')));const cgm=$('winterCheckGridMain');if(cgm)cgm.innerHTML=mainChecks.length?mainChecks.map(card).join(''):'<div class="empty">Supporting readiness checks are still learning.</div>';const cgs=$('winterCheckGridSide');if(cgs)cgs.innerHTML=sideChecks.length?sideChecks.map(card).join(''):'<div class="empty">Live conditions are still learning.</div>';const sm=$('winterScoreMath');if(sm){sm.innerHTML=`GHOST ${winterMode==='now'?'Right Now':'Next Departure'} Score: <b>100</b> − <b>${penalty.toFixed(1)}</b> = <b>${Number(sb.score_unrounded ?? w.score ?? 0).toFixed(1)}</b> · exact score; only active readiness limiters reduce it.`;}
   const ff=w.forecast||[];renderForecastCard('wf1',ff.find(x=>x.hours===1));renderForecastCard('wf3',ff.find(x=>x.hours===3));renderForecastCard('wf6',ff.find(x=>x.hours===6));const cold=w.coldest||{};$('wfcoldtime').textContent=cold.target_ts?tm(cold.target_ts):'—';$('wfcoldpack').textContent=wf(cold.pack_f);$('wfcoldoutside').textContent=wf(cold.outside_f);$('wfcoldmargin').textContent=cold.margin_f==null?'—':`${cold.margin_f>=0?'+':''}${Number(cold.margin_f).toFixed(1)}°F`;$('wfcoldrange').textContent=wrange(cold.range_f);$('winterWeatherSource').textContent=`Weather · ${weather.source||'ambient fallback'}${weather.status?` · ${weather.status}`:''}`;$('winterThermalSource').textContent=`Thermal retention · ${t.retention_samples||0} parked events`;
   $('heaterDirect').textContent=c.heater_on?'ON':'OFF';$('heaterPre').textContent=c.preconditioning?'ON':'OFF';$('heaterPackPower').textContent=wkw(c.pack_kw);$('heaterNeed').textContent=d.precondition_start_ts?'RECOMMENDED':c.heater_on?'ACTIVE':'NOT NEEDED';$('heaterHeadline').textContent=c.heater_on?'HEATER ACTIVE':d.precondition_start_ts?'WARM-UP RECOMMENDED':'HEATER OFF · NOT NEEDED';$('heaterExplain').textContent=`Pack ${wf(c.pack_f)} · ${t.current_margin_f==null?'ambient margin learning':`${Number(t.current_margin_f).toFixed(1)}°F above outside`}.`;$('heaterCallout').textContent=c.heater_on?'Direct battery-heater sensor confirms ON.':d.precondition_start_ts?`Suggested start ${tm(d.precondition_start_ts)} based on learned thermal behavior.`:'Direct heater sensor confirms OFF.';
   $('packAverage').textContent=wf(c.pack_f);$('packRange').textContent=c.module_min_f==null||c.module_max_f==null?'—':`${wf(c.module_min_f)} → ${wf(c.module_max_f)}`;$('packSpread').textContent=wf(c.module_spread_f);$('packMove').textContent=c.pack_move_30m_f==null?'—':`${c.pack_move_30m_f>=0?'+':''}${Number(c.pack_move_30m_f).toFixed(1)}°F over 30 min`;$('packHeadline').textContent=c.pack_f!=null&&c.outside_f!=null&&c.pack_f>c.outside_f+5?'PACK WARM AND STABLE':'PACK TRACKING AMBIENT';$('packExplain').textContent=`Pack is ${wf(c.pack_f)} with ${wf(c.module_spread_f)} module spread.`;
@@ -7251,6 +7501,9 @@ document.addEventListener('visibilitychange',()=>{
     <a href="/?companion=1&view=overview">AI Lab</a>
     <a href="/?companion=1&view=models">Models</a>
     <a href="/?companion=1&view=quality">Data Quality</a>
+    <a href="/forecast-quality">Forecast Quality</a>
+    <a href="/trip-quality">Trip Quality</a>
+    <a href="/vehicle-sensors">Vehicle Sensors</a>
     <a href="/?companion=1&view=sources">Sources</a>
     <a href="/?companion=1&view=production">Production</a>
     <a href="/?companion=1&view=history">History</a>
