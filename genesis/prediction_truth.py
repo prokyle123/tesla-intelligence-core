@@ -29,6 +29,8 @@ NOTES = [
     "Outcomes can share telemetry and are not statistically independent samples.",
     "Different model generations or operating conditions can change the result.",
     "All nonnegative resolved forecast errors are counted, including extreme misses.",
+    "Positive signed error means predicted pack temperature exceeded actual temperature.",
+    "Measurement gap measures offset from the forecast target, not evaluation latency.",
     "These measurements do not prove causation, prospective validity, or eligibility for model promotion.",
 ]
 
@@ -49,16 +51,36 @@ def _empty(state: str) -> dict:
         "can_promote": False,
     }
 
-def _metric(count: object, mae_c: object, hits: object) -> dict:
+def _metric(count: object, mae_c: object, hits: object,
+            *, extra: dict | None = None) -> dict:
     n = int(count or 0)
+    result = {"samples": n, "mae_f": None, "within_2f_percent": None,
+              "above_5f_percent": None, "above_10f_percent": None,
+              "mean_signed_error_f": None, "overpredict_percent": None,
+              "underpredict_percent": None, "signed_samples": 0,
+              "target_gap_over_10m_percent": None, "gap_samples": 0}
     if not n:
-        return {"samples": 0, "mae_f": None, "within_2f_percent": None}
-    value = float(mae_c)
-    if not math.isfinite(value) or value < 0:
-        return {"samples": n, "mae_f": None, "within_2f_percent": None}
-    h = int(hits or 0)
-    return {"samples": n, "mae_f": round(value * 1.8, 2),
-            "within_2f_percent": round(100 * h / n, 1)}
+        return result
+    if mae_c is not None and math.isfinite(float(mae_c)) and float(mae_c) >= 0:
+        result["mae_f"] = round(float(mae_c) * 1.8, 2)
+        result["within_2f_percent"] = round(100 * int(hits or 0) / n, 1)
+    e = extra or {}
+    result["above_5f_percent"] = round(100 * int(e.get("severe5") or 0) / n, 1) if "severe5" in e else None
+    result["above_10f_percent"] = round(100 * int(e.get("severe10") or 0) / n, 1) if "severe10" in e else None
+    b = int(e.get("signed_n") or 0)
+    if b > 0:
+        result["signed_samples"] = b
+        bias = e.get("mean_signed_c")
+        if bias is not None and math.isfinite(float(bias)):
+            result["mean_signed_error_f"] = round(float(bias) * 1.8, 2)
+        result["overpredict_percent"] = round(100 * int(e.get("over_n") or 0) / b, 1)
+        result["underpredict_percent"] = round(100 * int(e.get("under_n") or 0) / b, 1)
+    g = int(e.get("gap_n") or 0)
+    if g > 0:
+        result["gap_samples"] = g
+        result["target_gap_over_10m_percent"] = round(
+            100 * int(e.get("gap_over600") or 0) / g, 1)
+    return result
 
 def _decision(current: dict, previous: dict, versions: set) -> dict:
     if min(current["samples"], previous["samples"]) < MIN_COMPARISON_SCORES:
@@ -105,6 +127,21 @@ def prediction_truth(source_db: Path, *, now: float | None = None) -> dict:
                 if vehicles > 1:
                     out["status"] = "MULTIVEHICLE_ISOLATION_REQUIRED"
                     return out
+            # Optional evidence fields are absent in some older local schemas.
+            # Their measurements remain null, never fabricated as zero.
+            diagnostics = """
+                       SUM(CASE WHEN abs_error * 1.8 > 5 THEN 1 ELSE 0 END) severe5,
+                       SUM(CASE WHEN abs_error * 1.8 > 10 THEN 1 ELSE 0 END) severe10"""
+            if "signed_error" in cols:
+                diagnostics += """,
+                       SUM(CASE WHEN signed_error IS NOT NULL THEN 1 ELSE 0 END) signed_n,
+                       AVG(signed_error) mean_signed_c,
+                       SUM(CASE WHEN signed_error > 0 THEN 1 ELSE 0 END) over_n,
+                       SUM(CASE WHEN signed_error < 0 THEN 1 ELSE 0 END) under_n"""
+            if "resolution_gap_seconds" in cols:
+                diagnostics += """,
+                       SUM(CASE WHEN resolution_gap_seconds IS NOT NULL THEN 1 ELSE 0 END) gap_n,
+                       SUM(CASE WHEN resolution_gap_seconds > 600 THEN 1 ELSE 0 END) gap_over600"""
             boundary = when - DAYS * SECONDS
             start = when - 2 * DAYS * SECONDS
             # Directly aggregate in SQLite: do not read event-level rows into
@@ -118,7 +155,8 @@ def prediction_truth(source_db: Path, *, now: float | None = None) -> dict:
                 SELECT CASE WHEN resolved_at >= ? THEN 1 ELSE 0 END recent,
                        COUNT(*) n, AVG(abs_error) mae_c,
                        SUM(CASE WHEN abs_error * 1.8 <= 2.0
-                                THEN 1 ELSE 0 END) hits
+                                THEN 1 ELSE 0 END) hits,
+                       {diagnostics}
                 FROM prediction_audit
                 WHERE {criteria}
                 GROUP BY recent
@@ -129,7 +167,8 @@ def prediction_truth(source_db: Path, *, now: float | None = None) -> dict:
                        COUNT(*) n, AVG(abs_error) mae_c,
                        SUM(CASE WHEN abs_error * 1.8 <= 2.0
                                 THEN 1 ELSE 0 END) hits,
-                       MIN(generation) gmin, MAX(generation) gmax
+                       MIN(generation) gmin, MAX(generation) gmax,
+                       {diagnostics}
                 FROM prediction_audit
                 WHERE {criteria}
                 GROUP BY model_name, horizon_minutes, recent
@@ -140,7 +179,7 @@ def prediction_truth(source_db: Path, *, now: float | None = None) -> dict:
     out["status"] = "OK"
     for row in buckets:
         out["recent" if row["recent"] else "previous"] = _metric(
-            row["n"], row["mae_c"], row["hits"])
+            row["n"], row["mae_c"], row["hits"], extra=dict(row))
 
     grouped = {}
     for row in models:
@@ -156,7 +195,7 @@ def prediction_truth(source_db: Path, *, now: float | None = None) -> dict:
             "_versions": {}
         })
         label = "recent" if row["recent"] else "previous"
-        item[label] = _metric(row["n"], row["mae_c"], row["hits"])
+        item[label] = _metric(row["n"], row["mae_c"], row["hits"], extra=dict(row))
         item["_versions"][label] = (row["gmin"], row["gmax"])
 
     for item in grouped.values():
