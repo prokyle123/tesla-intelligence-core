@@ -17,6 +17,8 @@ from .history_audit import distributed_coverage
 from .history_samples import historical_blocks
 from .architect import architect_cycle
 from .architect_store import ArchitectLedger
+from .conflict_mission import inspect_conflicts
+from .thermal_mission import thermal_episode_challenge
 
 def run_once(source_db: Path, research_db: Path, max_rows: int = 6000) -> dict:
     source_db = Path(source_db).expanduser().resolve()
@@ -111,6 +113,44 @@ def architect_once(source_db: Path, research_db: Path, architect_db: Path,
     return report
 
 
+def mission_followup(source_db: Path, architect_db: Path,
+                     rows_per_block: int = 2400) -> dict:
+    """Execute the research mission selected by the latest Architect cycle.
+
+    Pure read-only analytics, with no production effects. The saved mission is
+    not allowed to specify code, arbitrary paths, APIs or any commands.
+    """
+    saved = ArchitectLedger(architect_db).latest()["run"]
+    if not saved:
+        return {
+            "status":"NO_SAVED_ARCHITECT_MISSION",
+            "note":"First run architect-once --save with private storage.",
+            "production_changes":False,"fleet_uploads":False,
+        }
+    mission = saved["selected_next_mission"]["kind"]
+    blocks=historical_blocks(source_db,blocks=5,rows_per_block=rows_per_block)
+    if mission=="RESOLVE_SENSOR_CONTEXT":
+        report=inspect_conflicts(blocks)
+    elif mission=="CHALLENGE_SHADOW_MODEL":
+        report=thermal_episode_challenge(blocks)
+    else:
+        # Only vetted mission types are executable; unknown/unapproved plans
+        # cannot become network requests or dynamically loaded Python code.
+        return {
+            "status":"MANUAL_REVIEW_REQUIRED","selected_mission":mission,
+            "note":"No vetted execution recipe for the selected research mission.",
+            "production_changes":False,"fleet_uploads":False,
+        }
+    return {
+        "status":"FOLLOWUP_COMPLETED_RESEARCH_ONLY",
+        "architect_run_id":saved["id"],
+        "selected_mission":mission,
+        "followup":report,
+        "production_changes":False,
+        "fleet_uploads":False,
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="Experimental offline GHOST GENESIS lab")
     p.add_argument("--source-db", type=Path, default=config.source_db())
@@ -137,6 +177,15 @@ def main(argv: list[str] | None = None) -> int:
     architect.add_argument("--save", action="store_true",
                   help="Explicitly save aggregate trial outcomes in independent local Architect SQLite")
     commands.add_parser("architect-status",help="Read last saved local Architect plans")
+    follow = commands.add_parser("mission-next",
+                                help="Run vetted followup chosen by saved Architect research")
+    follow.add_argument("--rows-per-block",type=int,default=2400)
+    direct = commands.add_parser("mission-conflicts",
+                                help="Read-only charger/speed conflict diagnostic")
+    direct.add_argument("--rows-per-block",type=int,default=2400)
+    thermal = commands.add_parser("mission-thermal",
+                                 help="Read-only parked pack-temperature +60m challenge")
+    thermal.add_argument("--rows-per-block",type=int,default=2400)
     demo = commands.add_parser("simulate-fleet", help="Run a synthetic offline global-model learning demo")
     demo.add_argument("--nodes", type=int, default=32)
     demo.add_argument("--rounds", type=int, default=30)
@@ -163,6 +212,15 @@ def main(argv: list[str] | None = None) -> int:
                                     rows_per_block=args.rows_per_block)
         elif args.command == "architect-status":
             result = ArchitectLedger(args.architect_db).latest()
+        elif args.command == "mission-next":
+            result = mission_followup(args.source_db,args.architect_db,
+                                      args.rows_per_block)
+        elif args.command == "mission-conflicts":
+            result = inspect_conflicts(historical_blocks(
+                args.source_db,blocks=5,rows_per_block=args.rows_per_block))
+        elif args.command == "mission-thermal":
+            result = thermal_episode_challenge(historical_blocks(
+                args.source_db,blocks=5,rows_per_block=args.rows_per_block))
         else:
             result = network_status()
     except (SourceUnavailable, ValueError) as exc:
