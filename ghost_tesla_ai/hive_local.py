@@ -296,7 +296,7 @@ import threading as _threading
 from flask import request as _request
 
 _CONTROL_LOCK=_threading.Lock()
-_ALLOWED_ACTIONS=frozenset(("preview","consent","join","send","disable","revoke"))
+_ALLOWED_ACTIONS=frozenset(("preview","consent","join","send","disable","revoke","region-set","region-clear"))
 
 
 def _client_root() -> Path:
@@ -443,6 +443,16 @@ def hive_control(action:str):
         if action=="join" and payload.get("region_code") is not None and payload.get("region_code") not in (
             "NORTH_AMERICA_WEST","NORTH_AMERICA_EAST","SOUTH_AMERICA","EUROPE","AFRICA","ASIA","OCEANIA"):
             return jsonify({"error":"INVALID_OPTIONAL_BROAD_REGION"}),400
+        if action=="region-set":
+            if payload.get("acknowledge_optional_region") is not True:
+                return jsonify({"error":"EXPLICIT_REGION_CONSENT_REQUIRED"}),400
+            if payload.get("region_code") not in (
+                "NORTH_AMERICA_WEST","NORTH_AMERICA_EAST","SOUTH_AMERICA",
+                "EUROPE","AFRICA","ASIA","OCEANIA"):
+                return jsonify({"error":"VALID_BROAD_REGION_REQUIRED"}),400
+            current=_private_consent()
+            if current.get("mode")!="OPTED_IN" or not current.get("hourly_enabled"):
+                return jsonify({"error":"ACTIVE_HIVE_OPT_IN_REQUIRED"}),409
         if action=="join" and not _hourly_service_ready():
             return jsonify({"error":"HOURLY_TRANSFER_TIMER_NOT_RUNNING"}),503
         if action=="send":
@@ -457,7 +467,7 @@ def hive_control(action:str):
                 return jsonify({"error":"REPORT_CHANGED_REFRESH_PREVIEW"}),409
         if action=="revoke" and payload.get("confirmation")!="DELETE":
             return jsonify({"error":"TYPE_DELETE_TO_CONFIRM"}),400
-        result=_run_hive_action(action,month=month)
+        result=_run_hive_action(action,month=month,region_code=payload.get("region_code") if action=="region-set" else None)
         if action=="join" and result.get("mode")=="OPTED_IN":
             # Immediate first contribution after informed consent. A failed
             # first attempt MUST leave opted-in state active for timer retry.
