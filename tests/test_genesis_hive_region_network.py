@@ -81,7 +81,7 @@ class HiveBroadRegionTests(unittest.TestCase):
         public=check(self.snapshot())
         self.assertEqual(public["reporting_nodes"],2)
         self.assertEqual(public["regions"],[{"code":"NORTH_AMERICA_EAST",
-            "label":"Eastern North America","x":180,"y":110,
+            "label":"Eastern North America","x":201,"y":82,
             "reporting_nodes":1,"visibility":"EXPLICIT_PUBLIC_OPT_IN"}])
         # Existing nonpublic reporter in the same group cannot be inferred
         # from the published region count.
@@ -129,7 +129,7 @@ class HiveBroadRegionTests(unittest.TestCase):
         self.assertEqual(len(public["regions"]),1)
         region=public["regions"][0]
         self.assertEqual(region,{"code":"NORTH_AMERICA_EAST",
-            "label":"Eastern North America","x":180,"y":110,"reporting_nodes":10})
+            "label":"Eastern North America","x":201,"y":82,"reporting_nodes":10})
         self.assertEqual(self.submit(tokens[0],path="/v1/region",method="DELETE").status_code,200)
         self.assertEqual(check(self.snapshot())["regions"],[])
         # Only active reporting owners count. Revocation must erase location consent.
