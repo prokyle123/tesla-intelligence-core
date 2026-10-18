@@ -42,6 +42,40 @@ class HiveLocalIntegrationTests(unittest.TestCase):
                 (self.now-5000,self.now-4000,"resolved","battery_level",1.0,"PRIVATE_CAR"),
                 (self.now-1000,None,"pending","battery_temp_c",None,"PRIVATE_CAR"),
             ])
+        # Never depend on an optional coordinator running on the test host.
+        # A live Pi may correctly report zero contributors rather than
+        # "unknown"; isolate the tests to make results deterministic.
+        coordinator = patch("ghost_tesla_ai.hive_local._local_coordinator",
+                            return_value=None)
+        coordinator.start()
+        self.addCleanup(coordinator.stop)
+        consent = patch("ghost_tesla_ai.hive_local._private_consent",
+                        return_value={"mode":"OFF","last_success_month":None})
+        consent.start()
+        self.addCleanup(consent.stop)
+
+    def test_connected_coordinator_zero_is_distinct_from_disconnected(self):
+        disconnected = local_snapshot(self.db, now=self.now)
+        self.assertFalse(disconnected["fleet"]["available"])
+        self.assertFalse(disconnected["fleet"]["coordinator_connected"])
+        self.assertIsNone(disconnected["fleet"]["participating_vehicles"])
+
+        coordinator_response = {
+            "schema":"ghost-hive-public-v1",
+            "reporting_nodes":0,
+            "predictions_checked":0,
+            "mean_error_f":None,
+            "monthly":[],
+        }
+        with patch("ghost_tesla_ai.hive_local._local_coordinator",
+                   return_value=coordinator_response):
+            connected = local_snapshot(self.db, now=self.now)
+        self.assertTrue(connected["fleet"]["available"])
+        self.assertTrue(connected["fleet"]["coordinator_connected"])
+        self.assertEqual(connected["fleet"]["participating_vehicles"],0)
+        self.assertEqual(connected["fleet"]["predictions_checked"],0)
+        self.assertEqual(connected["local"]["predictions_scored"],3)
+        self.assertFalse(connected["hive"]["real_transfer_enabled"])
 
     def test_local_records_are_real_outcomes_not_raw_sample_predictions(self):
         before=hashlib.sha256(self.db.read_bytes()).hexdigest()
