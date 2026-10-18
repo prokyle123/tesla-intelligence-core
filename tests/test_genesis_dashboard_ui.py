@@ -69,7 +69,7 @@ class DashboardUITests(unittest.TestCase):
         self.assertIn('fetch("/api/genesis/paired-baseline"',html)
         self.assertIn('void readContext()',html)
         self.assertIn('void readPaired()',html)
-        self.assertIn('requires operator review',html.lower())
+        self.assertIn('require operator review',html.lower())
         self.assertNotIn('fetch("/api/genesis/execute',html)
 
     def test_no_vehicle_actions_or_raw_sample_exposure(self):
