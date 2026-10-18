@@ -4,8 +4,8 @@ The ONLY transmitted facts are month, count, rounded sum of absolute
 battery-temperature forecast errors. No VIN, GPS, car_id, state, route,
 raw samples, exact times, model files or model parameters.
 
-Manual consent + explicit upload; no background timers. HTTPS required
-except loopback development. Server operators can see submitted aggregates
+Consent is explicit; optional hourly aggregate sync is enabled only
+after affirmative owner approval. HTTPS required except loopback development. Server operators can see submitted aggregates
 from one pseudonymous registered installation: NOT anonymous.
 """
 from __future__ import annotations
@@ -89,14 +89,15 @@ def configure(root:Path,endpoint:str,token_file:Path)->dict:
     return status(root)
 
 
-def consent(root:Path,*,acknowledged:bool=False)->dict:
+def consent(root:Path,*,acknowledged:bool=False,hourly:bool=False)->dict:
     if not acknowledged:
         raise ConsentError("Affirmative aggregate-sharing acknowledgement required")
     c=_config(root)
     if not c.get("configured") or not c.get("token_file"):
         raise ConsentError("Configure a private coordinator and token first")
-    if c["mode"]!="OPTED_IN":
+    if c["mode"]!="OPTED_IN" or (hourly and c.get("schedule")!="hourly"):
         c["mode"]="OPTED_IN"
+        c["schedule"]="hourly" if hourly else "manual"
         _put(root,STATE_NAME,c)
     return status(root)
 
@@ -113,7 +114,8 @@ def status(root:Path)->dict:
     c=_config(root)
     result={"mode":c["mode"],"configured":bool(c.get("configured")),
             "explicit_real_consent":c["mode"]=="OPTED_IN",
-            "automatic_uploads":False,
+            "automatic_uploads":c["mode"]=="OPTED_IN" and c.get("schedule")=="hourly",
+            "transfer_frequency":"hourly" if c["mode"]=="OPTED_IN" and c.get("schedule")=="hourly" else "OFF",
             "data_fields":["schema","metric","month","scored_predictions",
                            "total_abs_error_c","source"],
             "gps":False,"raw_trips":False,"vin":False,
@@ -253,6 +255,8 @@ def main(argv=None)->int:
     g=sub.add_parser("consent")
     g.add_argument("--i-understand-pseudonymous-aggregate-sharing",
                    action="store_true",required=True)
+    g.add_argument("--hourly",action="store_true",
+                   help="Enable hourly aggregate sync AFTER explicit affirmative consent")
     sub.add_parser("disable")
     remote=sub.add_parser("revoke-remote")
     remote.add_argument("--confirm-delete",action="store_true")
@@ -265,7 +269,7 @@ def main(argv=None)->int:
     a=p.parse_args(argv)
     actions={
         "configure":lambda:configure(a.state_dir,a.endpoint,a.token_file),
-        "consent":lambda:consent(a.state_dir,acknowledged=a.i_understand_pseudonymous_aggregate_sharing),
+        "consent":lambda:consent(a.state_dir,acknowledged=a.i_understand_pseudonymous_aggregate_sharing,hourly=a.hourly),
         "disable":lambda:disable(a.state_dir),
         "revoke-remote":lambda:revoke_remote(a.state_dir,confirm=a.confirm_delete),
         "status":lambda:status(a.state_dir),
