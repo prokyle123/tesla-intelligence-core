@@ -128,6 +128,13 @@ footer{border-top:1px solid var(--border);margin-top:35px;padding-top:18px;color
 <div class="divider"></div><div class="section-title"><h2>Private evidence history</h2><small>Only manually recorded snapshots</small></div><div id="prospective-history" class="chart-list"><div class="empty">No evidence snapshots have been recorded yet.</div></div>
 <p class="note">No model training, no scheduled jobs, no model promotion or Hive uploads. Timestamp-based freezing does not verify ingestion chronology or artifact bytes.</p>
 </div>
+<div class="panel" aria-label="Frozen research challenger comparison">
+<div class="section-title"><h2>Frozen Challenger Competition</h2><span class="pill dim" id="challenger-status">Manual challenger freeze required</span></div>
+<p class="note">A fixed ambient-relaxation model is calibrated from resolved pre-freeze outcomes. When new eligible GHOST forecasts arrive, GENESIS compares that candidate, the production model and persistence against the same actual temperature. No model is deployed.</p>
+<div class="note" id="challenger-coverage">No challenger research artifact has been frozen.</div>
+<div id="challenger-models" class="chart-list"><div class="empty">Run the local challenger-freeze command after reviewing the historical training prerequisites.</div></div>
+<p class="note">Reconstructed predictions use stored forecast-source readings. This is not authenticated ingestion chronology, independent episodes, or permission to promote a model.</p>
+</div>
 <div class="panel"><div class="section-title"><h2>Evidence-led next investigations</h2><span class="pill dim">Proposed · not executed</span></div><p class="note">Review scored prediction failures and propose repeatable investigations. No automatic training, model changes or commands.</p><div id="context-missions-investigations" class="chart-list"><div class="empty">Loading evidence-based plans when opened.</div></div></div>
 <div class="panel"><div class="section-title"><h2>Prior Hypothesis Architect notes</h2><small>Available only if the separate Architect ledger was saved</small></div><div id="architect-previous" class="empty">No additional Architect records loaded.</div></div>
 </section>
@@ -172,7 +179,7 @@ const percent = n => Number.isFinite(Number(n)) ? (Number(n)>0?"+":"")+Number(n)
 const number = (n,places=2) => Number.isFinite(Number(n)) ? Number(n).toFixed(places) : "—";
 const pretty = s => String(s||"No result").replaceAll("_"," ").replace(/\b\w/g,x=>x.toUpperCase());
 const dateText = n => { const dt=new Date(Number(n)*1000); return Number.isFinite(dt.getTime()) ? dt.toLocaleString() : "Unknown date"; };
-let cache=null,historySelected=null,healthOk=false,truthLastRead=0,truthPending=false,contextLastRead=0,contextPending=false,pairedLastRead=0,pairedPending=false,prospectiveLastRead=0,prospectivePending=false;
+let cache=null,historySelected=null,healthOk=false,truthLastRead=0,truthPending=false,contextLastRead=0,contextPending=false,pairedLastRead=0,pairedPending=false,prospectiveLastRead=0,prospectivePending=false,challengerLastRead=0,challengerPending=false;
 function label(id,value){el(id).textContent=value;}
 function view(tab) {
   for(const button of document.querySelectorAll("[data-tab]")) {
@@ -184,6 +191,7 @@ function view(tab) {
   if(tab==="models" && Date.now()-truthLastRead>300000)void readTruth();
   if((tab==="models" || tab==="investigations") && Date.now()-contextLastRead>300000)void readContext();
   if(tab==="investigations" && Date.now()-prospectiveLastRead>300000)void readProspective();
+  if(tab==="investigations" && Date.now()-challengerLastRead>300000)void readChallenger();
   if(tab==="models" && Date.now()-pairedLastRead>300000)void readPaired();
 }
 for(const button of document.querySelectorAll("[data-tab]"))button.addEventListener("click",()=>view(button.dataset.tab));
@@ -582,6 +590,54 @@ async function readProspective(){
   el("prospective-models").replaceChildren();
   el("prospective-history").replaceChildren(make("div","Could not read private evidence history.","empty"));
  }finally{prospectivePending=false;}
+}
+async function readChallenger(){
+ if(challengerPending)return;
+ challengerPending=true;
+ challengerLastRead=Date.now();
+ try{
+  const r=await fetch("/api/genesis/challenger",{cache:"no-store",credentials:"same-origin"});
+  if(!r.ok)throw Error("Challenger status unavailable");
+  const data=await r.json();
+  label("challenger-status",data.status==="NOT_FROZEN"?"Not frozen":pretty(data.status));
+  const list=el("challenger-models");list.replaceChildren();
+  if(data.status==="NOT_FROZEN"){
+    label("challenger-coverage","Candidate has not been trained/frozen. M9's existing watch is unaffected.");
+    list.append(make("div","Use the reviewed GENESIS CLI challenger-freeze command when you choose to begin this separate prospective trial.","empty"));
+    return;
+  }
+  label("challenger-coverage","Complete same-event comparisons: "+String(data.matched_pairs||0)+
+    " · missing paired evidence: "+String(data.incomplete_pairs||0)+
+    " · generation exclusions: "+String(data.generation_excluded||0)+
+    " · missing ambient: "+String(data.missing_ambient_pairs||0));
+  for(const candidate of Array.isArray(data.candidates)?data.candidates:[]){
+    const box=make("div",undefined,"item");
+    box.append(make("strong",String(candidate.horizon_minutes)+"-minute candidate · fixed α "+String(candidate.alpha)));
+    box.append(make("div",String(candidate.training_samples)+" pre-freeze training outcomes · "+
+      String(candidate.validation_samples)+" historical validation outcomes · "+
+      pretty(candidate.historical_status),"detail"));
+    list.append(box);
+  }
+  for(const row of Array.isArray(data.models)?data.models:[]){
+    const box=make("div",undefined,"item");
+    box.append(make("strong",String(row.model)+" · "+String(row.horizon_minutes)+"m · generation "+String(row.generation)));
+    box.append(make("div",pretty(row.assessment)+" · "+String(row.samples||0)+" matched future outcomes over "+
+      String(row.evidence_days||0)+" UTC days","detail"));
+    const show=value=>Number.isFinite(value)?number(value,2)+"°F":"—";
+    box.append(make("div","GHOST "+show(row.production_mae_f)+
+      " · Challenger "+show(row.challenger_mae_f)+
+      " · Persistence "+show(row.persistence_mae_f),"note"));
+    box.append(make("div","Challenger advantage vs GHOST "+show(row.challenger_advantage_vs_production_f)+
+      " · vs persistence "+show(row.challenger_advantage_vs_persistence_f),"note"));
+    list.append(box);
+  }
+  if(!Array.isArray(data.models)||!data.models.length)
+    list.append(make("div","No eligible same-event future scores yet.","empty"));
+ }catch(e){
+  label("challenger-status","Evaluation unavailable");
+  label("challenger-coverage","Could not inspect the local challenger.");
+  el("challenger-models").replaceChildren();
+ }finally{challengerPending=false;}
 }
 async function readHive(){
  // GENESIS research UI is GET-only. Prefer the already-existing integrated
