@@ -34,7 +34,8 @@ SQL="""
 CREATE TABLE IF NOT EXISTS participants (
   id INTEGER PRIMARY KEY, secret_hash TEXT NOT NULL UNIQUE,
   created_at INTEGER NOT NULL, enabled INTEGER NOT NULL DEFAULT 1,
-  public_monthly INTEGER NOT NULL DEFAULT 0
+  public_monthly INTEGER NOT NULL DEFAULT 0,
+  public_monthly_since TEXT
 );
 CREATE TABLE IF NOT EXISTS contributions (
   participant INTEGER NOT NULL, period TEXT NOT NULL, metric TEXT NOT NULL,
@@ -87,6 +88,8 @@ def initialize(path: Path):
         if "public_monthly" not in members:
             # Older aggregate consent was for hidden small cohorts. Default PRIVATE.
             con.execute("ALTER TABLE participants ADD COLUMN public_monthly INTEGER NOT NULL DEFAULT 0")
+        if "public_monthly_since" not in members:
+            con.execute("ALTER TABLE participants ADD COLUMN public_monthly_since TEXT")
         columns={r[1] for r in con.execute("PRAGMA table_info(region_consents)")}
         if "public_listing" not in columns:
             # Existing broad-region choices remain nonpublic until reconsented.
@@ -268,7 +271,10 @@ def create_app(path: Path) -> Flask:
             or body.get("acknowledge_public_from_one") is not True):
             return jsonify({"error":"SMALL_MONTHLY_PUBLIC_CONSENT_REQUIRED"}),400
         with closing(sqlite3.connect(db,timeout=4)) as con:
-            changed=con.execute("UPDATE participants SET public_monthly=1 WHERE id=? AND enabled=1",(user,))
+            month=time.strftime("%Y-%m",time.gmtime())
+            changed=con.execute("""UPDATE participants SET public_monthly=1,
+                public_monthly_since=COALESCE(public_monthly_since,?)
+                WHERE id=? AND enabled=1""",(month,user))
             if changed.rowcount!=1:
                 return jsonify({"error":"ACTIVE_HIVE_ENROLLMENT_REQUIRED"}),409
             con.commit()
@@ -280,7 +286,7 @@ def create_app(path: Path) -> Flask:
     def hide_small_monthly_cohorts():
         user=authenticate()
         with closing(sqlite3.connect(db,timeout=4)) as con:
-            con.execute("UPDATE participants SET public_monthly=0 WHERE id=?",(user,))
+            con.execute("UPDATE participants SET public_monthly=0, public_monthly_since=NULL WHERE id=?",(user,))
             con.commit()
         return jsonify({"public_monthly":False,"deleted":True}),200
 
