@@ -127,8 +127,11 @@ def paired_baseline(source_db: Path, *, now: float | None=None) -> dict:
         })
         item["recent" if row["recent"] else "previous"]=_metric(row)
     for item in grouped.values():
-        current=item["recent"] or {"samples":0,"model_mae_f":None,"persistence_mae_f":None}
-        prior=item["previous"] or {"samples":0,"model_mae_f":None,"persistence_mae_f":None}
+        # Keep the same response schema even when a generation has zero
+        # observations in one week. Missing is not a zero-error score.
+        empty=_metric({"n":0,"model_error_c":None,"persistence_error_c":None,"wins":0})
+        current=item["recent"] or empty.copy()
+        prior=item["previous"] or empty.copy()
         item["recent"]=current
         item["previous"]=prior
         n=current["samples"]
