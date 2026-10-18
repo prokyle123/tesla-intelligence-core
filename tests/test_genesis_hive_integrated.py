@@ -4,6 +4,7 @@ from datetime import datetime,timezone
 import hashlib
 from html.parser import HTMLParser
 import json
+import re
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -139,6 +140,19 @@ class HiveLocalIntegrationTests(unittest.TestCase):
         self.assertIn('href="/vehicle-sensors"',src)
         server=(ROOT/"ghost_tesla_ai/server.py").read_text()
         self.assertIn("app.register_blueprint(ghost_hive_local_bp)",server)
+
+    def test_private_browser_startup_has_no_obsolete_dom_ids(self):
+        # Regression: removing the middle opt-in banner without removing
+        # its JS click-handler prevented EVERY API request from starting.
+        page=(ROOT/"web/templates/hive.html").read_text()
+        self.assertNotIn('id="review-sharing"',page)
+        self.assertNotIn('$("review-sharing")',page)
+        html_ids=set(re.findall(r'\\bid="([^"]+)"',page))
+        literal_lookups=set(re.findall(r'\\$\\("([^"]+)"\\)',page))
+        missing=literal_lookups-html_ids
+        self.assertEqual(missing,set(),f"Broken DOM references block dashboard refresh: {missing}")
+        self.assertIn('fetch("/api/hive/local"',page)
+        self.assertIn('refresh();',page)
 
     def test_integrated_ui_has_no_second_nav_and_explicit_missing_data(self):
         src=(ROOT/"web/templates/hive.html").read_text()
