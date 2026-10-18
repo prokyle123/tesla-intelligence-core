@@ -95,7 +95,7 @@ def _local_coordinator():
     # or Tesla polling in the Home web request path.
     try:
         with urllib.request.urlopen(
-            "http://127.0.0.1:8778/v1/public-network",timeout=.6) as response:
+            "http://127.0.0.1:8778/v1/public-network",timeout=2.0) as response:
             r=json.load(response)
         if r.get("schema")!="ghost-hive-public-v1":
             return None
@@ -240,6 +240,7 @@ def local_snapshot(path:Path|None=None, *, now:float|None=None)->dict:
     result["hive"]["real_transfer_enabled"]=consent.get("hourly_enabled",False)
     hub=_local_coordinator()
     if hub is not None:
+        result["hive"]["status"]="CONNECTED"
         result["fleet"]["available"]=True
         result["fleet"]["coordinator_connected"]=True
         result["fleet"]["participating_vehicles"]=hub.get("reporting_nodes")
