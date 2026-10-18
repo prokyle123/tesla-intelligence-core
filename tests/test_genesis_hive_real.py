@@ -97,7 +97,7 @@ class RealHiveTests(unittest.TestCase):
         self.assertEqual(net["reporting_nodes"],1)
         self.assertIsNone(net["mean_error_f"])
         self.assertIsNone(net["predictions_checked"])
-        self.assertEqual(net["monthly"][0]["status"],"SMALL_GROUP_PRIVATE")
+        self.assertEqual(next(x for x in net["monthly"] if x["month"]==MONTH)["status"],"SMALL_GROUP_PRIVATE")
         self.assertNotIn("PRIVATE_ROUTE",json.dumps(net))
         self.assertTrue(revoke(self.hub,self.token))
         with sqlite3.connect(self.hub) as con:
@@ -115,7 +115,7 @@ class RealHiveTests(unittest.TestCase):
         self.assertEqual(published["reporting_nodes"],10)
         self.assertEqual(published["predictions_checked"],300)
         self.assertEqual(published["mean_error_f"],1.35)
-        self.assertEqual(published["monthly"][0]["status"],"SHARED_GROUP")
+        self.assertEqual(next(x for x in published["monthly"] if x["month"]==MONTH)["status"],"SHARED_GROUP")
         self.assertFalse(published["verified_unique_people"])
         self.assertFalse(published["model_weights_shared"])
         self.assertTrue(revoke(self.hub,members[-1]))
