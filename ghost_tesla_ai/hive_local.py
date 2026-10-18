@@ -61,7 +61,7 @@ def _num(v,places=1):
 
 
 def _private_consent():
-    result={"mode":"OFF","last_success_month":None}
+    result={"mode":"OFF","last_success_month":None,"hourly_enabled":False}
     try:
         root=Path(os.environ.get(
             "GHOST_HIVE_CLIENT_STATE_DIR",
@@ -71,6 +71,7 @@ def _private_consent():
             data=json.loads(policy.read_text())
             if data.get("policy")=="MONTHLY_BATTERY_TEMP_ERROR_V1":
                 result["mode"]="OPTED_IN" if data.get("mode")=="OPTED_IN" else "OFF"
+                result["hourly_enabled"]=(result["mode"]=="OPTED_IN" and data.get("schedule")=="hourly")
         receipt=root/"last-receipt.json"
         if receipt.is_file() and not receipt.is_symlink() and not receipt.stat().st_mode & 0o077:
             data=json.loads(receipt.read_text())
@@ -224,6 +225,7 @@ def local_snapshot(path:Path|None=None, *, now:float|None=None)->dict:
     consent=_private_consent()
     result["hive"]["contribution"]=consent["mode"]
     result["hive"]["last_success_month"]=consent["last_success_month"]
+    result["hive"]["hourly_enabled"]=consent["hourly_enabled"]
     hub=_local_coordinator()
     if hub is not None:
         result["fleet"]["available"]=True
