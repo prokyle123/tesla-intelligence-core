@@ -120,6 +120,7 @@ footer{border-top:1px solid var(--border);margin-top:35px;padding-top:18px;color
 <div><div class="value" id="outcome-waiting" style="font-size:30px;font-weight:800">—</div><div class="note">Awaiting evidence</div></div>
 </div><div class="divider"></div><p class="note" id="mission-conflicts">Sensor-context diagnostics will appear after a recorded cycle.</p></div>
 </div>
+<div class="panel"><div class="section-title"><h2>Evidence-led next investigations</h2><span class="pill dim">Proposed · not executed</span></div><p class="note">Review scored prediction failures and propose repeatable investigations. No automatic training, model changes or commands.</p><div id="context-missions-investigations" class="chart-list"><div class="empty">Loading evidence-based plans when opened.</div></div></div>
 <div class="panel"><div class="section-title"><h2>Prior Hypothesis Architect notes</h2><small>Available only if the separate Architect ledger was saved</small></div><div id="architect-previous" class="empty">No additional Architect records loaded.</div></div>
 </section>
 <section class="tab-panel" data-panel="history" hidden>
@@ -173,7 +174,7 @@ function view(tab) {
   }
   for(const panel of document.querySelectorAll("[data-panel]"))panel.hidden=panel.dataset.panel!==tab;
   if(tab==="models" && Date.now()-truthLastRead>300000)void readTruth();
-  if(tab==="models" && Date.now()-contextLastRead>300000)void readContext();
+  if((tab==="models" || tab==="investigations") && Date.now()-contextLastRead>300000)void readContext();
   if(tab==="models" && Date.now()-pairedLastRead>300000)void readPaired();
 }
 for(const button of document.querySelectorAll("[data-tab]"))button.addEventListener("click",()=>view(button.dataset.tab));
@@ -459,9 +460,10 @@ async function readContext(){
   if(d.groups_omitted||rows.length>18)
     groups.append(make("div","Additional context groups not shown. "+
       "Evidence remains available in the read-only local API.","note"));
-  const missions=el("context-missions");missions.replaceChildren();
+  const destinations=[el("context-missions"),el("context-missions-investigations")];
+  destinations.forEach(dest=>dest.replaceChildren());
   const plans=Array.isArray(d.priorities)?d.priorities:[];
-  if(!plans.length)missions.append(make("div","No generation-consistent worsening group has enough evidence yet.","empty"));
+  if(!plans.length)destinations.forEach(dest=>dest.append(make("div","No generation-consistent worsening group has enough evidence yet.","empty")));
   for(const plan of plans){
    const item=make("div",undefined,"item");
    item.append(make("strong",String(plan.model)+" · "+pretty(plan.group)));
@@ -469,7 +471,7 @@ async function readContext(){
    item.append(make("div",String(plan.samples_previous)+" previous / "+
      String(plan.samples_recent)+" recent scored forecasts · "+
      pretty(plan.state),"note"));
-   missions.append(item);
+   destinations.forEach(dest=>dest.append(item.cloneNode(true)));
   }
   label("context-caveat","Only forecast-source conditions are used. Groups share underlying forecasts."+
     " Weather, charging and heater signals are observational, not proof of causality."+
@@ -478,6 +480,7 @@ async function readContext(){
   label("context-status","Context unavailable");
   el("context-groups").replaceChildren(make("div","Could not evaluate local context data.","empty"));
   el("context-missions").replaceChildren(make("div","No research priorities available.","empty"));
+  el("context-missions-investigations").replaceChildren(make("div","No research priorities available.","empty"));
  }finally{contextPending=false;}
 }
 async function readPaired(){
