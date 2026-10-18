@@ -42,7 +42,7 @@ Nice=10
 TimeoutStartSec=80
 NoNewPrivileges=true
 ProtectSystem=strict
-ReadWritePaths=$WEB_ROOT
+ReadWritePaths=$HOME_DIR/genesis-product/state/hive-public
 PrivateTmp=true
 UNIT
 cat > "$TIMER" <<'UNIT'
