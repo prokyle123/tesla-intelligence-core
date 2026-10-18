@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   screenshots:
@@ -117,12 +117,14 @@ jobs:
             sleep 3
             adb exec-out screencap -p > docs/images/companion/companion-v050-connector.png
 
-      - name: Commit screenshots
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add             docs/images/companion/companion-v050-home.png             docs/images/companion/companion-v050-neural.png             docs/images/companion/companion-v050-connector.png
-          git diff --cached --quiet && exit 0
-          git commit -m "Add Companion v0.5.0 emulator screenshots"
-          git pull --rebase origin main
-          git push origin HEAD:main
+      # Keep generated screenshots reviewable rather than pushing to main.
+      - name: Upload screenshots for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: companion-preview-screenshots
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            docs/images/companion/companion-v050-home.png
+            docs/images/companion/companion-v050-neural.png
+            docs/images/companion/companion-v050-connector.png
