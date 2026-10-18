@@ -7,6 +7,7 @@ from pathlib import Path
 
 from . import config
 from .hivemind import network_status
+from .fleet_simulator import simulate_fleet
 from .research import discover
 from .source import SourceUnavailable, load_numeric_history
 from .store import ResearchStore
@@ -43,12 +44,17 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--max-rows", type=int, default=6000)
     commands.add_parser("status", help="Show research runs and privacy settings")
     commands.add_parser("hivemind-status", help="Inspect disabled-by-default fleet controls")
+    demo = commands.add_parser("simulate-fleet", help="Run a synthetic offline global-model learning demo")
+    demo.add_argument("--nodes", type=int, default=32)
+    demo.add_argument("--rounds", type=int, default=30)
     args = p.parse_args(argv)
     try:
         if args.command == "run-once":
             result = run_once(args.source_db, args.research_db, args.max_rows)
         elif args.command == "status":
             result = overview(args.research_db)
+        elif args.command == "simulate-fleet":
+            result = simulate_fleet(vehicles=args.nodes, rounds=args.rounds)
         else:
             result = network_status()
     except (SourceUnavailable, ValueError) as exc:
