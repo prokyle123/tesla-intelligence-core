@@ -126,7 +126,7 @@ def tournament_from_episodes(episodes: list[list[tuple[float,float,float]]],
         "hourly_pairs":{"training":pairs[0],"selection_validation":pairs[1],
                         "historical_holdout":pairs[2]},
         "models_compared":[],
-        "selection_method":"Lowest episode-balanced MAE on validation ONLY. Test holdout not used to choose model.",
+        "selection_method":"Validation-only lowest episode-balanced MAE with near-best preference for simpler predictors; historical holdout never used in selection.",
         "selected_model":"PERSISTENCE",
         "validation":None,
         "historical_holdout":None,
@@ -161,13 +161,28 @@ def tournament_from_episodes(episodes: list[list[tuple[float,float,float]]],
                       "validation_improvement_pct":scores["improvement_pct"],
                       "validation_episodes_better":scores["episodes_better"],
                       "validation_episodes_evaluated":len(valid)})
-    trial.sort(key=lambda x:(x["validation_episode_balanced_mae_c"],x["model"]!="PERSISTENCE",x["model"]))
+    trial.sort(key=lambda x:(x["validation_episode_balanced_mae_c"],x["model"]))
     report["models_compared"]=trial
-    selected=trial[0]["model"]
-    best=trial[0]
-    # Selection requires a genuine gap beyond rounded MAE/measurement noise.
-    if selected!="PERSISTENCE" and best["validation_improvement_pct"]>=MIN_VALIDATION_GAIN_PCT:
-        report["selected_model"]=selected
+    # Predeclared near-best simplicity rule, all on validation only:
+    # complexity is penalized when the difference is below a practical
+    # 0.005 C or 2% of persistence error (whichever is larger). This
+    # prevents a tiny numerical fitting advantage from selecting a
+    # more complex, easily overfit thermal model.
+    simplest={"PERSISTENCE":0,"AMBIENT_RELAXATION":1,
+              "DRIFT_ONLY":1,"THERMAL_ASYMMETRIC":3,"AFFINE_THERMAL":3}
+    best_mae=trial[0]["validation_episode_balanced_mae_c"]
+    baseline_mae=statistics.fmean(baseline_valid)
+    tolerance=max(.005,.02*baseline_mae)
+    eligible=[item for item in trial
+              if item["validation_episode_balanced_mae_c"]<=best_mae+tolerance]
+    chosen=min(eligible,key=lambda item:(simplest[item["model"]],
+                                          item["validation_episode_balanced_mae_c"],
+                                          item["model"]))
+    # A research challenger must still beat persistence by >=10% on
+    # validation before we even test it as the preferred model.
+    if (chosen["model"]!="PERSISTENCE"
+            and chosen["validation_improvement_pct"]>=MIN_VALIDATION_GAIN_PCT):
+        report["selected_model"]=chosen["model"]
     else:
         report["selected_model"]="PERSISTENCE"
     params=models[report["selected_model"]]
