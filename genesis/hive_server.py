@@ -155,6 +155,11 @@ def create_app(path: Path) -> Flask:
             metric=validate(payload)
         except ProtocolError:
             return jsonify({"error":"INVALID_AGGREGATE"}),400
+        # Phase 1 accepts synthetic data only. The transport schema may
+        # describe future qualified research, but this server has NO means
+        # to attest its provenance, so it must fail closed.
+        if metric["origin"]!="synthetic":
+            return jsonify({"error":"REAL_CONTRIBUTIONS_NOT_ENABLED"}),403
         # The service stores only allowlisted statistics; uniqueness per
         # registered participant and period prevents duplicate weighting.
         with closing(sqlite3.connect(db,timeout=3)) as con:

@@ -53,6 +53,10 @@ class HiveTest(unittest.TestCase):
         headers={"Authorization":"Bearer "+key}
         self.assertEqual(client.post("/v1/contributions",json=sample,headers=headers).status_code,202)
         self.assertEqual(client.post("/v1/contributions",json=sample,headers=headers).status_code,202)
+        forbidden=dict(sample,origin="qualified_post_freeze")
+        response=client.post("/v1/contributions",json=forbidden,headers=headers)
+        self.assertEqual(response.status_code,403)
+        self.assertEqual(response.get_json()["error"],"REAL_CONTRIBUTIONS_NOT_ENABLED")
         with __import__("sqlite3").connect(self.db) as con:
             self.assertEqual(con.execute("SELECT COUNT(*) FROM contributions").fetchone()[0],1)
         out=client.get("/v1/cohorts/2026-10",headers=headers).get_json()
