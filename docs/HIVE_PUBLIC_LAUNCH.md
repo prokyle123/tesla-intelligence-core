@@ -108,3 +108,26 @@ not fully anonymous nor secure aggregation. Reported installation counts
 are not validated unique humans. Advanced fleet statistics, weather zones
 and region heat maps require separate affirmative location consent and
 privacy suppression before implementation. Neural weights remain local.
+
+
+## v1.1: first-send and optional privacy-thresholded regions
+
+After explicit hourly aggregate consent, the owner-authorized GHOST Hive control
+makes one immediate approved monthly report attempt. Failed attempts remain
+eligible for hourly retry and never silently reverse the owner's consent.
+
+A separate unchecked option allows one manually selected world-scale macro-region.
+Clients must never derive it from GPS, IP address, telemetry, home or routes.
+The coordinator stores the voluntary category apart from monthly scores and
+can delete it. A public map glow dot and ranked region appear only when at
+least ten opted-in enrolled installations in that macro-region have reported
+monthly data during the current UTC month. It does not verify unique humans.
+The icon uses a fixed approximate SVG catalog center, never car coordinates.
+The private GHOST Hive page may show the contributor's own region as a
+private-only dot immediately, even when a public cohort is not qualified.
+
+To upgrade safely, run the reviewed scripts/hive_v11_deploy.sh in check mode
+before install mode. This stages GENESIS, restarts ONLY the separate Hive
+coordinator, and upgrades only two Hive-owned production files with guarded
+backups. The existing GHOST Home, models, client consent and private keys
+are preserved.
