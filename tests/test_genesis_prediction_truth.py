@@ -45,7 +45,7 @@ class PredictionTruthTests(unittest.TestCase):
                 ("pending", NOW - 2 * DAY, "battery_temp_c", 0, "pending", 1, 60, 1, "PRIVATE_CAR"),
                 ("resolved", NOW + DAY, "battery_temp_c", 0, "future", 1, 60, 1, "PRIVATE_CAR"),
                 ("resolved", NOW - 20 * DAY, "battery_temp_c", 0, "old", 1, 60, 1, "PRIVATE_CAR"),
-                ("resolved", NOW - 2 * DAY, "battery_temp_c", 31, "outlier", 1, 60, 1, "PRIVATE_CAR"),
+                ("resolved", NOW - 2 * DAY, "battery_temp_c", -1, "invalid_negative", 1, 60, 1, "PRIVATE_CAR"),
             ])
             con.executemany("INSERT INTO prediction_audit VALUES(?,?,?,?,?,?,?,?,?)", rows)
 
@@ -71,6 +71,18 @@ class PredictionTruthTests(unittest.TestCase):
         self.assertFalse(result["production_changes"])
         self.assertFalse(result["network_uploads"])
         self.assertFalse(result["can_promote"])
+
+    def test_extreme_resolved_misses_are_not_hidden(self):
+        with sqlite3.connect(self.db) as con:
+            con.execute("INSERT INTO prediction_audit VALUES(?,?,?,?,?,?,?,?,?)",
+                        ("resolved",NOW-2*DAY,"battery_temp_c",31.0,
+                         "severe_miss",7,60,1,"PRIVATE_CAR"))
+        data=prediction_truth(self.db,now=NOW)
+        self.assertEqual(data["recent"]["samples"],241)
+        row=next(x for x in data["models"] if x["model"]=="severe_miss")
+        self.assertEqual(row["recent"]["samples"],1)
+        self.assertEqual(row["recent"]["mae_f"],55.8)
+        self.assertEqual(row["state"],"INSUFFICIENT_COMPARABLE_EVIDENCE")
 
     def test_missing_source_and_schema_are_non_mutating(self):
         missing=self.root/"missing.sqlite3"
