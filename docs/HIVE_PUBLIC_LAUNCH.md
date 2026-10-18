@@ -36,7 +36,7 @@ than 10 reporting installations suppress cohort details, without blocking
 real consent or ingestion. Enrollment does NOT verify unique human owners.
 
 Graphic assets are decorative; no bright dots represent contributor sites.
-Earth image: NASA/JPL PIA18033, photo illustration (nasa.gov/JPL). World base
+Earth image: NASA Goddard Black Marble 2016 (NASA SVS 30878), photo illustration (nasa.gov/JPL). World base
 map: CC0 Blank world map Equal Earth / Natural Earth (Wikimedia Commons).
 The page retains its built-in SVG fallback when those external assets fail.
 Before final production, download, optimize and bundle these static

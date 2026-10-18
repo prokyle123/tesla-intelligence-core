@@ -15,7 +15,7 @@ import sqlite3
 from urllib.parse import quote
 
 K=10
-MONTHS=7
+MONTHS=12
 
 def summary(db:Path, *,now:datetime|None=None)->dict:
     current=now or datetime.now(timezone.utc)
