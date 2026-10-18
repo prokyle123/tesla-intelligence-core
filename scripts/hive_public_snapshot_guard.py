@@ -21,6 +21,7 @@ PUBLIC_REGION_CENTERS={
     "OCEANIA":("Oceania",653,260),
 }
 REGION_ROW={"code","label","x","y","reporting_nodes"}
+SINGLE_PUBLIC_REGION_ROW=REGION_ROW|{"visibility"}
 
 
 def check(d):
@@ -45,7 +46,8 @@ def check(d):
         raise ValueError("Invalid public region list")
     seen_regions=set()
     for region in groups:
-        if not isinstance(region,dict) or set(region)!=REGION_ROW:
+        fields=set(region) if isinstance(region,dict) else set()
+        if fields not in (REGION_ROW,SINGLE_PUBLIC_REGION_ROW):
             raise ValueError("Unexpected regional data fields")
         code=region["code"]
         if not isinstance(code,str) or code not in PUBLIC_REGION_CENTERS or code in seen_regions:
@@ -54,7 +56,12 @@ def check(d):
         label,x,y=PUBLIC_REGION_CENTERS[code]
         if region["label"]!=label or type(region["x"]) is not int or type(region["y"]) is not int or (region["x"],region["y"])!=(x,y):
             raise ValueError("Region coordinates must be privacy-reviewed fixed macro centroids")
-        integer(region["reporting_nodes"],10)
+        if fields==SINGLE_PUBLIC_REGION_ROW:
+            if region["visibility"]!="EXPLICIT_PUBLIC_OPT_IN":
+                raise ValueError("Unapproved singleton visibility claim")
+            integer(region["reporting_nodes"],1)
+        else:
+            integer(region["reporting_nodes"],10)
         if region["reporting_nodes"]>d["reporting_nodes"]:
             raise ValueError("Region count exceeds total reporting installations")
     if groups!=sorted(groups,key=lambda r:(-r["reporting_nodes"],r["code"])):
