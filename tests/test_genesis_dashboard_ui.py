@@ -51,6 +51,15 @@ class DashboardUITests(unittest.TestCase):
         self.assertNotIn("No production modification · No fleet uploads",html)
         self.assertNotIn("/api/hive/control/",html)
 
+    def test_prediction_truth_lab_uses_only_local_readonly_evidence(self):
+        html=HTML.read_text()
+        for key in ("truth-status","truth-summary","truth-models","truth-note"):
+            self.assertIn('id="'+key+'"',html)
+        self.assertIn('fetch("/api/genesis/prediction-quality"',html)
+        self.assertIn('if(tab==="models"',html)
+        self.assertIn("non-overlapping",html)
+        self.assertNotIn("fetch(\"https://",html)
+
     def test_no_vehicle_actions_or_raw_sample_exposure(self):
         html=HTML.read_text()
         self.assertIn("/api/genesis/overview",html)
