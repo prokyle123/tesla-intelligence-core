@@ -61,7 +61,7 @@ def _num(v,places=1):
 
 
 def _private_consent():
-    result={"mode":"OFF","last_success_month":None,"hourly_enabled":False}
+    result={"mode":"OFF","last_success_month":None,"last_success_at_utc":None,"hourly_enabled":False}
     try:
         root=Path(os.environ.get(
             "GHOST_HIVE_CLIENT_STATE_DIR",
@@ -76,6 +76,7 @@ def _private_consent():
         if receipt.is_file() and not receipt.is_symlink() and not receipt.stat().st_mode & 0o077:
             data=json.loads(receipt.read_text())
             result["last_success_month"]=data.get("month")
+            result["last_success_at_utc"]=data.get("time_utc")
     except (OSError,ValueError,TypeError,json.JSONDecodeError):
         pass
     return result
@@ -225,6 +226,7 @@ def local_snapshot(path:Path|None=None, *, now:float|None=None)->dict:
     consent=_private_consent()
     result["hive"]["contribution"]=consent["mode"]
     result["hive"]["last_success_month"]=consent["last_success_month"]
+    result["hive"]["last_success_at_utc"]=consent.get("last_success_at_utc")
     result["hive"]["hourly_enabled"]=consent.get("hourly_enabled",False)
     result["hive"]["real_transfer_enabled"]=consent.get("hourly_enabled",False)
     hub=_local_coordinator()
@@ -312,7 +314,7 @@ def _hourly_service_ready() -> bool:
 
 def _run_hive_action(action:str,*,month:str|None=None) -> dict:
     """Execute reviewed standalone monthly-aggregate module, not a shell."""
-    if action not in _ALLOWED_ACTIONS:
+    if action not in (_ALLOWED_ACTIONS | {"sync-now"}):
         raise ValueError("Unsupported action")
     app=Path(os.environ.get("GHOST_HIVE_CODE_DIR",
         str(Path.home()/"genesis-product/current"))).expanduser().absolute()
@@ -321,7 +323,11 @@ def _run_hive_action(action:str,*,month:str|None=None) -> dict:
     args=[_sys.executable,"-m","genesis.hive_member",
           "--state-dir",str(_client_root()),
           "--source-db",str(config.DB_PATH)]
-    if action in ("consent","join"):
+    if action=="sync-now":
+        args=[_sys.executable,"-m","genesis.hive_hourly",
+              "--state-dir",str(_client_root()),
+              "--source-db",str(config.DB_PATH)]
+    elif action in ("consent","join"):
         args.extend(["consent","--i-understand-pseudonymous-aggregate-sharing"])
         if action=="join":
             args.append("--hourly")
@@ -333,7 +339,7 @@ def _run_hive_action(action:str,*,month:str|None=None) -> dict:
         args.extend(["preview","--month",month or ""])
     else:
         args.append("disable")
-    worker=_subprocess.run(args,cwd=app,timeout=25,capture_output=True,text=True,
+    worker=_subprocess.run(args,cwd=app,timeout=40 if action=="sync-now" else 25,capture_output=True,text=True,
         env={"HOME":str(Path.home()),"PATH":"/usr/bin:/bin","PYTHONPATH":str(app)},
         check=True)
     data=json.loads(worker.stdout)
@@ -398,6 +404,18 @@ def hive_control(action:str):
         if action=="revoke" and payload.get("confirmation")!="DELETE":
             return jsonify({"error":"TYPE_DELETE_TO_CONFIRM"}),400
         result=_run_hive_action(action,month=month)
+        if action=="join" and result.get("mode")=="OPTED_IN":
+            # Immediate first contribution after informed consent. A failed
+            # first attempt MUST leave opted-in state active for timer retry.
+            # No additional consent or new payload fields are inferred.
+            try:
+                first=_run_hive_action("sync-now")
+                result["first_upload"]={
+                    "state":first.get("state","UNKNOWN"),
+                    "month":first.get("month"),
+                    "network_request":bool(first.get("network_request",False))}
+            except (_subprocess.SubprocessError,ValueError,RuntimeError,OSError,json.JSONDecodeError):
+                result["first_upload"]={"state":"RETRY_SCHEDULED","network_request":False}
         if action=="preview" and result.get("eligible") and result.get("payload"):
             result["preview_sha256"]=_payload_fingerprint(result["payload"])
         response=jsonify(result)
