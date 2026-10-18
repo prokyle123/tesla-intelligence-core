@@ -15,6 +15,7 @@ from .vehicle_snapshot import snapshot
 from .prediction_truth import prediction_truth
 from .thermal_context import thermal_context
 from .paired_baseline import paired_baseline
+from .prospective_truth_watch import check_watch
 from .hive_transfer import status as hive_client_status
 
 blueprint = Blueprint("ghost_genesis", __name__, template_folder="web")
@@ -81,6 +82,22 @@ def genesis_paired_baseline():
     # Every scored challenger and persistence score uses the same observed outcome.
     source=current_app.config.get("GENESIS_SOURCE_DB") or str(config.source_db())
     return _headers(jsonify(paired_baseline(Path(source))))
+
+
+@blueprint.get("/api/genesis/prospective-watch")
+def genesis_prospective_watch():
+    # Status endpoint never freezes anything. A manual CLI action creates
+    # an immutable private file before any future evidence is eligible.
+    source=current_app.config.get("GENESIS_SOURCE_DB") or str(config.source_db())
+    frozen=_private_data_dir() / "prospective-truth-watch.json"
+    try:
+        report=check_watch(Path(source),frozen)
+    except (ValueError,OSError) as exc:
+        report={"status":"WATCH_UNAVAILABLE","scope":"LOCAL_GHOST_ONLY",
+                "reason":type(exc).__name__,"models":[],
+                "production_changes":False,"network_uploads":False,
+                "can_promote":False,"automatic_execution":False}
+    return _headers(jsonify(report))
 
 
 @blueprint.get("/api/genesis/hive")
