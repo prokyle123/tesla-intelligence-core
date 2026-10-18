@@ -60,6 +60,8 @@ def _db_counts(path=DB)->dict:
                 "SELECT COUNT(*) FROM region_consents").fetchone()[0]),
             "public_schema":"public_listing" in {
                 r[1] for r in con.execute("PRAGMA table_info(region_consents)")},
+            "monthly_public_schema":{"public_monthly","public_monthly_since"} <= {
+                r[1] for r in con.execute("PRAGMA table_info(participants)")},
             "integrity":con.execute("PRAGMA integrity_check").fetchone()[0],
         }
 
@@ -136,7 +138,8 @@ def _wait_health(*,expected:int,public_schema:bool,seconds=25):
             if (health.get("ok") is True and
                 public.get("reporting_nodes")==expected and
                 counts["enrolled"]==expected and
-                counts["public_schema"] is public_schema):
+                counts["public_schema"] is public_schema and
+                counts["monthly_public_schema"] is public_schema):
                 return
         except (OSError,ValueError,sqlite3.Error):
             pass
@@ -199,7 +202,8 @@ def execute(*,apply:bool):
     print("PINNED SOURCE:",rev)
     print("EXISTING COORDINATOR:",pid,"OLD_RELEASE",str(oldcwd))
     print("ACTIVE REPORTERS:",old["enrolled"],"MONTHLY ROWS:",old["monthly"])
-    print("REGION ROWS:",old["regions"],"PUBLIC SCHEMA:",old["public_schema"])
+    print("REGION ROWS:",old["regions"],"PUBLIC REGION SCHEMA:",old["public_schema"],
+          "PUBLIC MONTH SCHEMA:",old["monthly_public_schema"])
     if not apply:
         print("MANAGED COORDINATOR CHECK PASS — no process or DB changes")
         return
