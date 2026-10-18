@@ -109,7 +109,7 @@ class HiveLocalIntegrationTests(unittest.TestCase):
         for key in ('window.hiveReporting=Number.isInteger(fleet.participating_vehicles)',
                     'overallOnly("Public monthly history appears once a reporter',
                     'Overall enrollment · not a monthly count',
-                    'within the SAME UTC month',
+                    'Live, real overall contributor count.',
                     'Your selected broad region (private view)',
                     'data-privacy-scope","OWNER_ONLY"',
                     'Countries and actual drive routes are not collected'):
