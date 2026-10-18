@@ -54,6 +54,17 @@ jobs:
       - name: GENESIS offline research and privacy regression tests
         run: python3 -m unittest discover -s tests -p 'test_genesis*.py' -v
 
+      - name: GENESIS independent stage contract
+        run: |
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          GHOST_GENESIS_PREFIX="$tmp/genesis" bash scripts/genesis_stage_preview.sh stage
+          test -f "$tmp/genesis/current/genesis/product_core.py"
+          test -f "$tmp/genesis/current/genesis/workspace.py"
+          test ! -e "$tmp/genesis/state/product.sqlite3"
+          GHOST_GENESIS_PREFIX="$tmp/genesis" bash scripts/genesis_stage_preview.sh status
+          test -L "$tmp/genesis/current"
+
       - name: Check committed diff whitespace
         run: git diff --check HEAD~1 HEAD
 
