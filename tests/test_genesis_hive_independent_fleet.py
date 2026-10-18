@@ -137,14 +137,14 @@ class IndependentComparisonTests(unittest.TestCase):
         local=(root/"ghost_tesla_ai/hive_local.py").read_text()
         for needle in ('id="peer-title"','id="peer-history"',
                        'renderPeer(await response.json())',
-                       '"/api/hive/peer-comparison"',
+                       '"/api/hive/control/peer-compare"',
                        'Your submitted monthly MAE'):
             self.assertIn(needle,frontend)
         self.assertIn('"/v1/member-comparison"',client)
         self.assertIn("member._read_private",client)
-        self.assertIn('"/api/hive/peer-comparison"',local)
+        self.assertIn('def _hive_peer_comparison():',local)
         self.assertNotIn("member_token",frontend)
-        self.assertNotIn('"/api/hive/control/peer-',frontend)
+        self.assertNotIn('"/api/hive/peer-comparison"',frontend)
 
 
 if __name__=="__main__":
