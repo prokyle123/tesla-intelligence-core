@@ -50,7 +50,7 @@ class HiveLocalIntegrationTests(unittest.TestCase):
         coordinator.start()
         self.addCleanup(coordinator.stop)
         consent = patch("ghost_tesla_ai.hive_local._private_consent",
-                        return_value={"mode":"OFF","last_success_month":None})
+                        return_value={"mode":"OFF","last_success_month":None,"hourly_enabled":False})
         consent.start()
         self.addCleanup(consent.stop)
 
@@ -122,7 +122,7 @@ class HiveLocalIntegrationTests(unittest.TestCase):
             self.assertEqual(page.status_code,200)
             self.assertIn(b"GHOST <span>HIVE</span>",page.data)
             self.assertIn(b"Contributing Vehicles",page.data)
-            self.assertIn(b"Manage Hive Participation",page.data)
+            self.assertIn(b"Join the Hive",page.data)
             api=client.get("/api/hive/local")
             self.assertEqual(api.status_code,200)
             self.assertEqual(api.get_json()["local"]["predictions_scored"],3)
@@ -145,7 +145,7 @@ class HiveLocalIntegrationTests(unittest.TestCase):
         for required in ("GHOST <span>HIVE</span>","Where Contributors Participate",
                          "Prediction Accuracy","Battery Temperature Error",
                          "Research Activity","Top Contributing Regions",
-                         "Manage Hive Participation","/api/hive/local"):
+                         "Join the Hive","/api/hive/local"):
             self.assertIn(required,src)
         self.assertNotIn("<nav",src)
         self.assertNotIn('href=',src)

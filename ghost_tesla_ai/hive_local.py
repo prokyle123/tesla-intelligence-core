@@ -225,7 +225,7 @@ def local_snapshot(path:Path|None=None, *, now:float|None=None)->dict:
     consent=_private_consent()
     result["hive"]["contribution"]=consent["mode"]
     result["hive"]["last_success_month"]=consent["last_success_month"]
-    result["hive"]["hourly_enabled"]=consent["hourly_enabled"]
+    result["hive"]["hourly_enabled"]=consent.get("hourly_enabled",False)
     hub=_local_coordinator()
     if hub is not None:
         result["fleet"]["available"]=True

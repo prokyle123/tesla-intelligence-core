@@ -47,6 +47,8 @@ class HiveConsentApiTests(unittest.TestCase):
             return {"sent":True,"month":month,"received":"ACCEPTED_BY_COORDINATOR"}
         if action=="consent":
             return {"mode":"OPTED_IN","automatic_uploads":False}
+        if action=="join":
+            return {"mode":"OPTED_IN","automatic_uploads":True}
         if action=="disable":
             return {"mode":"OFF"}
         if action=="revoke":
@@ -100,12 +102,38 @@ class HiveConsentApiTests(unittest.TestCase):
         self.assertEqual(self.submit("revoke",{"confirmation":"DELETE"}).get_json()["remote_deleted"],True)
         self.assertEqual(self.operations[-1],("revoke",None))
 
+
+    def test_ssh_tunnel_consent_without_browser_token(self):
+        req={"acknowledge_pseudonymous_sharing":True,
+             "allow_hourly_aggregates":True}
+        self.assertEqual(self.submit("join",{"acknowledge_pseudonymous_sharing":True}).status_code,400)
+        self.assertEqual(self.submit("join",req).get_json()["automatic_uploads"],True)
+        local="http://127.0.0.1:8766"
+        self.operations.clear()
+        ok=self.client.post("/api/hive/control/join",json=req,
+            headers={"Origin":local},base_url=local,
+            environ_overrides={"REMOTE_ADDR":"127.0.0.1"})
+        self.assertEqual(ok.status_code,200)
+        self.assertTrue(ok.get_json()["automatic_uploads"])
+        self.assertEqual(self.operations,[("join",None)])
+        self.operations.clear()
+        denied=self.client.post("/api/hive/control/join",json=req,
+            headers={"Origin":local},base_url=local,
+            environ_overrides={"REMOTE_ADDR":"100.95.3.2"})
+        self.assertEqual(denied.status_code,403)
+        spoofed=self.client.post("/api/hive/control/join",json=req,
+            headers={"Origin":local,"X-Forwarded-For":"100.95.3.2"},
+            base_url=local,environ_overrides={"REMOTE_ADDR":"127.0.0.1"})
+        self.assertEqual(spoofed.status_code,403)
+        self.assertEqual(self.operations,[])
+
     def test_ui_has_real_controls_without_automatically_sending(self):
         html=(Path(__file__).resolve().parents[1]/"web/templates/hive.html").read_text()
-        for name in ("hive-owner-key","hive-preview","hive-consent","hive-send",
-                     "hive-disable","hive-revoke","hive-agree","hive-confirm-send",
-                     "hive-delete-confirm","preview_sha256"):
+        for name in ("hive-join","hive-disable","hive-revoke","hive-delete-confirm",
+                     "allow_hourly_aggregates","acknowledge_pseudonymous_sharing"):
             self.assertIn(name,html)
+        self.assertNotIn("hive-owner-key",html)
+        self.assertNotIn("X-Ghost-Hive-Owner",html)
         self.assertNotIn("localStorage",html)
         self.assertNotIn("sessionStorage",html)
         self.assertIn("pseudonymous",html.lower())
