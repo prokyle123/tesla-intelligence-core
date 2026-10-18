@@ -90,7 +90,7 @@ def revoke(path: Path, token: str) -> bool:
 def create_app(path: Path) -> Flask:
     db=_private(path)
     initialize(db)
-    app=Flask("genesis-hive",template_folder="web")
+    app=Flask(__name__,template_folder="web")
     app.config["MAX_CONTENT_LENGTH"]=MAX_BODY
 
     @app.after_request
