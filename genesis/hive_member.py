@@ -11,6 +11,7 @@ from one pseudonymous registered installation: NOT anonymous.
 from __future__ import annotations
 
 import argparse
+import fcntl
 from datetime import datetime,timezone
 import json
 import os
@@ -103,10 +104,22 @@ def consent(root:Path,*,acknowledged:bool=False,hourly:bool=False)->dict:
 
 
 def disable(root:Path)->dict:
-    c=_config(root)
-    if c.get("configured"):
-        c["mode"]="OFF"
-        _put(root,STATE_NAME,c)
+    """Wait for any in-flight hourly sync before switching consent OFF."""
+    r=_dir(root,create=True)
+    lock=r/".hourly-worker.lock"
+    if lock.is_symlink():
+        raise ConsentError("Unsafe hourly lock")
+    fd=os.open(lock,os.O_RDWR|os.O_CREAT|getattr(os,"O_NOFOLLOW",0),0o600)
+    try:
+        fcntl.flock(fd,fcntl.LOCK_EX)
+        c=_config(root)
+        if c.get("configured"):
+            c["mode"]="OFF"
+            c["schedule"]="OFF"
+            _put(root,STATE_NAME,c)
+    finally:
+        fcntl.flock(fd,fcntl.LOCK_UN)
+        os.close(fd)
     return status(root)
 
 
