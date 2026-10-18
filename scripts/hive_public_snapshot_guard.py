@@ -12,13 +12,13 @@ FIELDS={"schema","published_at_utc","source","network_status","reporting_nodes",
 ROW={"month","label","status","reporting_nodes","predictions_checked","mean_error_f"}
 # Fixed approximate geographic macros; never accept free-form location coordinates.
 PUBLIC_REGION_CENTERS={
-    "NORTH_AMERICA_WEST":("Western North America",128,111),
-    "NORTH_AMERICA_EAST":("Eastern North America",180,110),
-    "SOUTH_AMERICA":("South America",166,235),
-    "EUROPE":("Europe",371,99),
-    "AFRICA":("Africa",397,189),
-    "ASIA":("Asia",520,118),
-    "OCEANIA":("Oceania",653,260),
+    "NORTH_AMERICA_WEST":("Western North America",137,78),
+    "NORTH_AMERICA_EAST":("Eastern North America",201,82),
+    "SOUTH_AMERICA":("South America",253,194),
+    "EUROPE":("Europe",412,70),
+    "AFRICA":("Africa",422,165),
+    "ASIA":("Asia",570,87),
+    "OCEANIA":("Oceania",665,214),
 }
 REGION_ROW={"code","label","x","y","reporting_nodes"}
 SINGLE_PUBLIC_REGION_ROW=REGION_ROW|{"visibility"}
