@@ -82,7 +82,7 @@ body{background:radial-gradient(ellipse at 52% -20%,#14344952,transparent 58%),#
 <div class="hero-stat"><div class="symbol">♟</div><div><b id="fleet-vehicles">—</b><span>Contributing Vehicles</span><small>Opt-in reporting installations</small></div></div>
 <div class="hero-stat"><div class="symbol">▤</div><div><b id="local-predictions">—</b><span>Local Predictions Scored</span><small>Actual outcomes</small></div></div>
 <div class="hero-stat"><div class="symbol">▥</div><div><b id="local-accuracy">—</b><span>Local Temperature Accuracy</span><small>Within ±2°F</small></div></div>
-<div class="hero-stat"><div class="symbol">◎</div><div><b id="fleet-regions">—</b><span>Contributing Regions</span><small>Qualified public broad-region groups (10+)</small></div></div>
+<div class="hero-stat"><div class="symbol">◎</div><div><b id="fleet-regions">—</b><span>Contributing Regions</span><small>Explicitly public broad regions or qualified cohorts</small></div></div>
 </div></div>
 <div class="panel chart-panel"><div class="panel-heading"><h3><span class="cyan">♧</span> Contributing Vehicles</h3><div class="periods" role="group" aria-label="Contributing vehicles time range"><button type="button" data-window="7d" title="Day-level public contributor history is not available">7D</button><button type="button" data-window="30d" title="Day-level contributor history is not available">30D</button><button type="button" data-window="6m" class="chosen" aria-pressed="true">6M</button><button type="button" data-window="1y">1Y</button></div></div><div id="vehicles-chart" class="graph"><div class="empty">No verified fleet contributors yet.<br>New installations can join when private transfer is enabled.</div></div><p class="subtle">Only coordinator-confirmed reporting installations; no fabricated monthly contributor history.</p></div>
 </section>
@@ -173,14 +173,14 @@ function renderRegions(groups,localChoice=null){
  }
  const safe=Array.isArray(groups)?groups.filter(r=>
    typeof r==="object" && r!==null && Number.isInteger(r.reporting_nodes) &&
-   r.reporting_nodes>=10 && Number.isInteger(r.x)&&Number.isInteger(r.y) &&
+   (r.reporting_nodes>=10 || (r.visibility==="EXPLICIT_PUBLIC_OPT_IN" && r.reporting_nodes>=1)) && Number.isInteger(r.x)&&Number.isInteger(r.y) &&
    typeof r.label==="string" && r.x>=0&&r.x<=760&&r.y>=0&&r.y<=330):[];
  if(!safe.length){
   const empty=document.createElement("div");empty.className="empty";
-  empty.textContent="No publishable regional groups yet. Regional rankings need 10+ opted-in reporters in the same region and UTC month. Country and actual driving-location rankings are not collected by Hive.";
+  empty.textContent="No publishable regional groups yet. Public region dots appear from one expressly public-listed installation or a qualified ten-member cohort. Countries and actual drive routes are not collected.";
   list.append(empty);
   $("region-map-note").textContent=Object.prototype.hasOwnProperty.call(PRIVATE_REGION_CENTERS,localChoice)?
-   "Your selected broad region appears as a private dot. Public dots require at least 10 reporting installations.":
+   "Your selected broad region appears privately. Public listing of a single contributor is a separate optional permission.":
    "No qualified regional groups yet. Choose a broad region voluntarily; no GPS or location inference.";
   return;
  }
@@ -190,12 +190,12 @@ function renderRegions(groups,localChoice=null){
                             class:"pin-halo"});
    const core=shape("circle",{cx:r.x,cy:r.y,r:Math.min(7,3+Math.sqrt(r.reporting_nodes)/3),
                             class:"pin-core"});
-   const caption=shape("title",{},r.label+" — "+r.reporting_nodes+" enrolled reporting installations");
+   const caption=shape("title",{},r.label+" — "+r.reporting_nodes+" "+(r.visibility==="EXPLICIT_PUBLIC_OPT_IN"?"explicit public listings":"reporting installations"));
    core.append(caption);pins.append(halo,core);
    const item=document.createElement("div");item.className="region-result";
    const text=document.createElement("div");text.className="region-line";
    const label=document.createElement("span");label.textContent=(i+1)+". "+r.label;
-   const value=document.createElement("strong");value.textContent=String(r.reporting_nodes)+" nodes";
+   const value=document.createElement("strong");value.textContent=String(r.reporting_nodes)+(r.visibility==="EXPLICIT_PUBLIC_OPT_IN"?" public":" nodes");
    text.append(label,value);
    const bar=document.createElement("div");bar.className="progress";
    const fill=document.createElement("span");fill.style.width=String(100*r.reporting_nodes/max)+"%";
