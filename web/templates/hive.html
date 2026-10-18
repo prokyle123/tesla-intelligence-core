@@ -34,7 +34,7 @@
 </div></div>
 <div class="panel chart-panel"><div class="panel-heading"><h3><span class="cyan">♧</span> Contributing Vehicles</h3><span class="pill">6 MONTHS</span></div><div id="vehicles-chart" class="graph"><div class="empty">No verified fleet contributors yet.<br>New installations can join when private transfer is enabled.</div></div><p class="subtle">Real Hive participants only. No sample numbers are used.</p></div>
 </section>
-<section class="optin"><div><h3>Help improve GHOST for everyone</h3><p>Contribute a monthly summary of verified battery-temperature prediction errors. Your approval is required, and you can stop or request deletion anytime.</p></div><button class="action" id="review-sharing" type="button">Manage Hive Participation →</button></section>
+<section class="optin"><div><h3>Help improve GHOST for everyone</h3><p>Opt in once. GHOST will send updated, privacy-limited research summaries hourly when new results are available. You can turn it off anytime.</p></div><button class="action" id="review-sharing" type="button">Join the Hive →</button></section>
 <section class="grid-mid">
 <div class="panel content"><div class="panel-heading"><h3>◎ Prediction Accuracy <span class="muted">ⓘ</span></h3><span class="pill">Battery Temperature · °F</span></div><div class="metric"><strong id="accuracy-value">—</strong><span>within ±2°F · local GHOST</span></div><div class="metric-note">Actual scored predictions, not model-training accuracy</div><div id="accuracy-chart" class="line-chart"><div class="empty">Waiting for actual prediction outcomes</div></div><div class="key"><span><i></i>Local GHOST</span><span><i class="grey"></i>Hive comparison unavailable</span></div></div>
 <div class="panel content"><div class="panel-heading"><h3>♧ Battery Temperature Error <span class="muted">ⓘ</span></h3></div><div class="split"><div><div class="metric"><strong id="local-error" class="cyan">—</strong></div><div class="metric-note">Local mean prediction miss</div></div><div><div class="metric"><strong id="hive-error" style="color:var(--grey)">—</strong></div><div class="metric-note">Hive network baseline · pending</div></div></div><div id="thermal-chart" class="line-chart"><div class="empty">Temperature validation history will appear after scored results accumulate.</div></div><p class="note">Lower error means better temperature predictions. No fleet improvement is claimed yet.</p></div>
@@ -52,33 +52,23 @@
 <div class="bottom-note">GHOST HIVE · Local integration preview · No real-data transfer enabled · No fabricated fleet statistics</div>
 </div>
 <dialog class="full-screen-modal" id="sharing-dialog" aria-labelledby="sharing-title">
-<h3 id="sharing-title">Your Hive participation</h3>
-<p>You can help improve future research by submitting <strong>one summarized report per UTC month</strong>. Each submission is linked to your independently enrolled installation—not your public identity, but <strong>not fully anonymous</strong>.</p>
+<h3 id="sharing-title">Contribute to GHOST Hive</h3>
+<p>One simple choice. If you join, GHOST will check for new verified research results <strong>once every hour</strong> and submit an updated monthly summary when something changes.</p>
 <div class="consent-fields">
-<div><b>Exactly what can be shared</b><small>UTC month · number of completed battery-temperature predictions · combined absolute prediction error · metric and format labels.</small></div>
-<div><b>Never in this report</b><small>VIN, GPS, addresses, trip routes, exact trip times, raw telemetry, or model files.</small></div>
-<div><b>Participation</b><small>OFF by default; no automated uploads. Server operators can associate a monthly aggregate with its enrolled installation. Opting out stops future uploads; revocation requests deletion of stored reports.</small></div>
+<div><b>What GHOST shares</b><small>The UTC month, number of completed battery temperature predictions, their combined absolute error, and format/source labels. Six approved summary fields total.</small></div>
+<div><b>What stays private</b><small>No VIN, GPS, exact trip times, addresses, route history, raw telemetry, or trained model weights. Hive can associate a summary with this enrolled installation: the data is pseudonymous, not fully anonymous.</small></div>
+<div><b>Always your choice</b><small>Off by default. Turn it off at any time to stop future updates; request deletion separately. The coordinator stores one replaceable report per installation per month.</small></div>
 </div>
-<label class="consent-label" for="hive-owner-key">Installation-owner key <small>(stored only for this page session; never saved in browser storage)</small></label>
-<input id="hive-owner-key" class="consent-input" type="password" autocomplete="off" spellcheck="false" placeholder="Paste the key from your private Ghost terminal" />
-<p class="note">The owner key is in the private <code>hive-client/dashboard-admin.token</code> file on Ghost. Do not paste it into a public chat. Use a trusted connection such as Tailscale or an SSH tunnel.</p>
+<p class="note" id="hive-access-note">Owner-only actions use your authenticated SSH tunnel, not a token pasted into the browser.</p>
+<button class="action" id="hive-join" type="button">Yes, contribute automatically every hour</button>
+<button class="action secondary" id="hive-disable" type="button">Turn off contribution</button>
 <div class="consent-divide"></div>
-<label class="consent-label" for="hive-month">Reporting month (UTC)</label>
-<input class="consent-input" id="hive-month" type="month" />
-<button class="action" id="hive-preview" type="button">Preview exact monthly report</button>
-<div id="hive-report" class="consent-preview" aria-live="polite">Preview the report before deciding to share anything.</div>
-<label class="consent-check"><input id="hive-agree" type="checkbox" /> <span>I understand the coordinator can link this monthly summary to my enrolled installation, and I choose to opt in.</span></label>
-<button class="action" id="hive-consent" type="button">Enable monthly sharing</button>
-<label class="consent-check"><input id="hive-confirm-send" type="checkbox" /> <span>Send precisely the reviewed report above, once, now.</span></label>
-<button class="action" id="hive-send" type="button" disabled>Send reviewed report</button>
-<div class="consent-divide"></div>
-<div class="consent-actions">
-<button class="action secondary" id="hive-disable" type="button">Turn sharing OFF</button>
-<label class="consent-label" for="hive-delete-confirm">To revoke enrollment and request server deletion, type DELETE:</label>
+<details><summary>Delete my submitted data and revoke enrollment</summary><p class="note">This removes current server records for this installation and disables future uploads. Re-enrollment is required to contribute again.</p>
+<label class="consent-label" for="hive-delete-confirm">Type DELETE to confirm</label>
 <input class="consent-input" id="hive-delete-confirm" type="text" maxlength="6" autocomplete="off" placeholder="DELETE" />
-<button class="action danger" id="hive-revoke" type="button">Revoke enrollment and delete shared reports</button>
-</div>
-<p id="hive-action-result" class="consent-message" role="status" aria-live="polite">No change made.</p>
+<button class="action danger" id="hive-revoke" type="button">Revoke and request deletion</button>
+</details>
+<p id="hive-action-result" class="consent-message" role="status" aria-live="polite">No sharing preference changed.</p>
 <button class="action secondary" id="close-dialog" type="button">Close</button>
 </dialog>
 <script>
@@ -131,7 +121,7 @@ function render(d){
  const activity=d.contribution_activity||[];$("local-week").textContent=number(activity.reduce((a,r)=>a+(r.local_predictions_scored||0),0));
  $("consent-text").textContent=hive.contribution==="OPTED_IN"?"Opted in":"Inactive";
  $("consent-sub").textContent=hive.contribution==="OPTED_IN"?
-   (hive.last_success_month?"Last accepted report: "+hive.last_success_month:"No monthly reports sent yet"):
+   (hive.hourly_enabled?"Automatic hourly summaries enabled":"Manual sharing enabled"):
    "Sharing off · Your data stays local";
  $("network-status").textContent=fleet.coordinator_connected?
    "Hive coordinator reachable":"Fleet network not connected";
@@ -147,93 +137,58 @@ async function refresh(){
  render(await response.json());}
  catch(e){$("updated").textContent="Could not read local evidence. Classic GHOST remains unchanged.";}
 }
-let reviewedFingerprint=null;
 function consentMessage(text){$("hive-action-result").textContent=text;}
-function currentMonth(){return $("hive-month").value||new Date().toISOString().slice(0,7);}
-async function control(action,payload={}){
- const owner=$("hive-owner-key").value.trim();
- if(!owner){throw Error("Enter your installation-owner key from Ghost first.");}
+async function control(action,payload){
  const response=await fetch("/api/hive/control/"+action,{
    method:"POST",credentials:"same-origin",
-   headers:{"Content-Type":"application/json","X-Ghost-Hive-Owner":owner},
+   headers:{"Content-Type":"application/json"},
    body:JSON.stringify(payload)});
  let data;
  try{data=await response.json();}catch(e){throw Error("Hive control returned an invalid response.");}
- if(!response.ok)throw Error(data.error||"Hive action refused.");
+ if(!response.ok){
+   if(data.error==="OWNER_AUTHORIZATION_REQUIRED")
+     throw Error("Owner access required: open this page through an authenticated SSH tunnel on http://127.0.0.1:8766/hive.");
+   throw Error(data.error||"Hive action was refused.");
+ }
  return data;
 }
-async function perform(action,payload={}){
- consentMessage("Working…");
- for(const b of ["hive-preview","hive-consent","hive-send","hive-disable","hive-revoke"]){$(b).disabled=true;}
+async function perform(action,payload){
+ consentMessage("Updating your preference…");
+ for(const id of ["hive-join","hive-disable","hive-revoke"])$(id).disabled=true;
  try{
    const result=await control(action,payload);
-   if(action==="preview"){
-     reviewedFingerprint=result.eligible?result.preview_sha256:null;
-     $("hive-confirm-send").checked=false;
-     $("hive-send").disabled=!reviewedFingerprint;
-     if(result.eligible){
-       const p=result.payload;
-       const avg=p.scored_predictions?1.8*p.total_abs_error_c/p.scored_predictions:null;
-       $("hive-report").textContent="Month: "+p.month+
-          "\nCompleted temperature forecasts: "+number(p.scored_predictions)+
-          "\nTotal absolute error: "+fixed(p.total_abs_error_c,2)+" °C"+
-          "\nAverage absolute error: "+fixed(avg,2)+" °F"+
-          "\nSource: GHOST verified prediction audit"+
-          "\nNot anonymous: coordinator can identify this enrolled installation.";
-       consentMessage("Preview ready. Nothing has been sent.");
-     } else{
-       $("hive-report").textContent=result.reason||"Insufficient qualifying predictions.";
-       consentMessage("No eligible report for this month.");
-     }
-   }else{
-     if(action==="send" && result.sent!==true)throw Error(result.reason||"The coordinator did not accept the report.");
-     if(action==="revoke" && result.remote_deleted!==true)throw Error("Local sharing stopped but remote deletion is not confirmed.");
-     reviewedFingerprint=null;$("hive-confirm-send").checked=false;
-     if(action==="revoke")$("hive-delete-confirm").value="";
-     const success={
-       consent:"You are opted in. No report was sent automatically.",
-       send:"Monthly report accepted by the coordinator: "+(result.month||""),
-       disable:"Sharing is OFF. No new reports will be sent.",
-       revoke:"Enrollment revoked and coordinator deletion confirmed."
-     };
-     consentMessage(success[action]||"Action completed.");
-     await refresh();
-   }
- }catch(error){consentMessage("Action not completed: "+error.message);}
- finally{
-   for(const b of ["hive-preview","hive-consent","hive-disable","hive-revoke"]){$(b).disabled=false;}
-   $("hive-send").disabled=!reviewedFingerprint;
- }
+   if(action==="join" && !(result.mode==="OPTED_IN" && result.automatic_uploads===true))
+      throw Error("Hourly consent was not confirmed.");
+   if(action==="disable" && result.mode!=="OFF")throw Error("Sharing was not disabled.");
+   if(action==="revoke" && result.remote_deleted!==true)
+      throw Error("Local sharing stopped, but coordinator deletion could not be confirmed.");
+   const messages={
+      join:"You're contributing! New approved monthly research results will sync automatically, at most once per hour.",
+      disable:"Contribution turned off. No new research summaries will be sent.",
+      revoke:"Remote deletion confirmed and enrollment revoked."
+   };
+   consentMessage(messages[action]);
+   if(action==="revoke")$("hive-delete-confirm").value="";
+   await refresh();
+ }catch(error){consentMessage("Change not completed: "+error.message);}
+ finally{for(const id of ["hive-join","hive-disable","hive-revoke"])$(id).disabled=false;}
 }
-$("hive-month").value=new Date().toISOString().slice(0,7);
-$("hive-month").addEventListener("change",()=>{
- reviewedFingerprint=null;
- $("hive-report").textContent="Reporting month changed. Preview the new report.";
- $("hive-send").disabled=true;
- $("hive-confirm-send").checked=false;
-});
-$("hive-preview").addEventListener("click",()=>perform("preview",{month:currentMonth()}));
-$("hive-consent").addEventListener("click",()=>{
- if(!$("hive-agree").checked){consentMessage("Read and check the informed consent statement first.");return;}
- perform("consent",{acknowledge_pseudonymous_sharing:true});
-});
-$("hive-send").addEventListener("click",()=>{
- if(!$("hive-confirm-send").checked || !reviewedFingerprint){consentMessage("Preview and explicitly confirm this report first.");return;}
- perform("send",{month:currentMonth(),confirm_this_exact_report:true,preview_sha256:reviewedFingerprint});
-});
+$("hive-join").addEventListener("click",()=>perform("join",{
+ acknowledge_pseudonymous_sharing:true,allow_hourly_aggregates:true
+}));
 $("hive-disable").addEventListener("click",()=>perform("disable",{}));
 $("hive-revoke").addEventListener("click",()=>{
- if($("hive-delete-confirm").value!=="DELETE"){consentMessage("Type DELETE exactly before requesting revocation.");return;}
+ if($("hive-delete-confirm").value!=="DELETE"){
+  consentMessage("Type DELETE to confirm remote deletion.");return;
+ }
  perform("revoke",{confirmation:"DELETE"});
 });
 $("review-sharing").addEventListener("click",()=>$("sharing-dialog").showModal());
 $("consent-status").addEventListener("click",()=>$("sharing-dialog").showModal());
-$("close-dialog").addEventListener("click",()=>{
- $("hive-owner-key").value="";
- $("hive-report").textContent="Preview the report before deciding to share anything.";
- reviewedFingerprint=null;$("hive-send").disabled=true;$("hive-confirm-send").checked=false;
- $("sharing-dialog").close();
-});
+$("close-dialog").addEventListener("click",()=>$("sharing-dialog").close());
+if(location.hostname!=="127.0.0.1"&&location.hostname!=="::1"){
+ $("hive-access-note").textContent="To change sharing safely, open this page through an authenticated SSH tunnel at http://127.0.0.1:8766/hive. No token copy/paste is required.";
+}
 refresh();
 setInterval(()=>{if(!document.hidden)refresh();},60000);
 </script>
