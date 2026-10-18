@@ -60,6 +60,18 @@ class DashboardUITests(unittest.TestCase):
         self.assertIn("non-overlapping",html)
         self.assertNotIn("fetch(\"https://",html)
 
+    def test_context_and_true_paired_baseline_are_visible_but_read_only(self):
+        html=HTML.read_text()
+        for id_ in ("context-status","context-groups","context-missions",
+                    "paired-status","paired-coverage","paired-groups"):
+            self.assertIn('id="'+id_+'"',html)
+        self.assertIn('fetch("/api/genesis/thermal-context"',html)
+        self.assertIn('fetch("/api/genesis/paired-baseline"',html)
+        self.assertIn('void readContext()',html)
+        self.assertIn('void readPaired()',html)
+        self.assertIn('requires operator review',html.lower())
+        self.assertNotIn('fetch("/api/genesis/execute',html)
+
     def test_no_vehicle_actions_or_raw_sample_exposure(self):
         html=HTML.read_text()
         self.assertIn("/api/genesis/overview",html)
