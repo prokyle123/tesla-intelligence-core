@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS monthly_research(
 CREATE TABLE IF NOT EXISTS region_consents(
  participant INTEGER PRIMARY KEY,
  region_code TEXT NOT NULL, enabled INTEGER NOT NULL DEFAULT 1,
+ public_listing INTEGER NOT NULL DEFAULT 0,
  changed_at INTEGER NOT NULL,
  FOREIGN KEY(participant) REFERENCES participants(id)
 );
@@ -81,6 +82,10 @@ def initialize(path: Path):
     with closing(sqlite3.connect(p)) as con:
         con.execute("PRAGMA foreign_keys=ON")
         con.executescript(SQL)
+        columns={r[1] for r in con.execute("PRAGMA table_info(region_consents)")}
+        if "public_listing" not in columns:
+            # Existing broad-region choices remain nonpublic until reconsented.
+            con.execute("ALTER TABLE region_consents ADD COLUMN public_listing INTEGER NOT NULL DEFAULT 0")
         con.commit()
     p.chmod(0o600)
 
@@ -238,12 +243,46 @@ def create_app(path: Path) -> Flask:
                 participant,region_code,enabled,changed_at) VALUES(?,?,1,?)
                 ON CONFLICT(participant) DO UPDATE SET
                 region_code=excluded.region_code,enabled=1,
-                changed_at=excluded.changed_at""",
+                public_listing=0,changed_at=excluded.changed_at""",
                 (user,selected["region_code"],int(time.time())))
             con.commit()
         return jsonify({"accepted":True,"regional_sharing":"OPTED_IN",
                         "region_code":selected["region_code"],
                         "exact_location_collected":False}),202
+
+    @app.put("/v1/region-publication")
+    def publish_region_one_member():
+        """Explicit new consent to list a coarse world region from one reporter."""
+        user=authenticate()
+        if request.mimetype!="application/json":abort(415)
+        if request.content_length is None or request.content_length>160:abort(413)
+        body=request.get_json(silent=True)
+        if (not isinstance(body,dict)
+            or set(body)!={"schema","acknowledge_single_reporter_public"}
+            or body["schema"]!="ghost-hive-region-public-v1"
+            or body["acknowledge_single_reporter_public"] is not True):
+            return jsonify({"error":"SINGLE_REPORTER_PUBLIC_CONSENT_REQUIRED"}),400
+        with closing(sqlite3.connect(db,timeout=4)) as con:
+            con.execute("PRAGMA foreign_keys=ON")
+            updated=con.execute("""UPDATE region_consents
+                SET public_listing=1, changed_at=?
+                WHERE participant=? AND enabled=1""",
+                (int(time.time()),user))
+            if updated.rowcount!=1:
+                return jsonify({"error":"SELECT_BROAD_REGION_FIRST"}),409
+            con.commit()
+        return jsonify({"accepted":True,"public_listing":True,
+                        "regional_scope":"VOLUNTARY_BROAD_REGION_ONLY",
+                        "one_member_visibility":True}),202
+
+    @app.delete("/v1/region-publication")
+    def hide_public_region():
+        user=authenticate()
+        with closing(sqlite3.connect(db,timeout=4)) as con:
+            con.execute("UPDATE region_consents SET public_listing=0, changed_at=? WHERE participant=?",
+                        (int(time.time()),user))
+            con.commit()
+        return jsonify({"public_listing":False,"deleted":True}),200
 
     @app.delete("/v1/region")
     def clear_broad_region():
