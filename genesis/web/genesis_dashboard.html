@@ -120,6 +120,13 @@ footer{border-top:1px solid var(--border);margin-top:35px;padding-top:18px;color
 <div><div class="value" id="outcome-waiting" style="font-size:30px;font-weight:800">—</div><div class="note">Awaiting evidence</div></div>
 </div><div class="divider"></div><p class="note" id="mission-conflicts">Sensor-context diagnostics will appear after a recorded cycle.</p></div>
 </div>
+<div class="panel" aria-label="Frozen prospective truth watch">
+<div class="section-title"><h2>Prospective Truth Watch</h2><span class="pill dim" id="prospective-status">Manual freeze required</span></div>
+<p class="note">A frozen evaluation watches only new GHOST forecasts created after the research watermark. It scores their later real outcomes against persistence using the same event. Start it explicitly from the local GENESIS CLI; this dashboard never starts experiments.</p>
+<div id="prospective-overview" class="note">Awaiting an operator-initiated freeze.</div>
+<div id="prospective-models" class="chart-list"><div class="empty">No post-freeze evidence yet.</div></div>
+<p class="note">No model training, no scheduled jobs, no model promotion or Hive uploads. Timestamp-based freezing does not verify ingestion chronology or artifact bytes.</p>
+</div>
 <div class="panel"><div class="section-title"><h2>Evidence-led next investigations</h2><span class="pill dim">Proposed · not executed</span></div><p class="note">Review scored prediction failures and propose repeatable investigations. No automatic training, model changes or commands.</p><div id="context-missions-investigations" class="chart-list"><div class="empty">Loading evidence-based plans when opened.</div></div></div>
 <div class="panel"><div class="section-title"><h2>Prior Hypothesis Architect notes</h2><small>Available only if the separate Architect ledger was saved</small></div><div id="architect-previous" class="empty">No additional Architect records loaded.</div></div>
 </section>
@@ -164,7 +171,7 @@ const percent = n => Number.isFinite(Number(n)) ? (Number(n)>0?"+":"")+Number(n)
 const number = (n,places=2) => Number.isFinite(Number(n)) ? Number(n).toFixed(places) : "—";
 const pretty = s => String(s||"No result").replaceAll("_"," ").replace(/\b\w/g,x=>x.toUpperCase());
 const dateText = n => { const dt=new Date(Number(n)*1000); return Number.isFinite(dt.getTime()) ? dt.toLocaleString() : "Unknown date"; };
-let cache=null,historySelected=null,healthOk=false,truthLastRead=0,truthPending=false,contextLastRead=0,contextPending=false,pairedLastRead=0,pairedPending=false;
+let cache=null,historySelected=null,healthOk=false,truthLastRead=0,truthPending=false,contextLastRead=0,contextPending=false,pairedLastRead=0,pairedPending=false,prospectiveLastRead=0,prospectivePending=false;
 function label(id,value){el(id).textContent=value;}
 function view(tab) {
   for(const button of document.querySelectorAll("[data-tab]")) {
@@ -175,6 +182,7 @@ function view(tab) {
   for(const panel of document.querySelectorAll("[data-panel]"))panel.hidden=panel.dataset.panel!==tab;
   if(tab==="models" && Date.now()-truthLastRead>300000)void readTruth();
   if((tab==="models" || tab==="investigations") && Date.now()-contextLastRead>300000)void readContext();
+  if(tab==="investigations" && Date.now()-prospectiveLastRead>300000)void readProspective();
   if(tab==="models" && Date.now()-pairedLastRead>300000)void readPaired();
 }
 for(const button of document.querySelectorAll("[data-tab]"))button.addEventListener("click",()=>view(button.dataset.tab));
@@ -521,6 +529,41 @@ async function readPaired(){
   el("paired-groups").replaceChildren(make("div",
     "Could not compare real paired forecasts with persistence.","empty"));
  }finally{pairedPending=false;}
+}
+async function readProspective(){
+ if(prospectivePending)return;
+ prospectivePending=true;
+ prospectiveLastRead=Date.now();
+ try {
+  const r=await fetch("/api/genesis/prospective-watch",{cache:"no-store",credentials:"same-origin"});
+  if(!r.ok)throw Error("Prospective watch unavailable");
+  const d=await r.json();
+  label("prospective-status",d.status==="NOT_FROZEN"?"Not frozen":pretty(d.status));
+  const n=el("prospective-models");n.replaceChildren();
+  if(d.status==="NOT_FROZEN"){
+    label("prospective-overview","No frozen watch exists. Start a new research-only watch explicitly using GENESIS CLI truth-watch-freeze.");
+    n.append(make("div","Only future forecasts created after a verified manual freeze can be evaluated.","empty"));
+    return;
+  }
+  label("prospective-overview","Eligible matched future forecasts: "+String(d.eligible_pairs||0)+
+    " · incomplete: "+String(d.incomplete_pairs||0)+
+    " · different model generations excluded: "+String(d.new_generation_pairs||0));
+  const rows=Array.isArray(d.models)?d.models:[];
+  if(!rows.length)n.append(make("div","No frozen model generations or future scored evidence available.","empty"));
+  for(const m of rows){
+    const group=make("div",undefined,"item");
+    group.append(make("strong",String(m.model)+" · "+String(m.horizon_minutes)+"m · generation "+String(m.generation)));
+    group.append(make("div",pretty(m.assessment)+" · "+String(m.samples||0)+" matched future forecasts","detail"));
+    group.append(make("div","GHOST model "+(Number.isFinite(m.model_mae_f)?number(m.model_mae_f,2)+"°F":"—")+
+      " · Persistence "+(Number.isFinite(m.persistence_mae_f)?number(m.persistence_mae_f,2)+"°F":"—")+
+      " · Model advantage "+(Number.isFinite(m.model_advantage_f)?number(m.model_advantage_f,2)+"°F":"—"),"note"));
+    n.append(group);
+  }
+ }catch(e){
+  label("prospective-status","Evaluation unavailable");
+  label("prospective-overview","The local prospective watch could not be evaluated.");
+  el("prospective-models").replaceChildren();
+ }finally{prospectivePending=false;}
 }
 async function readHive(){
  // GENESIS research UI is GET-only. Prefer the already-existing integrated
