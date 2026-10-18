@@ -56,13 +56,14 @@ def latest_discoveries(research_db: Path) -> dict:
     }
 
 
-def overview(research_db: Path) -> dict:
+def overview(research_db: Path, data_dir: Path | None = None) -> dict:
     store = ResearchStore(research_db)
+    root = Path(data_dir) if data_dir is not None else config.data_dir()
     return {
         "module": "GHOST GENESIS", "version": "0.1.1",
         "research_mode": "LOCAL_SHADOW_ONLY", "network": network_status(),
         "runs": store.recent_runs(20), "findings": store.recent_findings(25),
-        "architect": ArchitectLedger(config.data_dir() / "architect.sqlite3").latest(),
+        "architect": ArchitectLedger(root / "architect.sqlite3").latest(),
         "production_changes": False,
     }
 
