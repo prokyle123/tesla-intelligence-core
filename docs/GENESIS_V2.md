@@ -213,3 +213,54 @@ It lists per-era regime observations and paired-signal coverage for the
 eight previously selected shadow candidates. This is a local evidence
 diagnostic, not validation on unseen future trips. It does not train,
 promote models, modify GHOST, or contact Hivemind.
+
+
+## M2 Hypothesis Architect prototype (manual, locally self-directed)
+
+The first hypothesis-planning loop is now implemented. GENESIS can inspect
+five nonoverlapping historical blocks, automatically select from eleven
+preapproved research questions, and train a basic contemporaneous linear
+association model on the first three eras. It challenges each model on two
+later eras, using the **same activity regime** and a constant baseline
+trained only on the earlier observations.
+
+Each trial is marked SHADOW_ASSOCIATION, CHALLENGE_FAILED or
+INSUFFICIENT_EVIDENCE. It also has an explicit confounding caveat and a
+next-experiment recommendation. The mission selector prioritizes resolving
+a high rate of ambiguous simultaneous driving/charging signals; otherwise
+it prioritizes evidence gaps, challenge of stronger candidates or failures.
+
+**Limitations:** This is a rule-constrained local experiment planner, not
+self-modifying AI, a future-time forecast, a proof of causality or a trusted
+fleet discovery. The signals are contemporaneous, all recipes are vetted
+and fixed in the source, and selection on historical data is exploratory.
+Known thermodynamics/electrical relations are not novel discoveries. The
+sample spacing is three minutes within one classification and does not yet
+establish independent trip or charging episodes.
+
+No background tasks, Tesla commands, new services, public fleet endpoints
+or model promotion are added. Production is untouched.
+
+Run from the isolated, reviewed checkout with a private output database,
+specifying a suitable writable private directory:
+
+    python3 -m genesis.cli --source-db /var/lib/ghost-tesla-ai/ghost_ai.sqlite3 --architect-db /home/ghost/genesis-lab/architect.sqlite3 architect-once --rows-per-block 2400
+
+The default performs **no writes**. Add --save to explicitly write the
+aggregate plans and results to this separate, local SQLite file.
+The private ledger stores only research-plan metadata, not raw readings,
+VIN, GPS or driving routes.
+
+Read results later:
+
+    python3 -m genesis.cli --architect-db /home/ghost/genesis-lab/architect.sqlite3 architect-status
+
+The optional dedicated GENESIS dashboard includes an Architect mission panel,
+but enabling a web route in the existing production web process requires a
+separate reviewed deployment. At this stage the CLI works without installing
+or restarting any production services.
+
+Next planned features: episode-based grouping, well-calibrated baselines,
+independent future outcomes after hypothesis freeze, drift/uncertainty,
+signed candidate artifacts, safe competition against baseline production
+models, and manual approval before any production promotion.
