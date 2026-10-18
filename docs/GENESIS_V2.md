@@ -192,3 +192,24 @@ These only emit private counts and inference metadata; the source and ledger
 remain unchanged. The coverage output must not be published as a fleet
 metric. A historical association is neither a causal discovery nor proof
 of real-time future forecasting accuracy.
+
+
+## M1 distributed-history quality gate
+
+The first live 12,000-row sample had 7,890 charging, 3,038 parked/other,
+and 1,072 driving observations inferred from sensor data. Ten-minute thinning
+retained 1,227 rows (10.22%). Low retention is not automatically an error,
+but the sample may overrepresent long charging events.
+
+The new "historical-coverage" command checks five nonoverlapping
+chronological blocks spread across the local existing history, with
+2,400 raw records per block (12,000 maximum). SQLite is opened strictly
+read-only within one snapshot. No VIN, car ID, GPS, raw JSON, trip routes
+or precise activity timestamps are loaded or returned.
+
+    python3 -m genesis.cli --source-db /var/lib/ghost-tesla-ai/ghost_ai.sqlite3 --research-db /tmp/genesis-first-research.i4UGDw/research.sqlite3 historical-coverage --blocks 5 --rows-per-block 2400
+
+It lists per-era regime observations and paired-signal coverage for the
+eight previously selected shadow candidates. This is a local evidence
+diagnostic, not validation on unseen future trips. It does not train,
+promote models, modify GHOST, or contact Hivemind.
