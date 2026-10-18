@@ -121,6 +121,60 @@ const fixed=(n,p=1)=>typeof n==="number"&&Number.isFinite(n)?n.toFixed(p):"—";
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const ns="http://www.w3.org/2000/svg";
 const shape=(tag,a,text)=>{const e=document.createElementNS(ns,tag);for(const [k,v] of Object.entries(a))e.setAttribute(k,String(v));if(text!==undefined)e.textContent=String(text);return e;};
+let vehicleWindow="6m";
+function vehicleBars(container,months){
+ container.replaceChildren();
+ let data=Array.isArray(months)?months:[];
+ if(vehicleWindow==="7d"||vehicleWindow==="30d"){
+  const box=document.createElement("div");box.className="empty";
+  box.textContent="Daily participant history is not published. Choose 6M or 1Y for monthly cohort trends.";
+  container.append(box);return;
+ }
+ data=vehicleWindow==="6m"?data.slice(-6):data.slice(-12);
+ const available=data.filter(r=>r.status==="SHARED_GROUP"&&Number.isFinite(r.reporting_nodes));
+ if(!available.length){
+  const box=document.createElement("div");box.className="empty";
+  box.textContent="No reportable monthly cohorts yet. Contributor totals can begin at one, but month-by-month groups remain private until the release threshold.";
+  container.append(box);return;
+ }
+ const max=Math.max(1,...available.map(r=>r.reporting_nodes));
+ const svg=shape("svg",{viewBox:"0 0 600 218",role:"img","aria-label":"Real monthly participating GHOST Hive installations"});
+ const chartWidth=526, spacing=chartWidth/Math.max(1,data.length),barWidth=Math.max(12,spacing*.65);
+ for(let i=0;i<5;i++){
+   const y=20+i*38;
+   svg.append(shape("line",{x1:50,y1:y,x2:590,y2:y,stroke:"#315166","stroke-dasharray":"3 5"}));
+   svg.append(shape("text",{x:43,y:y+4,fill:"#a7bdcd","text-anchor":"end","font-size":"11"},String(Math.round(max*(1-i/4)))));
+ }
+ data.forEach((r,i)=>{
+  const x=56+i*spacing+(spacing-barWidth)/2;
+  const ok=r.status==="SHARED_GROUP"&&Number.isFinite(r.reporting_nodes);
+  const val=ok?r.reporting_nodes:null;
+  const height=ok?Math.max(2,val/max*144):0;
+  if(ok){
+   const gradient=shape("rect",{x,y:172-height,width:barWidth,height,rx:4,fill:"url(#hive-bars-gradient)"});
+   svg.append(gradient);
+   svg.append(shape("text",{x:x+barWidth/2,y:164-height,fill:"#e5f8fc","text-anchor":"middle","font-size":"12"},String(val)));
+  }else{
+   svg.append(shape("text",{x:x+barWidth/2,y:146,fill:"#5e8b9e","text-anchor":"middle","font-size":"11"},"—"));
+  }
+  svg.append(shape("text",{x:x+barWidth/2,y:204,fill:"#a6bdcd","text-anchor":"middle","font-size":"11"},String(r.label||r.month||"").slice(0,3)));
+ });
+ const defs=shape("defs",{}),grad=shape("linearGradient",{id:"hive-bars-gradient",x1:"0",y1:"0",x2:"0",y2:"1"});
+ grad.append(shape("stop",{offset:"0%","stop-color":"#1ce6e3"}),shape("stop",{offset:"100%","stop-color":"#1767bc"}));
+ defs.append(grad);svg.prepend(defs);
+ container.append(svg);
+}
+function wirePeriods(){
+ document.querySelectorAll(".periods button").forEach(b=>b.addEventListener("click",()=>{
+   vehicleWindow=b.dataset.window;
+   document.querySelectorAll(".periods button").forEach(node=>{
+      const active=node===b;
+      node.classList.toggle("chosen",active);
+      node.setAttribute("aria-pressed",active?"true":"false");
+   });
+   vehicleBars($("vehicles-chart"),window.hiveMonths||[]);
+ }));
+}
 function lineGraph(container,rows,key,{suffix="",maxValue=null}={}){
  container.replaceChildren();
  const pts=rows.map((r,i)=>({i,label:r.label||r.period||"",v:Number.isFinite(r[key])?r[key]:null}));
@@ -151,6 +205,9 @@ function bars(container,rows,key){
 }
 function render(d){
  const local=d.local||{}, fleet=d.fleet||{}, hive=d.hive||{};
+ window.hiveMonths=Array.isArray(fleet.monthly)?fleet.monthly:[];
+ vehicleBars($("vehicles-chart"),window.hiveMonths);
+ 
  $("fleet-vehicles").textContent=number(fleet.participating_vehicles);
  $("local-predictions").textContent=number(local.predictions_scored);
  $("local-accuracy").textContent=local.within_2f_percent===null?"—":fixed(local.within_2f_percent)+"%";
@@ -162,6 +219,9 @@ function render(d){
  $("local-pending").textContent=number(local.pending_predictions);
  const activity=d.contribution_activity||[];$("local-week").textContent=number(activity.reduce((a,r)=>a+(r.local_predictions_scored||0),0));
  $("consent-text").textContent=hive.contribution==="OPTED_IN"?"Opted in":"Inactive";
+ $("consent-status").classList.toggle("active",hive.contribution==="OPTED_IN");
+ $("consent-status").querySelector(".check").textContent=hive.contribution==="OPTED_IN"?"✓":"×";
+ $("consent-status").setAttribute("aria-label",hive.contribution==="OPTED_IN"?"Manage Hive contribution settings":"Join Hive");
  $("consent-sub").textContent=hive.contribution==="OPTED_IN"?
    (hive.hourly_enabled?"Automatic hourly summaries enabled":"Manual sharing enabled"):
    "Sharing off · Your data stays local";
@@ -233,6 +293,7 @@ $("close-dialog").addEventListener("click",()=>$("sharing-dialog").close());
 if(location.hostname!=="127.0.0.1"&&location.hostname!=="::1"){
  $("hive-access-note").textContent="To change sharing safely, open this page through an authenticated SSH tunnel at http://127.0.0.1:8766/hive. No token copy/paste is required.";
 }
+wirePeriods();
 refresh();
 setInterval(()=>{if(!document.hidden)refresh();},60000);
 </script>

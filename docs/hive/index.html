@@ -108,6 +108,60 @@ const fixed=(n,p=1)=>typeof n==="number"&&Number.isFinite(n)?n.toFixed(p):"—";
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const ns="http://www.w3.org/2000/svg";
 const shape=(tag,a,text)=>{const e=document.createElementNS(ns,tag);for(const [k,v] of Object.entries(a))e.setAttribute(k,String(v));if(text!==undefined)e.textContent=String(text);return e;};
+let vehicleWindow="6m";
+function vehicleBars(container,months){
+ container.replaceChildren();
+ let data=Array.isArray(months)?months:[];
+ if(vehicleWindow==="7d"||vehicleWindow==="30d"){
+  const box=document.createElement("div");box.className="empty";
+  box.textContent="Daily participant history is not published. Choose 6M or 1Y for monthly cohort trends.";
+  container.append(box);return;
+ }
+ data=vehicleWindow==="6m"?data.slice(-6):data.slice(-12);
+ const available=data.filter(r=>r.status==="SHARED_GROUP"&&Number.isFinite(r.reporting_nodes));
+ if(!available.length){
+  const box=document.createElement("div");box.className="empty";
+  box.textContent="No reportable monthly cohorts yet. Contributor totals can begin at one, but month-by-month groups remain private until the release threshold.";
+  container.append(box);return;
+ }
+ const max=Math.max(1,...available.map(r=>r.reporting_nodes));
+ const svg=shape("svg",{viewBox:"0 0 600 218",role:"img","aria-label":"Real monthly participating GHOST Hive installations"});
+ const chartWidth=526, spacing=chartWidth/Math.max(1,data.length),barWidth=Math.max(12,spacing*.65);
+ for(let i=0;i<5;i++){
+   const y=20+i*38;
+   svg.append(shape("line",{x1:50,y1:y,x2:590,y2:y,stroke:"#315166","stroke-dasharray":"3 5"}));
+   svg.append(shape("text",{x:43,y:y+4,fill:"#a7bdcd","text-anchor":"end","font-size":"11"},String(Math.round(max*(1-i/4)))));
+ }
+ data.forEach((r,i)=>{
+  const x=56+i*spacing+(spacing-barWidth)/2;
+  const ok=r.status==="SHARED_GROUP"&&Number.isFinite(r.reporting_nodes);
+  const val=ok?r.reporting_nodes:null;
+  const height=ok?Math.max(2,val/max*144):0;
+  if(ok){
+   const gradient=shape("rect",{x,y:172-height,width:barWidth,height,rx:4,fill:"url(#hive-bars-gradient)"});
+   svg.append(gradient);
+   svg.append(shape("text",{x:x+barWidth/2,y:164-height,fill:"#e5f8fc","text-anchor":"middle","font-size":"12"},String(val)));
+  }else{
+   svg.append(shape("text",{x:x+barWidth/2,y:146,fill:"#5e8b9e","text-anchor":"middle","font-size":"11"},"—"));
+  }
+  svg.append(shape("text",{x:x+barWidth/2,y:204,fill:"#a6bdcd","text-anchor":"middle","font-size":"11"},String(r.label||r.month||"").slice(0,3)));
+ });
+ const defs=shape("defs",{}),grad=shape("linearGradient",{id:"hive-bars-gradient",x1:"0",y1:"0",x2:"0",y2:"1"});
+ grad.append(shape("stop",{offset:"0%","stop-color":"#1ce6e3"}),shape("stop",{offset:"100%","stop-color":"#1767bc"}));
+ defs.append(grad);svg.prepend(defs);
+ container.append(svg);
+}
+function wirePeriods(){
+ document.querySelectorAll(".periods button").forEach(b=>b.addEventListener("click",()=>{
+   vehicleWindow=b.dataset.window;
+   document.querySelectorAll(".periods button").forEach(node=>{
+      const active=node===b;
+      node.classList.toggle("chosen",active);
+      node.setAttribute("aria-pressed",active?"true":"false");
+   });
+   vehicleBars($("vehicles-chart"),window.hiveMonths||[]);
+ }));
+}
 function lineGraph(container,rows,key,{suffix="",maxValue=null}={}){
  container.replaceChildren();
  const pts=rows.map((r,i)=>({i,label:r.label||r.period||"",v:Number.isFinite(r[key])?r[key]:null}));
@@ -138,6 +192,9 @@ function bars(container,rows,key){
 }
 function render(d){
  const months=Array.isArray(d.monthly)?d.monthly:[];
+ window.hiveMonths=months;
+ vehicleBars($("vehicles-chart"),window.hiveMonths);
+ 
  const latest=months.map(x=>({label:x.label||x.month||"",
    within_2f_percent:null,
    temp_mae_f:x.status==="SHARED_GROUP"?x.mean_error_f:null}));
@@ -153,7 +210,7 @@ function render(d){
  $("local-week").textContent="—";
  $("consent-text").textContent="Read only";
  $("consent-sub").textContent="Shared network totals · No login";
- $("network-status").textContent=Number.isFinite(d.reporting_nodes)?"Public Hive snapshot":"No network snapshot";
+ $("network-status").textContent=d.network_status==="AWAITING_FIRST_PUBLIC_EXPORT"?"Waiting for first public export":Number.isFinite(d.reporting_nodes)?"Hive public analytics":"No network snapshot";
  $("network-dot").style.background=Number.isFinite(d.reporting_nodes)?"#18df9b":"#e8b86b";
  $("updated").textContent=d.published_at_utc?"Snapshot "+new Date(d.published_at_utc).toLocaleString():"No public update published yet";
  lineGraph($("accuracy-chart"),latest,"within_2f_percent",{suffix:"%",maxValue:100});
@@ -179,6 +236,7 @@ async function refresh(){
 $("review-sharing").addEventListener("click",()=>$("sharing-dialog").showModal());
 $("consent-status").addEventListener("click",()=>$("sharing-dialog").showModal());
 $("close-dialog").addEventListener("click",()=>$("sharing-dialog").close());
+wirePeriods();
 refresh();
 setInterval(()=>{if(!document.hidden)refresh();},60000);
 </script>
