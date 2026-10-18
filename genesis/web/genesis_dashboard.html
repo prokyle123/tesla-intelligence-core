@@ -102,6 +102,12 @@ footer{border-top:1px solid var(--border);margin-top:35px;padding-top:18px;color
 <div id="context-missions" class="chart-list"><div class="empty">Waiting for enough comparable evidence.</div></div>
 <p id="context-caveat" class="note">Current source conditions are not necessarily the conditions at the future forecast target.</p>
 </div>
+</div><div class="panel" aria-label="Matched production versus persistence challenge">
+<div class="section-title"><h2>Production Model vs Persistence</h2><span class="pill dim" id="paired-status">Read-only · waiting</span></div>
+<p class="note">Same source, same actual outcome, same horizon. Compare each scored production forecast with the simpler prediction that starting pack temperature stays unchanged. These are scored historical observations, not frozen research trials.</p>
+<div id="paired-coverage" class="note">Baseline evidence has not been checked.</div>
+<div id="paired-groups" class="chart-list"><div class="empty">Select the Models tab to compare real forecast outcomes.</div></div>
+<p class="note">Lower MAE is better. A historical improvement does not authorize automatic model promotion.</p>
 </div><div class="panel"><div class="section-title"><h2>Evidence limitations</h2></div><p class="note">Results use observationally inferred parked episodes. Current telemetry may not reveal when the battery heater, conditioning, or changing outside temperatures affected the pack. The tested historical data has already been explored.</p><div id="model-caveats"></div></div>
 </section>
 <section class="tab-panel" data-panel="investigations" hidden>
@@ -157,7 +163,7 @@ const percent = n => Number.isFinite(Number(n)) ? (Number(n)>0?"+":"")+Number(n)
 const number = (n,places=2) => Number.isFinite(Number(n)) ? Number(n).toFixed(places) : "—";
 const pretty = s => String(s||"No result").replaceAll("_"," ").replace(/\b\w/g,x=>x.toUpperCase());
 const dateText = n => { const dt=new Date(Number(n)*1000); return Number.isFinite(dt.getTime()) ? dt.toLocaleString() : "Unknown date"; };
-let cache=null,historySelected=null,healthOk=false,truthLastRead=0,truthPending=false,contextLastRead=0,contextPending=false;
+let cache=null,historySelected=null,healthOk=false,truthLastRead=0,truthPending=false,contextLastRead=0,contextPending=false,pairedLastRead=0,pairedPending=false;
 function label(id,value){el(id).textContent=value;}
 function view(tab) {
   for(const button of document.querySelectorAll("[data-tab]")) {
@@ -168,6 +174,7 @@ function view(tab) {
   for(const panel of document.querySelectorAll("[data-panel]"))panel.hidden=panel.dataset.panel!==tab;
   if(tab==="models" && Date.now()-truthLastRead>300000)void readTruth();
   if(tab==="models" && Date.now()-contextLastRead>300000)void readContext();
+  if(tab==="models" && Date.now()-pairedLastRead>300000)void readPaired();
 }
 for(const button of document.querySelectorAll("[data-tab]"))button.addEventListener("click",()=>view(button.dataset.tab));
 function failure(message) {
@@ -472,6 +479,45 @@ async function readContext(){
   el("context-groups").replaceChildren(make("div","Could not evaluate local context data.","empty"));
   el("context-missions").replaceChildren(make("div","No research priorities available.","empty"));
  }finally{contextPending=false;}
+}
+async function readPaired(){
+ if(pairedPending)return;
+ pairedPending=true;
+ pairedLastRead=Date.now();
+ try{
+  const r=await fetch("/api/genesis/paired-baseline",{cache:"no-store",credentials:"same-origin"});
+  if(!r.ok)throw Error("Matched baseline unavailable");
+  const data=await r.json();
+  label("paired-status",data.status==="OK"?"Same-outcome challenge":pretty(data.status));
+  label("paired-coverage","Complete scored pairs: "+String(data.eligible_pairs||0)+
+    " · incomplete source/actual evidence: "+String(data.incomplete_pairs||0));
+  const list=el("paired-groups");list.replaceChildren();
+  const rows=Array.isArray(data.groups)?data.groups:[];
+  if(!rows.length)list.append(make("div","No complete prediction/persistence pairs are available.","empty"));
+  for(const group of rows.slice(0,16)){
+   const item=make("div",undefined,"item");
+   const h=make("div",undefined,"rowline");
+   h.append(make("strong",String(group.model)+" · "+String(group.horizon_minutes)+
+     "m · generation "+String(group.generation)));
+   h.append(make("small",pretty(group.assessment)));
+   item.append(h);
+   const now=group.recent||{},prev=group.previous||{};
+   for(const [title,w] of [["Recent",now],["Previous",prev]]){
+    item.append(make("div",title+" · "+String(w.samples||0)+" matched scores · Model "+
+       (Number.isFinite(w.model_mae_f)?number(w.model_mae_f,2)+"°F":"—")+
+       " · Persistence "+(Number.isFinite(w.persistence_mae_f)?number(w.persistence_mae_f,2)+"°F":"—")+
+       " · Model advantage "+(Number.isFinite(w.model_advantage_f)?
+         (w.model_advantage_f>=0?"+":"")+number(w.model_advantage_f,2)+"°F":"—"),"note"));
+   }
+   list.append(item);
+  }
+  if(data.groups_omitted||rows.length>16)list.append(make("div",
+    "Additional model/generation groups are omitted from this summary.","note"));
+ }catch(e){
+  label("paired-status","Evidence unavailable");
+  el("paired-groups").replaceChildren(make("div",
+    "Could not compare real paired forecasts with persistence.","empty"));
+ }finally{pairedPending=false;}
 }
 async function readHive(){
  // GENESIS research UI is GET-only. Prefer the already-existing integrated
