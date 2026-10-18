@@ -19,7 +19,12 @@ class PortableReleaseContract(unittest.TestCase):
             self.assertTrue(Path(cmd[1]).is_file())
             self.assertIn("--db", cmd)
             self.assertIn("--out", cmd)
-            self.assertNotIn("/home/ghost", " ".join(cmd))
+            # The checkout may legitimately live under /home/ghost on the
+            # developer's Pi. Verify the resolved script belongs to THIS
+            # checkout, not whether the runtime path contains that home.
+            self.assertEqual(Path(cmd[1]).resolve().parent,
+                             (ROOT / "release-sidecars").resolve())
+        self.assertNotIn("/home/ghost", Path(quality_runner.__file__).read_text())
 
     def test_quality_paths_do_not_force_pi_user(self):
         for filename in (
@@ -50,7 +55,28 @@ class PortableReleaseContract(unittest.TestCase):
         self.assertEqual([name for name, _ in stages],
                          ["sequence_v1", "location_v2", "outcomes_v3",
                           "feedback_v4", "coverage_v5", "relationships_v6"])
-        self.assertTrue(all("/home/ghost" not in " ".join(cmd) for _, cmd in stages))
+        # The input paths supplied by the caller are deliberately absolute:
+        # do not mistake a checkout installed in /home/ghost for hardcoding.
+        db_path = str(ROOT / "fixture.sqlite3")
+        out_path = str(ROOT / "private")
+        for name, cmd in stages:
+            self.assertEqual(cmd[:3], [sys.executable, "-m",
+                                      "ghost_tesla_ai." + dict(
+                                          sequence_v1="trip_sequence_shadow",
+                                          location_v2="trip_location_context",
+                                          outcomes_v3="trip_outcome_v3",
+                                          feedback_v4="trip_feedback_v4",
+                                          coverage_v5="trip_coverage_v5",
+                                          relationships_v6="trip_relationship_v6")[name]])
+            if "--db" in cmd:
+                self.assertEqual(cmd[cmd.index("--db") + 1], db_path)
+            if "--live-db" in cmd:
+                self.assertEqual(cmd[cmd.index("--live-db") + 1], db_path)
+            if "--root" in cmd:
+                self.assertEqual(cmd[cmd.index("--root") + 1], out_path)
+            if "--out" in cmd:
+                self.assertEqual(cmd[cmd.index("--out") + 1], out_path)
+        self.assertNotIn("/home/ghost", Path(trip_shadow_runner.__file__).read_text())
         installer = (ROOT / "install.sh").read_text()
         self.assertIn("ghost-trip-shadow.timer", installer)
         for filename in ("ghost-trip-shadow.service.in", "ghost-trip-shadow.timer.in"):
