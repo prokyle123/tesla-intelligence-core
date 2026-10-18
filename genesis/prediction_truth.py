@@ -28,6 +28,7 @@ NOTES = [
     "Forecast errors are actual resolved GHOST observations, not training accuracy.",
     "Outcomes can share telemetry and are not statistically independent samples.",
     "Different model generations or operating conditions can change the result.",
+    "All nonnegative resolved forecast errors are counted, including extreme misses.",
     "These measurements do not prove causation, prospective validity, or eligibility for model promotion.",
 ]
 
@@ -112,7 +113,6 @@ def prediction_truth(source_db: Path, *, now: float | None = None) -> dict:
                 status='resolved' AND target_field='battery_temp_c'
                 AND resolved_at >= ? AND resolved_at <= ?
                 AND abs_error IS NOT NULL AND abs_error >= 0
-                AND abs_error <= 30
             """
             buckets = con.execute(f"""
                 SELECT CASE WHEN resolved_at >= ? THEN 1 ELSE 0 END recent,
