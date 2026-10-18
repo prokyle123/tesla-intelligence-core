@@ -25,8 +25,23 @@ else
 fi
 echo "=== 2. PRIVATE LOOPBACK GATEWAY ==="
 sudo systemctl enable --now ghost-tesla-ai-funnel-gateway.service
-sudo systemctl restart ghost-tesla-ai-funnel-gateway.service
-test "$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:8777/__ghost_auth/login)" = 200
+# A newly restarted Python gateway may need a few seconds to import Flask and
+# bind its loopback socket. Avoid misdiagnosing startup as an auth failure.
+READY=0
+for attempt in $(seq 1 24);do
+  STATUS="$(curl --noproxy '*' -sS --max-time 2 -o /dev/null -w '%{http_code}' http://127.0.0.1:8777/__ghost_auth/login 2>/dev/null || true)"
+  if [[ "$STATUS" == 200 ]];then READY=1;break;fi
+  sleep 1
+done
+if [[ "$READY" != 1 ]];then
+  echo "PIN gateway did not become healthy on local port 8777." >&2
+  echo "Service state:" >&2
+  sudo systemctl --no-pager --full status ghost-tesla-ai-funnel-gateway.service >&2 || true
+  echo "Recent gateway log (no secret values):" >&2
+  sudo journalctl --no-pager -u ghost-tesla-ai-funnel-gateway.service -n 45 --output=cat >&2 || true
+  echo "Existing Serve/Funnel settings were NOT changed." >&2
+  exit 2
+fi
 echo "Gateway PIN login verified on Pi loopback."
 echo "=== 3. EXISTING SERVE/FUNNEL CONFIGURATION ==="
 STATUS="$(sudo tailscale serve status --json 2>/dev/null || true)"
