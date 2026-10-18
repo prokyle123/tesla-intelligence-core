@@ -268,7 +268,7 @@ function bars(container,rows,key){
 }
 function render(d){
  const local=d.local||{}, fleet=d.fleet||{}, hive=d.hive||{};
- renderRegions(fleet.regions||[],hive.region_code||null);
+ renderRegions(fleet.regions||[],hive.contribution==="OPTED_IN"?(hive.region_code||null):null);
  window.hiveMonths=Array.isArray(fleet.monthly)?fleet.monthly:[];
  vehicleBars($("vehicles-chart"),window.hiveMonths);
 
