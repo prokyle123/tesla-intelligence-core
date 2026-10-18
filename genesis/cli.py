@@ -26,10 +26,28 @@ def run_once(source_db: Path, research_db: Path, max_rows: int = 6000) -> dict:
         "production_changes": False, "hivemind_uploads": False,
     }
 
+def latest_discoveries(research_db: Path) -> dict:
+    """Metadata only: summarize accepted evidence from the latest research run."""
+    store = ResearchStore(research_db)
+    runs = store.recent_runs(1)
+    run = runs[0] if runs else None
+    return {
+        "module": "GHOST GENESIS", "research_mode": "LOCAL_SHADOW_ONLY",
+        "latest_run_id": run["id"] if run else None,
+        "evaluated": run["evaluated"] if run else 0,
+        "shadow_candidates": run["shadows"] if run else 0,
+        "rejected": (run["evaluated"] - run["shadows"]) if run else 0,
+        "findings": store.shadow_findings(100),
+        "interpretation": "Exploratory associations only; not independently validated discoveries.",
+        "production_changes": False,
+        "hivemind_uploads": False,
+    }
+
+
 def overview(research_db: Path) -> dict:
     store = ResearchStore(research_db)
     return {
-        "module": "GHOST GENESIS", "version": "0.1.0",
+        "module": "GHOST GENESIS", "version": "0.1.1",
         "research_mode": "LOCAL_SHADOW_ONLY", "network": network_status(),
         "runs": store.recent_runs(20), "findings": store.recent_findings(25),
         "production_changes": False,
@@ -43,6 +61,7 @@ def main(argv: list[str] | None = None) -> int:
     run = commands.add_parser("run-once", help="One explicit, read-only research cycle")
     run.add_argument("--max-rows", type=int, default=6000)
     commands.add_parser("status", help="Show research runs and privacy settings")
+    commands.add_parser("discoveries", help="Show only latest accepted local shadow candidates")
     commands.add_parser("hivemind-status", help="Inspect disabled-by-default fleet controls")
     demo = commands.add_parser("simulate-fleet", help="Run a synthetic offline global-model learning demo")
     demo.add_argument("--nodes", type=int, default=32)
@@ -53,6 +72,8 @@ def main(argv: list[str] | None = None) -> int:
             result = run_once(args.source_db, args.research_db, args.max_rows)
         elif args.command == "status":
             result = overview(args.research_db)
+        elif args.command == "discoveries":
+            result = latest_discoveries(args.research_db)
         elif args.command == "simulate-fleet":
             result = simulate_fleet(vehicles=args.nodes, rounds=args.rounds)
         else:

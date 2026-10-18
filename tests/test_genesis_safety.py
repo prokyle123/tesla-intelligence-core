@@ -102,6 +102,34 @@ class GenesisPrivacyAndDiscoveryTests(unittest.TestCase):
         for private in ("SECRET_LOCATION_DO_NOT_EXPOSE", "TEST_CAR", "raw_json", "vin"):
             self.assertNotIn(private.lower(), public.lower())
 
+    def test_discovery_reporting_prioritizes_shadows_without_losing_rejections(self):
+        from genesis.cli import latest_discoveries
+        original = discover(load_numeric_history(self.core))
+        self.assertTrue(any(x.status == "SHADOW" for x in original))
+        # Store 40 experiments with the rejected results at the end,
+        # reproducing the actual first-Pi-cycle reporting bug.
+        ordered = [x for x in original if x.status == "SHADOW"]
+        ordered += [x for x in original if x.status == "REJECTED"]
+        self.assertGreater(len(ordered), 25)
+        self.assertGreater(len(ordered) - len([x for x in ordered if x.status == "SHADOW"]), 25)
+        store = ResearchStore(self.research)
+        store.save(self.core, 6000, ordered)
+        report = overview(self.research)
+        self.assertTrue(report["findings"])
+        self.assertEqual(report["findings"][0]["status"], "SHADOW")
+        self.assertEqual(
+            sum(item["status"] == "SHADOW" for item in report["findings"]),
+            len([x for x in ordered if x.status == "SHADOW"]))
+        findings = latest_discoveries(self.research)
+        self.assertEqual(findings["evaluated"], len(ordered))
+        self.assertEqual(findings["shadow_candidates"], len(findings["findings"]))
+        self.assertTrue(all(x["status"] == "SHADOW" for x in findings["findings"]))
+        self.assertNotIn("car_id", json.dumps(findings))
+        # A later run must supersede the previous results rather than mixing them.
+        store.save(self.core, 0, [])
+        self.assertEqual(latest_discoveries(self.research)["findings"], [])
+        self.assertEqual(overview(self.research)["findings"], [])
+
     def test_store_refuses_core_database(self):
         with self.assertRaisesRegex(ValueError, "production"):
             ResearchStore(self.core).save(self.core, 0, [])

@@ -84,10 +84,26 @@ class ResearchStore:
             "SELECT id,created_at,source_rows,evaluated,shadows,status "
             "FROM runs ORDER BY id DESC LIMIT ?", limit)
 
+    # Report the latest completed run, not an arbitrary suffix of all history.
+    # A research run stores accepted candidates first, so a large batch of
+    # rejected experiments cannot hide the interesting SHADOW candidates.
+    _EXPERIMENT_COLS = (
+        "id,run_id,target,feature,status,evidence_rows,train_rows,test_rows,"
+        "ROUND(baseline_mae,4) AS baseline_mae,"
+        "ROUND(candidate_mae,4) AS candidate_mae,"
+        "ROUND(improvement_pct,2) AS improvement_pct,reason "
+    )
+
     def recent_findings(self, limit: int = 25) -> list[dict]:
         return self._read(
-            "SELECT id,run_id,target,feature,status,evidence_rows,train_rows,test_rows,"
-            "ROUND(baseline_mae,4) AS baseline_mae,"
-            "ROUND(candidate_mae,4) AS candidate_mae,"
-            "ROUND(improvement_pct,2) AS improvement_pct,reason "
-            "FROM experiments ORDER BY id DESC LIMIT ?", limit)
+            "SELECT " + self._EXPERIMENT_COLS +
+            "FROM experiments WHERE run_id = (SELECT MAX(id) FROM runs) "
+            "ORDER BY CASE status WHEN 'SHADOW' THEN 0 ELSE 1 END,"
+            "improvement_pct DESC, id ASC LIMIT ?", limit)
+
+    def shadow_findings(self, limit: int = 100) -> list[dict]:
+        return self._read(
+            "SELECT " + self._EXPERIMENT_COLS +
+            "FROM experiments WHERE run_id = (SELECT MAX(id) FROM runs) "
+            "AND status = 'SHADOW' "
+            "ORDER BY improvement_pct DESC, id ASC LIMIT ?", limit)
