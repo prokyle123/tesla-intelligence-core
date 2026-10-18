@@ -78,6 +78,46 @@ class HiveLocalIntegrationTests(unittest.TestCase):
         self.assertEqual(connected["local"]["predictions_scored"],3)
         self.assertFalse(connected["hive"]["real_transfer_enabled"])
 
+    def test_first_real_reporter_is_visible_without_public_region_disclosure(self):
+        hub={
+            "schema":"ghost-hive-public-v1",
+            "reporting_nodes":1,
+            "private_group_threshold":10,
+            "monthly":[{"month":"2026-10","status":"SMALL_GROUP_PRIVATE",
+                        "reporting_nodes":None,"predictions_checked":None,
+                        "mean_error_f":None}],
+            "regions":[],"countries":None,
+            "mean_error_f":None,"predictions_checked":None,
+        }
+        consent={"mode":"OPTED_IN","last_success_month":"2026-10",
+                 "last_success_at_utc":"2026-10-18T10:00:00Z",
+                 "hourly_enabled":True,"region_code":"NORTH_AMERICA_EAST"}
+        with patch("ghost_tesla_ai.hive_local._local_coordinator",return_value=hub), \
+             patch("ghost_tesla_ai.hive_local._private_consent",return_value=consent):
+            data=local_snapshot(self.db,now=self.now)
+        self.assertEqual(data["hive"]["contribution"],"OPTED_IN")
+        self.assertEqual(data["hive"]["region_code"],"NORTH_AMERICA_EAST")
+        self.assertEqual(data["fleet"]["participating_vehicles"],1)
+        self.assertTrue(data["fleet"]["coordinator_connected"])
+        self.assertEqual(data["fleet"]["regions"],[])
+        self.assertIsNone(data["fleet"]["countries"])
+        self.assertIsNone(data["fleet"]["monthly"][0]["reporting_nodes"])
+        self.assertIsNone(data["fleet"]["mean_error_f"])
+
+    def test_fleet_ui_displays_verified_overall_enrollment_but_never_synthesizes_monthly_counts(self):
+        html=(ROOT/"web/templates/hive.html").read_text()
+        for key in ('window.hiveReporting=Number.isInteger(fleet.participating_vehicles)',
+                    'overallOnly("No monthly cohort is large enough',
+                    'Overall enrollment · not a monthly count',
+                    'within the SAME UTC month',
+                    'Your selected broad region (private view)',
+                    'data-privacy-scope","OWNER_ONLY"',
+                    'Country and actual driving-location rankings are not collected'):
+            self.assertIn(key,html)
+        self.assertIn('r.status==="SHARED_GROUP"',html)
+        self.assertIn('r.reporting_nodes>=threshold',html)
+        self.assertNotIn('window.hiveReporting=Number(local.predictions_scored)',html)
+
     def test_local_records_are_real_outcomes_not_raw_sample_predictions(self):
         before=hashlib.sha256(self.db.read_bytes()).hexdigest()
         result=local_snapshot(self.db,now=self.now)
