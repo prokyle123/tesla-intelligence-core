@@ -19,6 +19,7 @@ FILES=(
     "ghost_tesla_ai/hive_local.py",
     "ghost_tesla_ai/funnel_gateway.py",
     "ghost_tesla_ai/hive_owner_proof.py",
+    "web/templates/hive.html",
 )
 OLD_GIT_BLOBS={
     "ghost_tesla_ai/hive_local.py":{
@@ -26,6 +27,8 @@ OLD_GIT_BLOBS={
     "ghost_tesla_ai/funnel_gateway.py":{
         "6ec6a77a26a2971c5ff5c402577101d2700b0ebb"},
     "ghost_tesla_ai/hive_owner_proof.py":set(),
+    "web/templates/hive.html":{
+        "36b19972e11eda8341fcc82146ce9f157a635bf1"},
 }
 NEW_FILE="ghost_tesla_ai/hive_owner_proof.py"
 
@@ -108,7 +111,8 @@ def apply(live:Path,source:Path,backup:Path, *, dry_run:bool):
                     uid=item["uid"],gid=item["gid"])
             installed.append(name)
         for name in FILES:
-            py_compile.compile(str(live/name),doraise=True)
+            if name.endswith(".py"):
+                py_compile.compile(str(live/name),doraise=True)
     except Exception:
         # Restore only source files this tool just modified.
         for name in reversed(installed):
