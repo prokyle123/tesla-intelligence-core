@@ -54,7 +54,10 @@ fi
 if ! printf '%s' "$STATUS" | "$PY" -c '
 import json,sys
 d=json.load(sys.stdin)
-assert isinstance(d,dict)
+if d is None:
+    sys.exit(0)  # Tailscale reports null before any Serve configuration.
+if not isinstance(d,dict):
+    sys.exit(1)
 if any(d.get(k) for k in ("TCP","Web","AllowFunnel","Foreground")):
     sys.exit(1)
 ';then
