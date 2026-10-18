@@ -50,7 +50,7 @@ def genesis_overview():
     # No database creation: all stores open in mode=ro or return [].
     data=overview(root/"research.sqlite3",data_dir=root)
     data["product_runs"]=ProductLedger(root/"product.sqlite3").read_recent(20)
-    data["product_version"]="0.4.0-preview"
+    data["product_version"]="0.6.0-preview"
     data["product_state"]="LOCAL_RESEARCH_ONLY"
     data["production_changes"]=False
     return _headers(jsonify(data))
@@ -115,7 +115,7 @@ def genesis_health():
     return _headers(jsonify({
         "ok":True,
         "component":"GENESIS workspace",
-        "version":"0.4.0-preview",
+        "version":"0.6.0-preview",
         "network":"LOCAL_ONLY",
         "data_available":(root/"product.sqlite3").is_file(),
         "research_only":True,
