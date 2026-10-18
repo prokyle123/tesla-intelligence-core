@@ -147,8 +147,8 @@ class HiveLocalIntegrationTests(unittest.TestCase):
         page=(ROOT/"web/templates/hive.html").read_text()
         self.assertNotIn('id="review-sharing"',page)
         self.assertNotIn('$("review-sharing")',page)
-        html_ids=set(re.findall(r'\\bid="([^"]+)"',page))
-        literal_lookups=set(re.findall(r'\\$\\("([^"]+)"\\)',page))
+        html_ids=set(re.findall(r'\bid="([^"]+)"',page))
+        literal_lookups=set(re.findall(r'\$\("([^"]+)"\)',page))
         missing=literal_lookups-html_ids
         self.assertEqual(missing,set(),f"Broken DOM references block dashboard refresh: {missing}")
         self.assertIn('fetch("/api/hive/local"',page)
@@ -165,7 +165,9 @@ class HiveLocalIntegrationTests(unittest.TestCase):
         self.assertNotIn('href=',src)
         self.assertNotIn("427"," ".join(src.split("hero-sats")[-1:]))
         self.assertIn("Fleet network not connected",src)
-        self.assertIn("Contribution locations are not collected.",src)
+        self.assertIn('id="hive-region-pins"',src)
+        self.assertIn('id="region-map-note"',src)
+        self.assertIn("Only opt-in broad regional summaries",src)
 
 if __name__=="__main__":
     unittest.main()
