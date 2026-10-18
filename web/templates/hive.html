@@ -145,6 +145,19 @@ function renderRegions(groups,localChoice=null){
  if(!list||!pins)return;
  list.replaceChildren();pins.replaceChildren();
  if(Object.prototype.hasOwnProperty.call(PRIVATE_REGION_CENTERS,localChoice)){
+  const owner=document.createElement("div");owner.className="region-result";
+  owner.setAttribute("data-privacy-scope","OWNER_ONLY");
+  const text=document.createElement("div");text.className="region-line";
+  const name=document.createElement("span");
+  name.textContent="Your selected broad region (private view)";
+  const value=document.createElement("strong");
+  value.textContent=PRIVATE_REGION_CENTERS[localChoice][2];
+  text.append(name,value);owner.append(text);
+  const caveat=document.createElement("small");caveat.className="subtle";
+  caveat.textContent="Your current regional sharing choice; not a verified public group or GPS location.";
+  owner.append(caveat);list.append(owner);
+ }
+ if(Object.prototype.hasOwnProperty.call(PRIVATE_REGION_CENTERS,localChoice)){
   const [x,y,label]=PRIVATE_REGION_CENTERS[localChoice];
   const halo=shape("circle",{cx:x,cy:y,r:19,class:"pin-halo"});
   const dot=shape("circle",{cx:x,cy:y,r:5,class:"pin-core"});
@@ -157,7 +170,7 @@ function renderRegions(groups,localChoice=null){
    typeof r.label==="string" && r.x>=0&&r.x<=760&&r.y>=0&&r.y<=330):[];
  if(!safe.length){
   const empty=document.createElement("div");empty.className="empty";
-  empty.textContent="No publishable regional groups yet. A dot appears only with 10 or more opted-in, reporting installations in a broad region.";
+  empty.textContent="No publishable regional groups yet. Regional rankings need 10+ opted-in reporters in the same region and UTC month. Country and actual driving-location rankings are not collected by Hive.";
   list.append(empty);
   $("region-map-note").textContent=Object.prototype.hasOwnProperty.call(PRIVATE_REGION_CENTERS,localChoice)?
    "Your selected broad region appears as a private dot. Public dots require at least 10 reporting installations.":
