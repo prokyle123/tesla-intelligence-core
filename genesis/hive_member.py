@@ -252,8 +252,11 @@ def revoke_remote(root:Path,*,confirm:bool=False)->dict:
                 raise ConsentError("Deletion not confirmed by coordinator")
     except (HTTPError,URLError) as exc:
         raise ConsentError("Locally disabled; remote deletion not confirmed") from exc
+    # Coordinator deleted the participant's optional regional opt-in too.
+    # Forget the local selection once deletion is confirmed, not before.
+    (Path(root).expanduser().absolute()/"regional-consent.json").unlink(missing_ok=True)
     return {"disabled_locally":True,"remote_deleted":True,
-            "note":"Stored contributor aggregates erased; backups may be retained under the server's retention policy."}
+            "note":"Stored contributor aggregates and regional consent erased; backups may be retained under the server's retention policy."}
 
 
 def main(argv=None)->int:
