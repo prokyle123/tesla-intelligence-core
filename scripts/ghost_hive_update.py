@@ -22,6 +22,17 @@ BASE_HASH_PREFIX={
     "ghost_tesla_ai/hive_local.py":("14f0fbee4285","61e13b57da06","be260bf1c765","995c7223a9e2"),
     "web/templates/hive.html":("a4aa5289c605","f427abbb67cb","964730ca8ed7","fa591e5a3221"),
 }
+# A prior deployed v1 UI had no SHA256 baseline registered. Its exact
+# Git blob identity is public and verified from commit 98f65fbc; unlike
+# prefix wildcards, this verifies *all* installed source bytes.
+REVIEWED_PRIOR_GIT_BLOBS={
+    "ghost_tesla_ai/hive_local.py":{"36573224ee008ce079ead3be7d67e12af38035f0"},
+    "web/templates/hive.html":{"c13ae37fac325d6290570cb70579f67eeef14a8f"},
+}
+
+def git_blob_sha(data:bytes)->str:
+    return hashlib.sha1(b"blob "+str(len(data)).encode()+b"\0"+data).hexdigest()
+
 
 
 def sha(data:bytes)->str:return hashlib.sha256(data).hexdigest()
@@ -56,7 +67,9 @@ def check(live:Path,source:Path,backup:Path):
         wanted=new.read_bytes()
         prefixes=BASE_HASH_PREFIX[name]
         if isinstance(prefixes,str): prefixes=(prefixes,)  # test fixture
-        if existing!=wanted and not any(sha(existing).startswith(prefix) for prefix in prefixes):
+        known_sha256=any(sha(existing).startswith(prefix) for prefix in prefixes)
+        known_git_blob=git_blob_sha(existing) in REVIEWED_PRIOR_GIT_BLOBS.get(name,set())
+        if existing!=wanted and not (known_sha256 or known_git_blob):
             raise ValueError("Existing Hive module was already edited: "+name)
         changes[name]=(existing,wanted)
     if all(before==after for before,after in changes.values()):
