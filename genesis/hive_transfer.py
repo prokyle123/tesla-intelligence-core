@@ -87,7 +87,12 @@ def configure(root: Path, *, endpoint: str, token_file: Path,
     document={"mode":"SYNTHETIC_TEST" if test_opt_in else "OFF",
               "endpoint":url,"token_file":str(key),"version":VERSION}
     file=_config_file(directory)
-    fd=os.open(file,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600) if not file.exists() else os.open(file,os.O_WRONLY|os.O_TRUNC,0o600)
+    if file.is_symlink() or (file.exists() and file.stat().st_mode & 0o077):
+        raise ValueError("Consent file must not be a symlink and must be private.")
+    flags=os.O_WRONLY|os.O_CREAT
+    flags|=os.O_TRUNC if file.exists() else os.O_EXCL
+    flags|=getattr(os,"O_NOFOLLOW",0)
+    fd=os.open(file,flags,0o600)
     with os.fdopen(fd,"w") as f:
         json.dump(document,f,sort_keys=True)
     return status(root)

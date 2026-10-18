@@ -77,8 +77,8 @@ def revoke(path: Path, token: str) -> bool:
     digest=hashlib.sha256(token.encode()).hexdigest()
     with closing(sqlite3.connect(path)) as con:
         con.execute("PRAGMA foreign_keys=ON")
-        row=con.execute("SELECT id FROM participants WHERE secret_hash=?",(digest,)).fetchone()
-        if not row:
+        row=con.execute("SELECT id,enabled FROM participants WHERE secret_hash=?",(digest,)).fetchone()
+        if not row or not row[1]:
             return False
         con.execute("DELETE FROM contributions WHERE participant=?",(row[0],))
         con.execute("UPDATE participants SET enabled=0 WHERE id=?",(row[0],))

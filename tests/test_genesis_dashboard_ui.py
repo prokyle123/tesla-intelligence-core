@@ -27,7 +27,7 @@ class Inspector(HTMLParser):
 class DashboardUITests(unittest.TestCase):
     def test_navigation_is_accessible_and_stays_inside_research(self):
         p=Inspector();p.feed(HTML.read_text())
-        self.assertEqual(p.tabs,["overview","models","investigations","history","system"])
+        self.assertEqual(p.tabs,["overview","models","investigations","history","hive","system"])
         self.assertEqual(p.tabs,p.panels)
         self.assertEqual(len(p.ids),len(set(p.ids)))
         self.assertEqual(p.scripts,1)
