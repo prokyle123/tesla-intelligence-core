@@ -17,9 +17,10 @@ import stat
 import tempfile
 
 FILES=("ghost_tesla_ai/hive_local.py","web/templates/hive.html")
+# Explicitly reviewed prior Hive module versions; unknown custom edits block.
 BASE_HASH_PREFIX={
-    "ghost_tesla_ai/hive_local.py":"be260bf1c765",
-    "web/templates/hive.html":"964730ca8ed7",
+    "ghost_tesla_ai/hive_local.py":("14f0fbee4285","61e13b57da06","be260bf1c765"),
+    "web/templates/hive.html":("a4aa5289c605","f427abbb67cb","964730ca8ed7"),
 }
 
 
@@ -53,7 +54,9 @@ def check(live:Path,source:Path,backup:Path):
             raise ValueError("Hive file not found or symlinked: "+name)
         existing=old.read_bytes()
         wanted=new.read_bytes()
-        if not sha(existing).startswith(BASE_HASH_PREFIX[name]):
+        prefixes=BASE_HASH_PREFIX[name]
+        if isinstance(prefixes,str): prefixes=(prefixes,)  # test fixture
+        if not any(sha(existing).startswith(prefix) for prefix in prefixes):
             raise ValueError("Existing Hive module was already edited: "+name)
         if existing==wanted:
             raise ValueError("Hive code already matches target, no update needed")
