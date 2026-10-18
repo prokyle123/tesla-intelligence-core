@@ -311,7 +311,7 @@ def _operator_permitted() -> bool:
     if _request.mimetype!="application/json" or _request.content_length is None or _request.content_length>1024:
         return False
     origin=_request.headers.get("Origin","")
-    if not origin or origin!=_request.host_url.rstrip("/"):
+    if not origin:
         return False
     # For this local developer preview, an authenticated SSH-forwarded
     # 127.0.0.1 connection is the owner authentication boundary. Never
@@ -322,6 +322,17 @@ def _operator_permitted() -> bool:
         and not any(h in _request.headers for h in
             ("Forwarded","X-Forwarded-For","X-Forwarded-Host","X-Real-IP"))):
         return True
+    # Independently signed gateway proof follows the PIN-authenticated
+    # HTTPS session over loopback. No user token is ever read by JavaScript.
+    # Request body, HTTPS Origin, action, timestamp and nonce are bound.
+    from .hive_owner_proof import verify as _verify_gateway_owner
+    if _verify_gateway_owner(
+        _request.method,_request.path,origin,_request.get_data(cache=True),
+        _request.headers,peer=_request.remote_addr or ""):
+        return True
+    # Legacy explicit owner key remains valid for same-origin clients only.
+    if origin!=_request.host_url.rstrip("/"):
+        return False
     key=_client_root()/"dashboard-admin.token"
     if not key.is_file() or key.is_symlink() or key.stat().st_mode & 0o077:
         return False
