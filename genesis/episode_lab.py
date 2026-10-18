@@ -144,6 +144,7 @@ def parked_thermal_research(source_db: Path, max_rows: int=100000) -> dict:
         "automatic_model_promotion":False,
         "production_changes":False,
         "network_uploads":False,
+        "prospective_validation":False,
     }
     if counts["unknown_heater_rows"]:
         output["caveats"].append("INCOMPLETE_HEATER_PRECONDITION_TELEMETRY")

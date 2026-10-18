@@ -74,7 +74,7 @@ class CompleteEpisodeResearchTests(unittest.TestCase):
         fixture(tiny,episodes=3)
         report=parked_thermal_research(tiny,max_rows=1000)
         self.assertEqual(report["status"],"INSUFFICIENT_EPISODE_EVIDENCE")
-        self.assertEqual(report["improvement_pct"],[])
+        self.assertEqual(report["gain_pct"],[])
         self.assertIsNone(report["cooling_fraction"])
 
     def test_fails_closed_for_multiple_vehicles(self):
