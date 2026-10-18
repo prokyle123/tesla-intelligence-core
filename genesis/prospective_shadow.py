@@ -130,7 +130,7 @@ def freeze_shadow(source_db: Path, state_db: Path,
             file.flush()
         with closing(sqlite3.connect(dest,timeout=5)) as con:
             con.executescript(SCHEMA)
-            con.execute("INSERT INTO frozen_shadow VALUES(1,?,?,?,?,?,?,?,?)",
+            con.execute("INSERT INTO frozen_shadow VALUES(1,?,?,?,?,?,?,?,?,?)",
                         (VERSION,wall,cutoff,_source_digest(source),MODEL,
                          _canonical(params),digest,full_report["status"],ntrain))
             con.commit()
@@ -249,9 +249,11 @@ def _new_completed_episodes(source_db: Path,cutoff: float,
             parked=ts is not None and regime=="PARKED_OR_OTHER" and not active
             gap=previous is not None and ts is not None and not 0<ts-previous<=MAX_GAP_S
             if gap:
-                if current or overflow: flush()
-                # A gap is an observational boundary; a fresh parked session
-                # may start here, but is only scored after it later closes.
+                if current or overflow:
+                    # Gap alone is NOT proof that parking ended. Drop the
+                    # interrupted session instead of scoring partial data.
+                    stats["discarded_gap_episodes"]=stats.get("discarded_gap_episodes",0)+1
+                    current=[];unknown=False;overflow=False
                 eligible_start=True
             if not parked:
                 if current or overflow: flush()
