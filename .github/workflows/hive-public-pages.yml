@@ -15,6 +15,9 @@ concurrency:
   cancel-in-progress: false
 jobs:
   publish:
+    # Initial GitHub Pages setup must be completed first. Prevent scheduled
+    # failures and accidental public publication until operator go-live.
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.HIVE_PUBLIC_FEED_URL != '' }}
     runs-on: ubuntu-latest
     environment:
       name: github-pages
