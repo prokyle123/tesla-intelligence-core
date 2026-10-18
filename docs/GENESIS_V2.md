@@ -138,3 +138,31 @@ python3 -m genesis.cli simulate-fleet --nodes 32 --rounds 30
 
 This is explicitly a **simulation**, NOT secure aggregation or differential
 privacy and not representative of real fleet accuracy.
+
+## M1 retrospective research audit (read only)
+
+The first live M0 run selected eight shadow pairs from 6,000 observations.
+The new `audit-candidates` command checks **those frozen candidate names**
+on up to 6,000 earlier, non-overlapping observations. It never writes research
+history or GHOST production state and never promotes models.
+
+Use the same local research database that contains the first run:
+
+~~~bash
+python3 -m genesis.cli \
+  --source-db /var/lib/ghost-tesla-ai/ghost_ai.sqlite3 \
+  --research-db /tmp/genesis-first-research.i4UGDw/research.sqlite3 \
+  audit-candidates --max-rows 12000 --recent-window 6000
+~~~
+
+The output lists bounded walk-forward fold errors, first-difference controls,
+and availability of driving/charging/parked regime evidence. Any warning is
+designed to keep an apparent relationship in research rather than production.
+
+**Important:** This is historical repeatability, not independent future
+confirmation. The first discovery was selected from the newest 6,000
+observations; replaying older records cannot prove causal interpretation or
+guarantee performance on future trips. Later M1 must freeze the experiment,
+wait for genuinely new observations, and audit model drift without selecting
+the outcome beforehand. The audit uses no personal timestamps, coordinates,
+vehicle identifiers or raw sensor streams in its output.

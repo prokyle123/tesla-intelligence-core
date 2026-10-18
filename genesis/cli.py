@@ -11,6 +11,7 @@ from .fleet_simulator import simulate_fleet
 from .research import discover
 from .source import SourceUnavailable, load_numeric_history
 from .store import ResearchStore
+from .validation import retrospective_audit
 
 def run_once(source_db: Path, research_db: Path, max_rows: int = 6000) -> dict:
     source_db = Path(source_db).expanduser().resolve()
@@ -53,6 +54,23 @@ def overview(research_db: Path) -> dict:
         "production_changes": False,
     }
 
+def audit_candidates(source_db: Path, research_db: Path,
+                     max_rows: int = 12000, recent_window: int = 6000) -> dict:
+    """Read-only retrospective check on previously selected shadow pairs."""
+    if max_rows <= recent_window or max_rows > 12000:
+        raise ValueError("Audit must include older records and remain within the 12,000-row cap.")
+    found = ResearchStore(research_db).shadow_findings(40)
+    if not found:
+        return {
+            "status":"NO_CANDIDATES", "results":[],
+            "production_changes":False, "hivemind_uploads":False,
+            "note":"An existing GENESIS research run with shadow findings is required.",
+        }
+    rows = load_numeric_history(source_db, limit=max_rows)
+    pairs = [(f["feature"],f["target"]) for f in found]
+    return retrospective_audit(rows,pairs,recent_window)
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="Experimental offline GHOST GENESIS lab")
     p.add_argument("--source-db", type=Path, default=config.source_db())
@@ -62,6 +80,9 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--max-rows", type=int, default=6000)
     commands.add_parser("status", help="Show research runs and privacy settings")
     commands.add_parser("discoveries", help="Show only latest accepted local shadow candidates")
+    audit = commands.add_parser("audit-candidates", help="Read-only retrospective evidence analysis")
+    audit.add_argument("--max-rows", type=int, default=12000)
+    audit.add_argument("--recent-window", type=int, default=6000)
     commands.add_parser("hivemind-status", help="Inspect disabled-by-default fleet controls")
     demo = commands.add_parser("simulate-fleet", help="Run a synthetic offline global-model learning demo")
     demo.add_argument("--nodes", type=int, default=32)
@@ -74,6 +95,8 @@ def main(argv: list[str] | None = None) -> int:
             result = overview(args.research_db)
         elif args.command == "discoveries":
             result = latest_discoveries(args.research_db)
+        elif args.command == "audit-candidates":
+            result = audit_candidates(args.source_db,args.research_db,args.max_rows,args.recent_window)
         elif args.command == "simulate-fleet":
             result = simulate_fleet(vehicles=args.nodes, rounds=args.rounds)
         else:
