@@ -81,7 +81,7 @@ try:
     with urllib.request.urlopen("http://127.0.0.1:8767/api/genesis/health",timeout=2) as r:
         response=json.load(r)
     assert response.get("ok") is True
-    assert response.get("version") == "0.6.0-preview"
+    assert response.get("version") == "0.7.0-preview"
     assert response.get("research_only") is True
     assert response.get("production_changes") is False
 except Exception:
@@ -104,7 +104,7 @@ fi
 echo "[5/5] Confirming real research diagnostic endpoints..."
 "$PY" - <<'PY'
 import json, urllib.request
-for endpoint in ("prediction-quality","thermal-context","paired-baseline","prospective-watch"):
+for endpoint in ("prediction-quality","thermal-context","paired-baseline","prospective-watch","challenger"):
     url="http://127.0.0.1:8767/api/genesis/"+endpoint
     with urllib.request.urlopen(url,timeout=30) as response:
         doc=json.load(response)
@@ -121,7 +121,7 @@ for endpoint in ("prediction-quality","thermal-context","paired-baseline","prosp
 PY
 
 echo
-echo "GENESIS v0.6 RESEARCH PREVIEW UPGRADE PASS"
+echo "GENESIS v0.7 RESEARCH PREVIEW UPGRADE PASS"
 echo "Viewer PID: $NEW_PID"
 echo "Local URL: http://127.0.0.1:8767/genesis"
 echo "Existing product history preserved in: $STATE"
