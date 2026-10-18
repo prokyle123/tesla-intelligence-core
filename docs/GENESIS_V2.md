@@ -308,3 +308,37 @@ Both mission commands are local and read-only. They do not write to the
 production database, alter GHOST models, schedule research, control Tesla
 hardware, upload to Hivemind, or claim causality. Private derived output
 must not be treated as publishable fleet evidence.
+
+
+## Full-history complete-episode thermal research (M2)
+
+The first real 60-minute parked thermal experiment had 38 training
+episodes but only one and four qualifying later-era episodes. It was
+correctly labeled insufficient evidence, not an inaccurate model.
+
+The new command reads up to 100,000 recent existing numeric telemetry
+records from read-only SQLite, streaming parked episodes rather than
+taking artificial disjoint row windows:
+
+    python3 -m genesis.cli --source-db /var/lib/ghost-tesla-ai/ghost_ai.sqlite3 mission-thermal-full --max-scan 100000
+
+The maximum supported scan is 120,000 observations. Each episode holds
+at most 4,800 observations; oversized episodes are excluded rather than
+cut into artificial independent episodes. Inferred parking ends when
+activity changes, an active pack-heater or precondition signal appears,
+the timestamp goes backwards or the telemetry gap exceeds 15 minutes.
+Hourly prediction targets must belong to the same contiguous episode.
+
+Complete episodes split chronologically: first 60% for training, next
+20% for validation, last 20% for another historical holdout. The bounded
+one-parameter ambient relaxation model competes with pack-temperature
+persistence. Outputs include episode counts, data gaps, missing heater
+state, fitted coefficient and validation/holdout MAE in degrees Celsius.
+If there are too few complete sessions the command does not invent gains.
+
+Only numeric allowlisted fields and internal ordering timestamps are read,
+not VIN, raw JSON, GPS or car ID. No output includes raw observations.
+The command cannot control the vehicle, contact a network, alter Classic
+GHOST, store research artifacts or auto-promote models. Episodes are
+inferred, not verified actual parking sessions. A historical result is
+not post-freeze, genuinely new observation validation.
