@@ -35,8 +35,13 @@ def summary(db:Path, *,now:datetime|None=None)->dict:
         num=con.execute("""SELECT COUNT(DISTINCT m.participant)
             FROM monthly_research m JOIN participants p
             ON m.participant=p.id WHERE p.enabled=1""").fetchone()[0] or 0
-        rows=con.execute("""SELECT m.month,COUNT(DISTINCT m.participant),
-                        SUM(m.scored_predictions),SUM(m.total_abs_error_c)
+        participant_columns={r[1] for r in con.execute("PRAGMA table_info(participants)")}
+        opted=("p.public_monthly=1" if "public_monthly" in participant_columns else "0=1")
+        rows=con.execute(f"""SELECT m.month,COUNT(DISTINCT m.participant),
+                        SUM(m.scored_predictions),SUM(m.total_abs_error_c),
+                        SUM(CASE WHEN {opted} THEN 1 ELSE 0 END),
+                        SUM(CASE WHEN {opted} THEN m.scored_predictions ELSE 0 END),
+                        SUM(CASE WHEN {opted} THEN m.total_abs_error_c ELSE 0 END)
             FROM monthly_research m JOIN participants p
             ON m.participant=p.id WHERE p.enabled=1
             AND m.month>=? AND m.month<=?
@@ -46,16 +51,29 @@ def summary(db:Path, *,now:datetime|None=None)->dict:
     timeline=[]
     for month in months:
         r=saved.get(month)
-        publish=bool(r and r[1]>=K)
+        qualified=bool(r and r[1]>=K and r[2]>0)
+        voluntarily_public=bool(r and r[4]>=1 and r[5]>0)
+        if qualified:
+            status="SHARED_GROUP"
+            n,scored,total=int(r[1]),int(r[2]),float(r[3])
+        elif voluntarily_public:
+            # Under the old 10-member rule, include ONLY individually reconsented
+            # member(s). Never mix in nonconsenting small-group reports.
+            status="EXPLICIT_PUBLIC_OPT_IN"
+            n,scored,total=int(r[4]),int(r[5]),float(r[6])
+        else:
+            status="SMALL_GROUP_PRIVATE"
+            n=scored=total=None
         timeline.append({
             "month":month,
             "label":datetime.strptime(month,"%Y-%m").strftime("%b %Y"),
-            "status":"SHARED_GROUP" if publish else "SMALL_GROUP_PRIVATE",
-            "reporting_nodes":int(r[1]) if publish else None,
-            "predictions_checked":int(r[2]) if publish else None,
-            "mean_error_f":round(1.8*r[3]/r[2],2) if publish and r[2] else None,
+            "status":status,
+            "reporting_nodes":n,
+            "predictions_checked":scored,
+            "mean_error_f":round(1.8*total/scored,2) if scored else None,
         })
-    latest=next((r for r in reversed(timeline) if r["status"]=="SHARED_GROUP"),None)
+    latest=next((r for r in reversed(timeline)
+                 if r["status"] in ("SHARED_GROUP","EXPLICIT_PUBLIC_OPT_IN")),None)
     return {
         "schema":"ghost-hive-public-v1",
         "published_at_utc":current.strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -70,7 +88,7 @@ def summary(db:Path, *,now:datetime|None=None)->dict:
         "regions":approved_regions,"countries":None,
         "private_group_threshold":K,
         "model_weights_shared":False,
-        "privacy_note":"Member totals count reporting enrollments, not verified humans. Monthly model averages require at least 10 reporting enrollments in the same UTC month. An explicitly opted-in installation may publish its own broad-region marker at one; other small groups remain hidden. No exact location or routes are collected.",
+        "privacy_note":"Member totals count reporting enrollments, not verified humans. Monthly model averages appear from one reporter only after a separate explicit public-small-cohort permission; otherwise the original ten-reporter rule applies. Region markers likewise require explicit singleton listing or a qualified group. Nonconsenting members are excluded from any small public cohorts. No exact location or routes are collected.",
         "federated_models_enabled":False,
     }
 
