@@ -342,3 +342,42 @@ The command cannot control the vehicle, contact a network, alter Classic
 GHOST, store research artifacts or auto-promote models. Episodes are
 inferred, not verified actual parking sessions. A historical result is
 not post-freeze, genuinely new observation validation.
+
+
+## M2 thermal model tournament (after real episode-scan failure)
+
+The first complete-episode thermal forecast inspected 88,219 records,
+found 2,111 candidate parked episodes and identified 310 usable complete
+episodes. In three chronological sets of 186/62/62 episodes
+(778/198/233 one-hour anchor pairs), the original one-parameter cooling
+model (fraction 0.13002) performed **worse than persistence** on both
+later evaluation periods: 1.0058 vs 0.7503 C MAE (34.07% worse), and
+0.7688 vs 0.5577 C MAE (37.84% worse). This challenger was correctly
+rejected. Missing heater/preconditioning telemetry affected 18,645
+parked observations.
+
+The new thermal-tournament command runs five predetermined model families:
+persistence, ambient relaxation, one-hour drift, affine thermal, and
+asymmetric cooling/warming response. Training uses the first 60% of
+complete episodes. The following 20% is used exclusively for model
+selection, favoring simpler near-best candidates. The final 20% is
+scored once AFTER selection, with episode-balanced MAE. A historical
+winner requires at least 10% improvement in validation AND historical
+holdout, over half the holdout episodes improved, plus a positive
+fixed-seed episode bootstrap 80% lower interval for the MAE benefit.
+Otherwise the existing persistence baseline is retained. Even an
+accepted research challenger remains in shadow; no automatic promotion.
+
+Heater-state observability is tracked at the eligible episode level.
+If a model passes historical accuracy checks but any eligible session
+has unknown heater/preconditioning state, the result explicitly warns
+that heater evidence was unverified. It never becomes production-ready.
+
+Local command in an isolated checkout:
+
+    python3 -m genesis.cli --source-db /var/lib/ghost-tesla-ai/ghost_ai.sqlite3 thermal-tournament --max-scan 100000
+
+No new Tessie polling, SQLite writes, network access, vehicle controls,
+production model integration or autonomous timer. These same historical
+records have already been analyzed; the nominal final holdout is NOT
+genuinely new prospective validation, nor evidence of causality.
