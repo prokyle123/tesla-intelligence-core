@@ -61,6 +61,59 @@ class HiveBroadRegionTests(unittest.TestCase):
         self.assertEqual(bad_size.status_code,413)
         self.assertEqual(check(self.snapshot())["regions"],[])
 
+    def test_one_expressly_public_member_gets_region_dot_without_leaking_others(self):
+        self.publish(self.member_token)
+        self.assertEqual(self.pick(self.member_token).status_code,202)
+        self.assertEqual(check(self.snapshot())["regions"],[])
+        other=enroll(self.db)
+        self.publish(other)
+        self.assertEqual(self.pick(other).status_code,202)
+        # Legacy region consent is NOT new public-singleton consent.
+        self.assertEqual(check(self.snapshot())["regions"],[])
+        req={"schema":"ghost-hive-region-public-v1",
+             "acknowledge_single_reporter_public":True}
+        reject=self.submit(self.member_token,path="/v1/region-publication",
+            method="PUT",data={"schema":"ghost-hive-region-public-v1"})
+        self.assertEqual(reject.status_code,400)
+        yes=self.submit(self.member_token,path="/v1/region-publication",
+            method="PUT",data=req)
+        self.assertEqual(yes.status_code,202)
+        public=check(self.snapshot())
+        self.assertEqual(public["reporting_nodes"],2)
+        self.assertEqual(public["regions"],[{"code":"NORTH_AMERICA_EAST",
+            "label":"Eastern North America","x":180,"y":110,
+            "reporting_nodes":1,"visibility":"EXPLICIT_PUBLIC_OPT_IN"}])
+        # Existing nonpublic reporter in the same group cannot be inferred
+        # from the published region count.
+        self.assertNotIn("2",str(public["regions"][0]["reporting_nodes"]))
+        hide=self.submit(self.member_token,path="/v1/region-publication",method="DELETE")
+        self.assertEqual(hide.status_code,200)
+        self.assertEqual(check(self.snapshot())["regions"],[])
+        self.assertEqual(self.submit(self.member_token,path="/v1/region-publication",
+            method="PUT",data=req).status_code,202)
+        # Changing region resets public visibility until separately reapproved.
+        self.assertEqual(self.pick(self.member_token,code="EUROPE").status_code,202)
+        self.assertEqual(check(self.snapshot())["regions"],[])
+
+    def test_upgrading_old_coordinator_defaults_all_existing_regions_to_private(self):
+        import sqlite3
+        from contextlib import closing
+        from genesis.hive_server import initialize
+        self.publish(self.member_token)
+        self.assertEqual(self.pick(self.member_token).status_code,202)
+        with closing(sqlite3.connect(self.db)) as con:
+            con.execute("ALTER TABLE region_consents RENAME TO prior_regions")
+            con.execute("CREATE TABLE region_consents(participant INTEGER PRIMARY KEY, region_code TEXT NOT NULL, enabled INTEGER NOT NULL DEFAULT 1, changed_at INTEGER NOT NULL)")
+            con.execute("INSERT INTO region_consents SELECT participant,region_code,enabled,changed_at FROM prior_regions")
+            con.execute("DROP TABLE prior_regions")
+            con.commit()
+        initialize(self.db)
+        with closing(sqlite3.connect(self.db)) as con:
+            cols={x[1] for x in con.execute("PRAGMA table_info(region_consents)")}
+            self.assertIn("public_listing",cols)
+            self.assertEqual(con.execute("SELECT public_listing FROM region_consents").fetchone()[0],0)
+        self.assertEqual(check(self.snapshot())["regions"],[])
+
     def test_ten_consented_members_publish_only_approved_centroid(self):
         self.publish(self.member_token)
         self.assertEqual(self.pick(self.member_token).status_code,202)
