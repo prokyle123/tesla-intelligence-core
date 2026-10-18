@@ -11,6 +11,8 @@ from flask import Blueprint, current_app, jsonify, make_response, render_templat
 from . import config
 from .cli import overview
 from .product_core import ProductLedger
+from .vehicle_snapshot import snapshot
+from .hive_transfer import status as hive_client_status
 
 blueprint = Blueprint("ghost_genesis", __name__, template_folder="web")
 
@@ -43,10 +45,24 @@ def genesis_overview():
     # No database creation: all stores open in mode=ro or return [].
     data=overview(root/"research.sqlite3",data_dir=root)
     data["product_runs"]=ProductLedger(root/"product.sqlite3").read_recent(20)
-    data["product_version"]="0.3.0-preview"
+    data["product_version"]="0.4.0-preview"
     data["product_state"]="LOCAL_RESEARCH_ONLY"
     data["production_changes"]=False
     return _headers(jsonify(data))
+
+
+@blueprint.get("/api/genesis/vehicle")
+def genesis_vehicle():
+    # Explicitly local only. This route is never registered by the Hive
+    # coordinator, which receives only allowlisted aggregates.
+    source=current_app.config.get("GENESIS_SOURCE_DB") or str(config.source_db())
+    return _headers(jsonify(snapshot(Path(source))))
+
+
+@blueprint.get("/api/genesis/hive")
+def genesis_hive_client():
+    root=_private_data_dir()
+    return _headers(jsonify(hive_client_status(root/"hive-client")))
 
 
 @blueprint.get("/api/genesis/health")
@@ -55,7 +71,7 @@ def genesis_health():
     return _headers(jsonify({
         "ok":True,
         "component":"GENESIS workspace",
-        "version":"0.3.0-preview",
+        "version":"0.4.0-preview",
         "network":"LOCAL_ONLY",
         "data_available":(root/"product.sqlite3").is_file(),
         "research_only":True,
