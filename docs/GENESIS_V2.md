@@ -264,3 +264,47 @@ Next planned features: episode-based grouping, well-calibrated baselines,
 independent future outcomes after hypothesis freeze, drift/uncertainty,
 signed candidate artifacts, safe competition against baseline production
 models, and manual approval before any production promotion.
+
+
+## M2 real follow-up missions: conflict forensics and parked +60m forecast
+
+The initial five-era Architect run evaluated 11 preapproved recipes and
+automatically selected the sensor-context conflict investigation. Three
+recipes passed their retrospective historical challenge, eight failed.
+
+The next **vetted** follow-up can be executed with the already saved
+private Architect ledger in the temporary reviewed checkout:
+
+    python3 -m genesis.cli --source-db /var/lib/ghost-tesla-ai/ghost_ai.sqlite3 --architect-db /home/ghost/genesis-lab/architect.sqlite3 mission-next --rows-per-block 2400
+
+Only a preapproved mission type can be run; no saved mission string is
+used as executable code, a dynamic import, or a network destination.
+The RESOLVE_SENSOR_CONTEXT handler aggregates conflicting speed and
+charger-power observations by historical era, by power-signal type, by
+run-length bucket and by neighboring inferred state. A signal overlap
+does NOT prove simultaneous physical charging and driving. Charger fields
+may have stale samples, different semantics, or unsynchronized reporting.
+All outputs are counts and qualitative next questions; no individual
+records, addresses, IDs, coordinates or precise timestamps appear.
+
+The next direct forecast experiment is:
+
+    python3 -m genesis.cli --source-db /var/lib/ghost-tesla-ai/ghost_ai.sqlite3 mission-thermal --rows-per-block 2400
+
+This model takes current parked pack temperature and ambient temperature
+and predicts pack temperature about one hour later. It first builds
+observed parked episodes. Driving/charging observations, active indicated
+pack heating and gaps greater than 15 minutes split episodes. Targets
+must be within 10 minutes of the 60-minute horizon and within the same
+episode. Training uses three chronological historical eras; the model
+is challenged on two later eras and compared against a pack-temperature
+persistence forecast. Minimum episode and anchor counts apply. A
+nonlinear future ambient/weather curve is NOT supplied; this is a basic
+one-hour relaxation model. Preconditioning and heater telemetry can be
+incomplete. A historically repeatable trial remains experimental rather
+than prospective confirmation.
+
+Both mission commands are local and read-only. They do not write to the
+production database, alter GHOST models, schedule research, control Tesla
+hardware, upload to Hivemind, or claim causality. Private derived output
+must not be treated as publishable fleet evidence.
