@@ -24,6 +24,7 @@ from flask import Flask,request,jsonify,abort,render_template
 from .hive_analytics import cohort_dashboard,synthetic_demo
 from .hive_monthly import validate_aggregate, AggregateError, MAX_BODY as REAL_MAX_BODY
 from .hive_public import summary as public_summary
+from .hive_peer_comparison import compare as compare_member
 from .hive_models import validate_model_manifest, ModelMetadataError
 from .hive_regions import validate_region_payload, RegionError, REGIONS
 
@@ -386,6 +387,12 @@ def create_app(path: Path) -> Flask:
             con.commit()
         return jsonify({"accepted":True,"status":"QUARANTINED_METADATA_ONLY",
                         "weights_uploaded":False,"production_promotion":False}),202
+
+    @app.get("/v1/member-comparison")
+    def member_comparison():
+        # Bearer-authenticated private response, never part of public-network.
+        member=authenticate()
+        return jsonify(compare_member(db,member))
 
     @app.get("/v1/public-network")
     def public_network():
