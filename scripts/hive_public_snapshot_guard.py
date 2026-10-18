@@ -10,6 +10,18 @@ FIELDS={"schema","published_at_utc","source","network_status","reporting_nodes",
 "monthly","regions","countries","private_group_threshold","model_weights_shared",
 "privacy_note","federated_models_enabled"}
 ROW={"month","label","status","reporting_nodes","predictions_checked","mean_error_f"}
+# Fixed approximate geographic macros; never accept free-form location coordinates.
+PUBLIC_REGION_CENTERS={
+    "NORTH_AMERICA_WEST":("Western North America",128,111),
+    "NORTH_AMERICA_EAST":("Eastern North America",180,110),
+    "SOUTH_AMERICA":("South America",166,235),
+    "EUROPE":("Europe",371,99),
+    "AFRICA":("Africa",397,189),
+    "ASIA":("Asia",520,118),
+    "OCEANIA":("Oceania",653,260),
+}
+REGION_ROW={"code","label","x","y","reporting_nodes"}
+
 
 def check(d):
     def integer(x,low=0):
@@ -26,8 +38,27 @@ def check(d):
         raise ValueError("Unknown network state")
     for key in ("verified_unique_people","model_weights_shared","federated_models_enabled"):
         if d[key] is not False:raise ValueError("Incorrect verified or federated claim")
-    if d["fleet_accuracy_percent"] is not None or d["regions"]!=[] or d["countries"] is not None:
-        raise ValueError("Unapproved accuracy or geographic claims")
+    if d["fleet_accuracy_percent"] is not None or d["countries"] is not None:
+        raise ValueError("Unapproved fleet accuracy or country claims")
+    groups=d["regions"]
+    if not isinstance(groups,list) or len(groups)>len(PUBLIC_REGION_CENTERS):
+        raise ValueError("Invalid public region list")
+    seen_regions=set()
+    for region in groups:
+        if not isinstance(region,dict) or set(region)!=REGION_ROW:
+            raise ValueError("Unexpected regional data fields")
+        code=region["code"]
+        if not isinstance(code,str) or code not in PUBLIC_REGION_CENTERS or code in seen_regions:
+            raise ValueError("Unrecognized/duplicate broad region")
+        seen_regions.add(code)
+        label,x,y=PUBLIC_REGION_CENTERS[code]
+        if region["label"]!=label or type(region["x"]) is not int or type(region["y"]) is not int or (region["x"],region["y"])!=(x,y):
+            raise ValueError("Region coordinates must be privacy-reviewed fixed macro centroids")
+        integer(region["reporting_nodes"],10)
+        if region["reporting_nodes"]>d["reporting_nodes"]:
+            raise ValueError("Region count exceeds total reporting installations")
+    if groups!=sorted(groups,key=lambda r:(-r["reporting_nodes"],r["code"])):
+        raise ValueError("Regions must be deterministically ranked")
     if not isinstance(d["privacy_note"],str) or not 1<=len(d["privacy_note"])<=600:
         raise ValueError("Invalid privacy disclosure")
     if d["published_at_utc"] is not None:
