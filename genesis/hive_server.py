@@ -23,6 +23,7 @@ import time
 from flask import Flask,request,jsonify,abort,render_template
 from .hive_analytics import cohort_dashboard,synthetic_demo
 from .hive_monthly import validate_aggregate, AggregateError, MAX_BODY as REAL_MAX_BODY
+from .hive_public import summary as public_summary
 
 from werkzeug.serving import make_server
 from .hive_protocol import validate,ProtocolError,MIN_COHORT,MAX_BODY,METRIC
@@ -220,40 +221,7 @@ def create_app(path: Path) -> Flask:
 
     @app.get("/v1/public-network")
     def public_network():
-        # No authentication required. Avoid small-cohort prediction accuracy:
-        # network membership count may start at one, whereas shared
-        # outcome quality stays hidden until >=10 enrolled reporting nodes.
-        with closing(sqlite3.connect(db,timeout=2)) as con:
-            row=con.execute("""SELECT COUNT(DISTINCT m.participant) nodes
-              FROM monthly_research m JOIN participants p
-                ON m.participant=p.id WHERE p.enabled=1""").fetchone()
-            members=int(row[0] or 0)
-            qualified=con.execute("""SELECT month,
-                COUNT(DISTINCT participant),SUM(scored_predictions),
-                SUM(total_abs_error_c)
-              FROM monthly_research
-              WHERE participant IN (SELECT id FROM participants WHERE enabled=1)
-              GROUP BY month ORDER BY month DESC LIMIT 12""").fetchall()
-        months=[]
-        for month, n, scores, err in reversed(qualified):
-            permitted=n>=10
-            months.append({
-              "month":month,"reporting_nodes":n if permitted else None,
-              "predictions_checked":int(scores) if permitted else None,
-              "mean_error_f":round(1.8*float(err)/scores,2) if permitted and scores else None,
-              "status":"SHARED_GROUP" if permitted else "SMALL_GROUP_PRIVATE"})
-        latest=next((m for m in reversed(months) if m["status"]=="SHARED_GROUP"),None)
-        return jsonify({
-          "schema":"ghost-hive-public-v1","source":"SELF_REPORTED_PRIVATE_COORDINATOR",
-          "reporting_nodes":members,"verified_unique_people":False,
-          "fleet_accuracy_percent":None,
-          "predictions_checked":latest["predictions_checked"] if latest else None,
-          "mean_error_f":latest["mean_error_f"] if latest else None,
-          "regions":[],"countries":None,"monthly":months,
-          "private_group_threshold":10,
-          "privacy_note":"Monthly errors withheld for fewer than ten participating installations. Reporting nodes are not verified unique people or proven independent forecasts.",
-          "real_transfer_supported":True,"model_weights_shared":False,
-        })
+        return jsonify(public_summary(db))
 
     @app.get("/v1/cohorts/<period>")
     def cohort(period):
