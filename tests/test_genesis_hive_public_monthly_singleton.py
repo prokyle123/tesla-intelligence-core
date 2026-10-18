@@ -37,7 +37,7 @@ class PublicFirstMonthlyTests(unittest.TestCase):
         return check(summary(self.db,now=datetime(2026,10,18,21,tzinfo=timezone.utc)))
 
     def test_one_member_is_visible_only_after_distinct_public_monthly_consent(self):
-        self.send(self.first,2,3.)
+        self.send(self.first,25,30.)
         self.assertEqual(self.feed()["reporting_nodes"],1)
         self.assertIsNone(self.feed()["predictions_checked"])
         self.assertEqual(self.feed()["monthly"][-1]["status"],"SMALL_GROUP_PRIVATE")
@@ -49,8 +49,8 @@ class PublicFirstMonthlyTests(unittest.TestCase):
                   "acknowledge_public_from_one":True})
         self.assertEqual(yes.status_code,202)
         public=self.feed()
-        self.assertEqual(public["predictions_checked"],2)
-        self.assertAlmostEqual(public["mean_error_f"],2.7)
+        self.assertEqual(public["predictions_checked"],25)
+        self.assertAlmostEqual(public["mean_error_f"],2.16)
         self.assertEqual(public["monthly"][-1]["status"],"EXPLICIT_PUBLIC_OPT_IN")
         self.assertEqual(public["monthly"][-1]["reporting_nodes"],1)
         hidden=self.request(self.first,"/v1/monthly-publication","DELETE")
@@ -59,7 +59,7 @@ class PublicFirstMonthlyTests(unittest.TestCase):
 
     def test_nonconsenting_peer_cannot_leak_into_one_public_members_metrics(self):
         second=enroll(self.db)
-        self.send(self.first,1,1)
+        self.send(self.first,25,25)
         self.send(second,50,999.)
         consent={"schema":"ghost-hive-monthly-public-v1",
                  "acknowledge_public_from_one":True}
@@ -67,11 +67,11 @@ class PublicFirstMonthlyTests(unittest.TestCase):
         published=self.feed()
         self.assertEqual(published["reporting_nodes"],2)
         self.assertEqual(published["monthly"][-1]["reporting_nodes"],1)
-        self.assertEqual(published["predictions_checked"],1)
+        self.assertEqual(published["predictions_checked"],25)
         self.assertEqual(published["mean_error_f"],1.8)
 
     def test_old_db_migrates_privately_by_default(self):
-        self.send(self.first,1,1.)
+        self.send(self.first,25,25.)
         with closing(sqlite3.connect(self.db)) as con:
             con.execute("ALTER TABLE participants RENAME TO previous_members")
             con.execute("""CREATE TABLE participants(
