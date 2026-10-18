@@ -22,6 +22,8 @@ import time
 
 from flask import Flask,request,jsonify,abort,render_template
 from .hive_analytics import cohort_dashboard,synthetic_demo
+from .hive_monthly import validate_aggregate, AggregateError, MAX_BODY as REAL_MAX_BODY
+
 from werkzeug.serving import make_server
 from .hive_protocol import validate,ProtocolError,MIN_COHORT,MAX_BODY,METRIC
 
@@ -36,6 +38,13 @@ CREATE TABLE IF NOT EXISTS contributions (
   received_at INTEGER NOT NULL,
   PRIMARY KEY(participant, period, metric, origin),
   FOREIGN KEY(participant) REFERENCES participants(id)
+);
+CREATE TABLE IF NOT EXISTS monthly_research(
+ participant INTEGER NOT NULL, month TEXT NOT NULL,
+ scored_predictions INTEGER NOT NULL, total_abs_error_c REAL NOT NULL,
+ received_at INTEGER NOT NULL,
+ PRIMARY KEY(participant,month),
+ FOREIGN KEY(participant) REFERENCES participants(id)
 );
 """
 
@@ -82,6 +91,7 @@ def revoke(path: Path, token: str) -> bool:
         if not row or not row[1]:
             return False
         con.execute("DELETE FROM contributions WHERE participant=?",(row[0],))
+        con.execute("DELETE FROM monthly_research WHERE participant=?",(row[0],))
         con.execute("UPDATE participants SET enabled=0 WHERE id=?",(row[0],))
         con.commit()
     return True
@@ -177,6 +187,73 @@ def create_app(path: Path) -> Flask:
         return jsonify({"accepted":True,"stored":"AGGREGATE_ONLY",
                         "origin":metric["origin"],
                         "publishable":False}),202
+
+    @app.post("/v1/monthly-research")
+    def monthly_research():
+        participant=authenticate()
+        if request.mimetype!="application/json":
+            abort(415)
+        # A real submission is accepted only after the client has presented
+        # informed local consent, and the server has validated all fields.
+        # The coordinator cannot independently prove data provenance.
+        if (request.content_length is not None
+                and request.content_length>REAL_MAX_BODY):
+            abort(413)
+        try:
+            sample=validate_aggregate(request.get_json(silent=True))
+        except AggregateError:
+            return jsonify({"error":"INVALID_MONTHLY_AGGREGATE"}),400
+        with closing(sqlite3.connect(db,timeout=4)) as con:
+            con.execute("PRAGMA foreign_keys=ON")
+            con.execute("""INSERT INTO monthly_research(
+                participant,month,scored_predictions,total_abs_error_c,received_at)
+                VALUES(?,?,?,?,?)
+                ON CONFLICT(participant,month) DO UPDATE SET
+                  scored_predictions=excluded.scored_predictions,
+                  total_abs_error_c=excluded.total_abs_error_c,
+                  received_at=excluded.received_at
+            """,(participant,sample["month"],sample["scored_predictions"],
+                 sample["total_abs_error_c"],int(time.time())))
+            con.commit()
+        return jsonify({"accepted":True,"mode":"SELF_REPORTED_COARSE_AGGREGATE",
+                        "scope":"ONE_UTC_MONTH","no_model_promotion":True}),202
+
+    @app.get("/v1/public-network")
+    def public_network():
+        # No authentication required. Avoid small-cohort prediction accuracy:
+        # network membership count may start at one, whereas shared
+        # outcome quality stays hidden until >=10 enrolled reporting nodes.
+        with closing(sqlite3.connect(db,timeout=2)) as con:
+            row=con.execute("""SELECT COUNT(DISTINCT m.participant) nodes
+              FROM monthly_research m JOIN participants p
+                ON m.participant=p.id WHERE p.enabled=1""").fetchone()
+            members=int(row[0] or 0)
+            qualified=con.execute("""SELECT month,
+                COUNT(DISTINCT participant),SUM(scored_predictions),
+                SUM(total_abs_error_c)
+              FROM monthly_research
+              WHERE participant IN (SELECT id FROM participants WHERE enabled=1)
+              GROUP BY month ORDER BY month DESC LIMIT 12""").fetchall()
+        months=[]
+        for month, n, scores, err in reversed(qualified):
+            permitted=n>=10
+            months.append({
+              "month":month,"reporting_nodes":n if permitted else None,
+              "predictions_checked":int(scores) if permitted else None,
+              "mean_error_f":round(1.8*float(err)/scores,2) if permitted and scores else None,
+              "status":"SHARED_GROUP" if permitted else "SMALL_GROUP_PRIVATE"})
+        latest=next((m for m in reversed(months) if m["status"]=="SHARED_GROUP"),None)
+        return jsonify({
+          "schema":"ghost-hive-public-v1","source":"SELF_REPORTED_PRIVATE_COORDINATOR",
+          "reporting_nodes":members,"verified_unique_people":False,
+          "fleet_accuracy_percent":None,
+          "predictions_checked":latest["predictions_checked"] if latest else None,
+          "mean_error_f":latest["mean_error_f"] if latest else None,
+          "regions":[],"countries":None,"monthly":months,
+          "private_group_threshold":10,
+          "privacy_note":"Monthly errors withheld for fewer than ten participating installations. Reporting nodes are not verified unique people or proven independent forecasts.",
+          "real_transfer_supported":True,"model_weights_shared":False,
+        })
 
     @app.get("/v1/cohorts/<period>")
     def cohort(period):
