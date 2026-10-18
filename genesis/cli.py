@@ -56,6 +56,7 @@ def overview(research_db: Path) -> dict:
         "module": "GHOST GENESIS", "version": "0.1.1",
         "research_mode": "LOCAL_SHADOW_ONLY", "network": network_status(),
         "runs": store.recent_runs(20), "findings": store.recent_findings(25),
+        "architect": ArchitectLedger(config.data_dir() / "architect.sqlite3").latest(),
         "production_changes": False,
     }
 

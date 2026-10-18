@@ -30,7 +30,7 @@ footer{margin-top:26px;color:var(--muted);font-size:12px}@media(max-width:760px)
 <div class="panel"><div class="name">Shadow candidates</div><div class="value" id="shadows">—</div><div class="meta">Not production</div></div>
 <div class="panel"><div class="name">Fleet network</div><div class="value" style="color:#6cbfa7">OFF</div><div class="meta">No outgoing traffic</div></div>
 </section>
-<section class="two"><div class="panel"><h2>Research Lab · Highest-scoring candidates first</h2><div id="findings" class="empty">No local experiments recorded yet.</div></div>
+<section class="two"><div><div class="panel" style="margin-bottom:16px"><h2>Hypothesis Architect · Research mission</h2><div id="architect" class="empty">No Architect cycles recorded yet. Experiments run manually and remain isolated.</div></div><div class="panel"><h2>Research Lab · Highest-scoring candidates first</h2><div id="findings" class="empty">No local experiments recorded yet.</div></div>
 <div><div class="panel"><h2>Evolution Timeline</h2><div id="timeline" class="track"></div><p class="meta" id="timeline-note">Each bar represents one research cycle, not production accuracy.</p></div>
 <div class="panel" style="margin-top:16px"><h2>Hivemind Control Center</h2>
 <div class="item"><strong>Private models</strong><div class="meta">Remain on this installation</div></div>
@@ -51,6 +51,18 @@ el("runs").textContent=runs.length;
 el("tested").textContent=runs.reduce((n,x)=>n+Number(x.evaluated||0),0);
 el("shadows").textContent=runs.reduce((n,x)=>n+Number(x.shadows||0),0);
 el("mode").textContent="Hivemind: "+String(d.network?.mode||"off")+" · disconnected";
+const ar=d.architect||{}, last=ar.run, trials=ar.trials||[];
+el("architect").replaceChildren();
+if(last){
+el("architect").className="";
+el("architect").append(make("div",String(last.selected_next_mission?.title||"Awaiting mission"),"item"));
+el("architect").append(make("div",String(last.selected_next_mission?.reason||"No evidence summary"),"meta"));
+el("architect").append(make("div","Investigate: "+String(last.selected_next_mission?.next_experiment||"Manual review needed"),"item"));
+el("architect").append(make("div","Experiments "+String(last.total_trials)+" · Shadow associations "+String(last.shadow_trials)+" · Challenged "+String(last.failed_trials)+" · Awaiting evidence "+String(last.waiting_trials),"meta"));
+for(const t of trials.slice(0,5)){el("architect").append(make("div",String(t.status)+" · "+String(t.regime)+" · "+String(t.feature)+" → "+String(t.target),"meta"));}
+}else{
+el("architect").append(make("div","No Architect cycles recorded yet. This experimental system never starts itself.","empty"));
+}
 el("privacy").textContent=String(d.network?.reason||"No network transport");
 el("findings").className="";el("findings").replaceChildren();
 if(!findings.length)el("findings").append(make("div","No experiments yet. Run a local research cycle through the Genesis CLI.","empty"));

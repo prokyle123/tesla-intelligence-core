@@ -29,6 +29,7 @@ class GenesisWebTests(unittest.TestCase):
                 data = api.get_json()
                 self.assertEqual(data["runs"], [])
                 self.assertEqual(data["findings"], [])
+                self.assertEqual(data["architect"], {"run": None, "trials": []})
                 self.assertFalse(data["production_changes"])
                 self.assertFalse(data["network"]["outbound_uploads"])
                 self.assertEqual(data["network"]["mode"], "contribute")
