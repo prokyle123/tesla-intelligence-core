@@ -119,10 +119,10 @@ class HiveConsentApiTests(unittest.TestCase):
         self.operations.clear()
         denied=self.client.post("/api/hive/control/join",json=req,
             headers={"Origin":local},base_url=local,
-            environ_overrides={"REMOTE_ADDR":"100.95.3.2"})
+            environ_overrides={"REMOTE_ADDR":"192.0.2.24"})
         self.assertEqual(denied.status_code,403)
         spoofed=self.client.post("/api/hive/control/join",json=req,
-            headers={"Origin":local,"X-Forwarded-For":"100.95.3.2"},
+            headers={"Origin":local,"X-Forwarded-For":"192.0.2.24"},
             base_url=local,environ_overrides={"REMOTE_ADDR":"127.0.0.1"})
         self.assertEqual(spoofed.status_code,403)
         self.assertEqual(self.operations,[])
