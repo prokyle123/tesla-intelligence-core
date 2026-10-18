@@ -78,7 +78,7 @@ class ResearchStore:
             con.row_factory = sqlite3.Row
             con.execute("PRAGMA query_only=ON")
             return [dict(x) for x in con.execute(query, (max(1, min(limit, 100)),))]
-            
+
     def recent_runs(self, limit: int = 20) -> list[dict]:
         return self._read(
             "SELECT id,created_at,source_rows,evaluated,shadows,status "
