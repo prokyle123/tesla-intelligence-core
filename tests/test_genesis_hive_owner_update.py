@@ -43,6 +43,13 @@ class GatewayOwnerReleaseTests(unittest.TestCase):
         self.allow={k:({mod.blob(v)} if v is not None else set())
                     for k,v in self.old.items()}
 
+    def test_previous_approved_fleet_map_is_exact_allowlisted_version(self):
+        # Reviewed Git blob from installed v1.4 map/dashboard commit 133c93e;
+        # unknown live changes continue to block all production upgrades.
+        approved=mod.OLD_GIT_BLOBS["web/templates/hive.html"]
+        self.assertIn("a7d458777775607f2db464791a4c1476ed986cd3",approved)
+        self.assertNotIn(mod.blob(b"UNREVIEWED LOCAL MAP EDIT"),approved)
+
     def test_preflight_is_read_only_upgrade_and_rollback(self):
         with patch.dict(mod.OLD_GIT_BLOBS,self.allow,clear=True):
             mod.apply(self.live,self.source,self.backup,dry_run=True)
