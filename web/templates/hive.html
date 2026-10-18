@@ -117,7 +117,14 @@ body{background:radial-gradient(ellipse at 52% -20%,#14344952,transparent 58%),#
 <small>This is a separate new permission. The public map shows only your chosen world region's generic marker and its explicitly public contributor count; never GPS, actual drives or identity. Your previous region choice is NOT automatically made public.</small>
 <button class="action secondary" id="hive-region-publish" type="button">Publish my broad region</button>
 <button class="action secondary" id="hive-region-hide" type="button">Hide my public region</button>
-<small id="hive-public-region-status" aria-live="polite">Not publicly listed</small></div><p class="note" id="hive-access-note">Manage sharing from your PIN-protected HTTPS GHOST address. No SSH tunnel is needed after owner HTTPS setup.</p>
+<small id="hive-public-region-status" aria-live="polite">Not publicly listed</small>
+<div class="consent-divide"></div>
+<label class="consent-check"><input id="hive-monthly-singleton-ack" type="checkbox" />
+<span>Publish my monthly battery-temperature forecast error statistics publicly, starting with my one installation</span></label>
+<small>New, separate permission: public viewers can see the UTC month, number of scored forecasts and combined temperature error from my installation even when it is the only reporter. No exact trips or VIN. Other contributors' nonpublic data stays hidden.</small>
+<button class="action secondary" id="hive-monthly-publish" type="button">Publish my monthly research</button>
+<button class="action secondary" id="hive-monthly-hide" type="button">Hide my public monthly research</button>
+<small id="hive-monthly-public-status" aria-live="polite">Monthly data remains under the original group publication rules.</small></div><p class="note" id="hive-access-note">Manage sharing from your PIN-protected HTTPS GHOST address. No SSH tunnel is needed after owner HTTPS setup.</p>
 <button class="action" id="hive-join" type="button">Yes, contribute automatically every hour</button>
 <button class="action secondary" id="hive-disable" type="button">Turn off contribution</button>
 <div class="consent-divide"></div>
@@ -334,6 +341,9 @@ function render(d){
  $("hive-public-region-status").textContent=hive.public_listing===true?
      "Public broad-region display ENABLED; any contributor can view this world-region marker.":
      "Not publicly listed; owner-only regional choice.";
+ $("hive-monthly-public-status").textContent=hive.public_monthly===true?
+   "Public monthly aggregate reporting ENABLED (starting at one reporter).":
+   "Single-reporter public monthly reporting is OFF.";
  $("fleet-vehicles").textContent=number(fleet.participating_vehicles);
  $("local-predictions").textContent=number(local.predictions_scored);
  $("local-accuracy").textContent=local.within_2f_percent===null?"—":fixed(local.within_2f_percent)+"%";
@@ -391,7 +401,7 @@ async function control(action,payload){
 }
 async function perform(action,payload){
  consentMessage("Updating your preference…");
- for(const id of ["hive-join","hive-disable","hive-revoke","hive-region-update","hive-region-clear","hive-region-publish","hive-region-hide"])$(id).disabled=true;
+ for(const id of ["hive-join","hive-disable","hive-revoke","hive-region-update","hive-region-clear","hive-region-publish","hive-region-hide","hive-monthly-publish","hive-monthly-hide"])$(id).disabled=true;
  try{
    const result=await control(action,payload);
    if(action==="join" && !(result.mode==="OPTED_IN" && result.automatic_uploads===true))
@@ -408,6 +418,8 @@ async function perform(action,payload){
       "region-clear":"Your shared region was removed.",
       "region-publish":"Your saved broad region is now explicitly approved for public display even if you are the first contributor.",
       "region-hide":"Public display removed; your private region choice is retained.",
+      "monthly-publish":"Your monthly research can now appear publicly starting with one reporter (after the next sanitized feed refresh).",
+      "monthly-hide":"Public small-cohort monthly reporting disabled. Existing ten-member qualified cohorts follow their original rules.",
       revoke:"Remote deletion confirmed and enrollment revoked."
    };
    consentMessage(messages[action]+(result.region_update?.regional_sharing==="NOT_CONFIRMED"?
@@ -417,7 +429,7 @@ async function perform(action,payload){
    if(action==="revoke")$("hive-delete-confirm").value="";
    await refresh();
  }catch(error){consentMessage("Change not completed: "+error.message);}
- finally{for(const id of ["hive-join","hive-disable","hive-revoke","hive-region-update","hive-region-clear","hive-region-publish","hive-region-hide"])$(id).disabled=false;}
+ finally{for(const id of ["hive-join","hive-disable","hive-revoke","hive-region-update","hive-region-clear","hive-region-publish","hive-region-hide","hive-monthly-publish","hive-monthly-hide"])$(id).disabled=false;}
 }
 $("hive-region-optin").addEventListener("change",()=>{
  $("hive-region-choice").disabled=!$("hive-region-optin").checked;
@@ -438,6 +450,14 @@ $("hive-region-publish").addEventListener("click",()=>{
   perform("region-publish",{acknowledge_public_singleton:true});
 });
 $("hive-region-hide").addEventListener("click",()=>perform("region-hide",{}));
+$("hive-monthly-publish").addEventListener("click",()=>{
+  if(!$("hive-monthly-singleton-ack").checked){
+    consentMessage("Confirm the separate public small-cohort monthly research permission first.");
+    return;
+  }
+  perform("monthly-publish",{acknowledge_public_monthly_from_one:true});
+});
+$("hive-monthly-hide").addEventListener("click",()=>perform("monthly-hide",{}));
 $("hive-join").addEventListener("click",()=>{
  const code=$("hive-region-optin").checked?$("hive-region-choice").value:null;
  if($("hive-region-optin").checked&&!code){
