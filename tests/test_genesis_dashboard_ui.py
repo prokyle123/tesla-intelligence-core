@@ -72,6 +72,15 @@ class DashboardUITests(unittest.TestCase):
         self.assertIn('require operator review',html.lower())
         self.assertNotIn('fetch("/api/genesis/execute',html)
 
+    def test_prospective_watch_requires_operator_action_not_dashboard_mutation(self):
+        html=HTML.read_text()
+        for field in ("prospective-status","prospective-overview","prospective-models"):
+            self.assertIn('id="'+field+'"',html)
+        self.assertIn('fetch("/api/genesis/prospective-watch"',html)
+        self.assertIn('truth-watch-freeze',html)
+        self.assertIn('if(tab==="investigations"',html)
+        self.assertNotIn('fetch("/api/genesis/prospective-freeze"',html)
+
     def test_no_vehicle_actions_or_raw_sample_exposure(self):
         html=HTML.read_text()
         self.assertIn("/api/genesis/overview",html)
