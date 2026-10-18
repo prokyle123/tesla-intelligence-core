@@ -19,8 +19,8 @@ import tempfile
 FILES=("ghost_tesla_ai/hive_local.py","web/templates/hive.html")
 # Explicitly reviewed prior Hive module versions; unknown custom edits block.
 BASE_HASH_PREFIX={
-    "ghost_tesla_ai/hive_local.py":("14f0fbee4285","61e13b57da06","be260bf1c765"),
-    "web/templates/hive.html":("a4aa5289c605","f427abbb67cb","964730ca8ed7"),
+    "ghost_tesla_ai/hive_local.py":("14f0fbee4285","61e13b57da06","be260bf1c765","995c7223a9e2"),
+    "web/templates/hive.html":("a4aa5289c605","f427abbb67cb","964730ca8ed7","fa591e5a3221"),
 }
 
 

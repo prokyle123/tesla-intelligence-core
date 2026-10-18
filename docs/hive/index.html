@@ -186,7 +186,7 @@ function render(d){
  const months=Array.isArray(d.monthly)?d.monthly:[];
  window.hiveMonths=months;
  vehicleBars($("vehicles-chart"),window.hiveMonths);
- 
+
  const latest=months.map(x=>({label:x.label||x.month||"",
    within_2f_percent:null,
    temp_mae_f:x.status==="SHARED_GROUP"?x.mean_error_f:null}));

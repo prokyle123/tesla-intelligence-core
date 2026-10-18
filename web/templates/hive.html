@@ -207,7 +207,7 @@ function render(d){
  const local=d.local||{}, fleet=d.fleet||{}, hive=d.hive||{};
  window.hiveMonths=Array.isArray(fleet.monthly)?fleet.monthly:[];
  vehicleBars($("vehicles-chart"),window.hiveMonths);
- 
+
  $("fleet-vehicles").textContent=number(fleet.participating_vehicles);
  $("local-predictions").textContent=number(local.predictions_scored);
  $("local-accuracy").textContent=local.within_2f_percent===null?"—":fixed(local.within_2f_percent)+"%";
