@@ -59,7 +59,7 @@ body{background:radial-gradient(ellipse at 52% -20%,#14344952,transparent 58%),#
 @media(max-width:800px){.grid-mid,.grid-bottom{grid-template-columns:1fr}.grid-mid .map-card,.grid-bottom .privacy-card{grid-column:auto}.globe-photo{top:-30%;height:170%}.hero-sats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:490px){.hero-copy{max-width:92%}.globe-visual{opacity:.34;width:90%;right:-36%}.hero-sats{grid-template-columns:repeat(2,minmax(0,1fr))}.top-actions{width:100%}.status{flex:1;min-width:0}.periods button{padding:5px}}
 
-/* Overlay only data-backed, threshold-qualified macro-region dots. */
+/* Overlay only data-backed, voluntarily public or cohort-qualified macro-region dots. */
 .hive-region-pins{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
 .hive-region-pins .pin-halo{fill:#10bfe4;opacity:.13;filter:blur(4px)}
 .hive-region-pins .pin-core{fill:#48f5ff;stroke:#7befff;stroke-width:1;filter:drop-shadow(0 0 4px #04d5ff)}
@@ -201,7 +201,7 @@ function renderRegions(groups,localChoice=null){
    const fill=document.createElement("span");fill.style.width=String(100*r.reporting_nodes/max)+"%";
    bar.append(fill);item.append(text,bar);list.append(item);
  });
- $("region-map-note").textContent="Cyan lights show consenting broad-region cohorts (10+); locations are approximate category centers, not vehicle positions.";
+ $("region-map-note").textContent="Cyan lights show explicitly public-listed broad regions starting at one, or qualified cohorts; generic region centers, not vehicle positions.";
 }
 
 let vehicleWindow="6m";
