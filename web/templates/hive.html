@@ -130,11 +130,27 @@ const fixed=(n,p=1)=>typeof n==="number"&&Number.isFinite(n)?n.toFixed(p):"—";
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const ns="http://www.w3.org/2000/svg";
 const shape=(tag,a,text)=>{const e=document.createElementNS(ns,tag);for(const [k,v] of Object.entries(a))e.setAttribute(k,String(v));if(text!==undefined)e.textContent=String(text);return e;};
-function renderRegions(groups){
+const PRIVATE_REGION_CENTERS={
+ "NORTH_AMERICA_WEST":[128,111,"Western North America"],
+ "NORTH_AMERICA_EAST":[180,110,"Eastern North America"],
+ "SOUTH_AMERICA":[166,235,"South America"],
+ "EUROPE":[371,99,"Europe"],
+ "AFRICA":[397,189,"Africa"],
+ "ASIA":[520,118,"Asia"],
+ "OCEANIA":[653,260,"Oceania"]
+};
+function renderRegions(groups,localChoice=null){
  const list=$("regions-list");
  const pins=$("hive-region-pins");
  if(!list||!pins)return;
  list.replaceChildren();pins.replaceChildren();
+ if(Object.prototype.hasOwnProperty.call(PRIVATE_REGION_CENTERS,localChoice)){
+  const [x,y,label]=PRIVATE_REGION_CENTERS[localChoice];
+  const halo=shape("circle",{cx:x,cy:y,r:19,class:"pin-halo"});
+  const dot=shape("circle",{cx:x,cy:y,r:5,class:"pin-core"});
+  dot.append(shape("title",{},"Your optional broad region: "+label+" (private preview; not a public contributor hotspot)"));
+  pins.append(halo,dot);
+ }
  const safe=Array.isArray(groups)?groups.filter(r=>
    typeof r==="object" && r!==null && Number.isInteger(r.reporting_nodes) &&
    r.reporting_nodes>=10 && Number.isInteger(r.x)&&Number.isInteger(r.y) &&
@@ -143,7 +159,9 @@ function renderRegions(groups){
   const empty=document.createElement("div");empty.className="empty";
   empty.textContent="No publishable regional groups yet. A dot appears only with 10 or more opted-in, reporting installations in a broad region.";
   list.append(empty);
-  $("region-map-note").textContent="No qualified region dots yet. Never exact vehicle positions.";
+  $("region-map-note").textContent=Object.prototype.hasOwnProperty.call(PRIVATE_REGION_CENTERS,localChoice)?
+   "Your selected broad region appears as a private dot. Public dots require at least 10 reporting installations.":
+   "No qualified regional groups yet. Choose a broad region voluntarily; no GPS or location inference.";
   return;
  }
  const max=Math.max(...safe.map(r=>r.reporting_nodes));
@@ -250,7 +268,7 @@ function bars(container,rows,key){
 }
 function render(d){
  const local=d.local||{}, fleet=d.fleet||{}, hive=d.hive||{};
- renderRegions(fleet.regions||[]);
+ renderRegions(fleet.regions||[],hive.region_code||null);
  window.hiveMonths=Array.isArray(fleet.monthly)?fleet.monthly:[];
  vehicleBars($("vehicles-chart"),window.hiveMonths);
 
