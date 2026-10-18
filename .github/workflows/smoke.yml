@@ -35,6 +35,7 @@ jobs:
           bash -n install.sh
           bash -n update.sh
           bash -n uninstall.sh
+          bash -n scripts/genesis_stage_preview.sh
 
       - name: Verify public installer repository
         run: |
