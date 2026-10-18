@@ -226,6 +226,7 @@ def local_snapshot(path:Path|None=None, *, now:float|None=None)->dict:
     result["hive"]["contribution"]=consent["mode"]
     result["hive"]["last_success_month"]=consent["last_success_month"]
     result["hive"]["hourly_enabled"]=consent.get("hourly_enabled",False)
+    result["hive"]["real_transfer_enabled"]=consent.get("hourly_enabled",False)
     hub=_local_coordinator()
     if hub is not None:
         result["fleet"]["available"]=True
@@ -296,6 +297,17 @@ def _operator_permitted() -> bool:
     provided=_request.headers.get("X-Ghost-Hive-Owner","")
     return bool(40<=len(provided)<=256 and len(expected)>=40 and
                 _hmac.compare_digest(provided,expected))
+
+
+def _hourly_service_ready() -> bool:
+    # The UI must not promise hourly delivery if no timer is active.
+    try:
+        proc=_subprocess.run(
+            ["systemctl","is-active","--quiet","ghost-hive-hourly.timer"],
+            timeout=3,capture_output=True,check=False)
+        return proc.returncode==0
+    except (OSError,_subprocess.SubprocessError):
+        return False
 
 
 def _run_hive_action(action:str,*,month:str|None=None) -> dict:
@@ -371,6 +383,8 @@ def hive_control(action:str):
             return jsonify({"error":"INFORMED_CONSENT_REQUIRED"}),400
         if action=="join" and payload.get("allow_hourly_aggregates") is not True:
             return jsonify({"error":"HOURLY_TRANSFER_CONSENT_REQUIRED"}),400
+        if action=="join" and not _hourly_service_ready():
+            return jsonify({"error":"HOURLY_TRANSFER_TIMER_NOT_RUNNING"}),503
         if action=="send":
             if payload.get("confirm_this_exact_report") is not True:
                 return jsonify({"error":"EXPLICIT_SEND_CONFIRMATION_REQUIRED"}),400
