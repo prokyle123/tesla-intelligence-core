@@ -52,10 +52,10 @@
 </div>
 <dialog class="full-screen-modal" id="sharing-dialog" aria-labelledby="sharing-title">
 <h3 id="sharing-title">Review Hive participation</h3>
-<p>Hive sharing is currently <strong>OFF</strong> in this integration preview. Your existing driving and prediction data stays local.</p>
+<p>Hive sharing is <strong>OFF by default</strong>. Participation requires a separate, explicit monthly-summary consent command on your own installation. Your driving records stay local.</p>
 <p>Future participation will require a separate informed opt-in, authenticated encrypted transfer, explicit review of approved aggregate fields, and a way to revoke consent.</p>
 <ul><li>No raw GPS trails, VIN, or trip histories in the proposed shared analytics.</li><li>Optional coarse region would require separate consent.</li><li>Contributions cannot honestly be called fully anonymous until the privacy design is verified.</li></ul>
-<p>There is no enable button yet because real-data transfer has not completed its security and consent testing.</p>
+<p>The transfer tool can submit only coarse monthly forecast-error summaries to an enrolled coordinator. No raw trips, GPS, VIN or model weights are included. The coordinator can associate summaries with your enrollment, so this is not fully anonymous. Contact your administrator to enroll, and review the preview before manually sending.</p>
 <button class="action" id="close-dialog" type="button">Close</button>
 </dialog>
 <script>
@@ -102,14 +102,17 @@ function render(d){
  $("fleet-regions").textContent=number(fleet.countries);
  $("accuracy-value").textContent=local.within_2f_percent===null?"—":fixed(local.within_2f_percent)+"%";
  $("local-error").textContent=local.temp_mae_f===null?"—":fixed(local.temp_mae_f,2)+"°F";
- $("hive-error").textContent="—";
+ $("hive-error").textContent=fleet.mean_error_f===undefined||fleet.mean_error_f===null?"—":fixed(fleet.mean_error_f,2)+"°F";
  $("local-total").textContent=number(local.predictions_scored);
  $("local-pending").textContent=number(local.pending_predictions);
  const activity=d.contribution_activity||[];$("local-week").textContent=number(activity.reduce((a,r)=>a+(r.local_predictions_scored||0),0));
- $("consent-text").textContent=hive.contribution==="OFF"?"Inactive":"Review required";
- $("consent-sub").textContent="Sharing off · Your data stays local";
- $("network-status").textContent="Fleet network not connected";
- $("network-dot").style.background="#e8b86b";
+ $("consent-text").textContent=hive.contribution==="OPTED_IN"?"Opted in":"Inactive";
+ $("consent-sub").textContent=hive.contribution==="OPTED_IN"?
+   (hive.last_success_month?"Last accepted report: "+hive.last_success_month:"No monthly reports sent yet"):
+   "Sharing off · Your data stays local";
+ $("network-status").textContent=fleet.coordinator_connected?
+   "Hive coordinator reachable":"Fleet network not connected";
+ $("network-dot").style.background=fleet.coordinator_connected?"#18df9b":"#e8b86b";
  $("updated").textContent="Local data checked "+new Date().toLocaleTimeString();
  lineGraph($("accuracy-chart"),d.monthly||[],"within_2f_percent",{suffix:"%",maxValue:100});
  lineGraph($("thermal-chart"),d.monthly||[],"temp_mae_f",{suffix:"°F"});

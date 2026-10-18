@@ -12,6 +12,9 @@ from __future__ import annotations
 from contextlib import closing
 from datetime import datetime, timezone
 import math
+import json
+import os
+import urllib.request
 from pathlib import Path
 import sqlite3
 import time
@@ -55,6 +58,40 @@ def _num(v,places=1):
     except (ValueError,TypeError,OverflowError):
         return None
     return round(value,places) if math.isfinite(value) else None
+
+
+def _private_consent():
+    result={"mode":"OFF","last_success_month":None}
+    try:
+        root=Path(os.environ.get(
+            "GHOST_HIVE_CLIENT_STATE_DIR",
+            str(Path.home()/"genesis-product/state/hive-client"))).expanduser()
+        policy=root/"real-consent.json"
+        if policy.is_file() and not policy.is_symlink() and not policy.stat().st_mode & 0o077:
+            data=json.loads(policy.read_text())
+            if data.get("policy")=="MONTHLY_BATTERY_TEMP_ERROR_V1":
+                result["mode"]="OPTED_IN" if data.get("mode")=="OPTED_IN" else "OFF"
+        receipt=root/"last-receipt.json"
+        if receipt.is_file() and not receipt.is_symlink() and not receipt.stat().st_mode & 0o077:
+            data=json.loads(receipt.read_text())
+            result["last_success_month"]=data.get("month")
+    except (OSError,ValueError,TypeError,json.JSONDecodeError):
+        pass
+    return result
+
+
+def _local_coordinator():
+    # Only loopback to the independent Hive process; no remote network calls
+    # or Tesla polling in the Home web request path.
+    try:
+        with urllib.request.urlopen(
+            "http://127.0.0.1:8778/v1/public-network",timeout=.6) as response:
+            r=json.load(response)
+        if r.get("schema")!="ghost-hive-public-v1":
+            return None
+        return r
+    except (OSError,ValueError,TypeError,json.JSONDecodeError):
+        return None
 
 
 def _empty():
@@ -182,6 +219,21 @@ def local_snapshot(path:Path|None=None, *, now:float|None=None)->dict:
             ]
     except (sqlite3.Error,FileNotFoundError,ValueError,OverflowError):
         result["error"]="LOCAL_RESEARCH_DATABASE_UNAVAILABLE"
+    # Aggregate transport status never depends on the private telemetry
+    # table. It is read only after the existing local evidence snapshot.
+    consent=_private_consent()
+    result["hive"]["contribution"]=consent["mode"]
+    result["hive"]["last_success_month"]=consent["last_success_month"]
+    hub=_local_coordinator()
+    if hub is not None:
+        result["fleet"]["available"]=True
+        result["fleet"]["coordinator_connected"]=True
+        result["fleet"]["participating_vehicles"]=hub.get("reporting_nodes")
+        result["fleet"]["predictions_checked"]=hub.get("predictions_checked")
+        result["fleet"]["mean_error_f"]=hub.get("mean_error_f")
+        result["fleet"]["monthly"]=hub.get("monthly",[])
+    else:
+        result["fleet"]["coordinator_connected"]=False
     return result
 
 
