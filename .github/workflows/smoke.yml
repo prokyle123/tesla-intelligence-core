@@ -113,6 +113,26 @@ jobs:
           Path("/tmp/ghost-hive-integrated.js").write_text(p.data[0])
           PY
           node --check /tmp/ghost-hive-integrated.js
+          python3 - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          class Inline(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.on=False
+                  self.data=[]
+              def handle_starttag(self,tag,attrs):
+                  if tag=='script': self.on=True
+              def handle_endtag(self,tag):
+                  if tag=='script': self.on=False
+              def handle_data(self,text):
+                  if self.on:self.data.append(text)
+          p=Inline()
+          p.feed(Path('docs/hive/index.html').read_text())
+          assert len(p.data)==1
+          Path('/tmp/ghost-hive-public.js').write_text(p.data[0])
+          PY
+          node --check /tmp/ghost-hive-public.js
 
       - name: Check committed diff whitespace
         run: git diff --check HEAD~1 HEAD
