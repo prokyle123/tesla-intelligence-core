@@ -110,7 +110,14 @@ body{background:radial-gradient(ellipse at 52% -20%,#14344952,transparent 58%),#
 <div><b>What stays private</b><small>No VIN, GPS, exact trip times, addresses, route history, raw telemetry, or trained model weights. Hive can associate a summary with this enrolled installation: the data is pseudonymous, not fully anonymous.</small></div>
 <div><b>Always your choice</b><small>Off by default. Turn it off at any time to stop future updates; request deletion separately. The coordinator stores one replaceable report per installation per month.</small></div>
 </div>
-<div class="consent-region"><label class="consent-check"><input id="hive-region-optin" type="checkbox" /><span>Optional: also share my broad world region (never GPS or exact trips)</span></label><select id="hive-region-choice" disabled><option value="">Choose a broad world region</option><option value="NORTH_AMERICA_WEST">Western North America</option><option value="NORTH_AMERICA_EAST">Eastern North America</option><option value="SOUTH_AMERICA">South America</option><option value="EUROPE">Europe</option><option value="AFRICA">Africa</option><option value="ASIA">Asia</option><option value="OCEANIA">Oceania</option></select><small>Region sharing is separate, OFF by default, and never guessed from your IP, GPS or vehicle history. Your selected broad region appears on this private dashboard immediately; public cohorts use the separately disclosed 10-member threshold.</small><button class="action secondary" id="hive-region-update" type="button">Update my broad region</button><button class="action secondary" id="hive-region-clear" type="button">Stop sharing my region</button></div><p class="note" id="hive-access-note">Manage sharing from your PIN-protected HTTPS GHOST address. No SSH tunnel is needed after owner HTTPS setup.</p>
+<div class="consent-region"><label class="consent-check"><input id="hive-region-optin" type="checkbox" /><span>Optional: also share my broad world region (never GPS or exact trips)</span></label><select id="hive-region-choice" disabled><option value="">Choose a broad world region</option><option value="NORTH_AMERICA_WEST">Western North America</option><option value="NORTH_AMERICA_EAST">Eastern North America</option><option value="SOUTH_AMERICA">South America</option><option value="EUROPE">Europe</option><option value="AFRICA">Africa</option><option value="ASIA">Asia</option><option value="OCEANIA">Oceania</option></select><small>Region is optional and never inferred. Your private view shows your saved choice now; PUBLIC display from one contributor requires the separate explicit listing option below.</small><button class="action secondary" id="hive-region-update" type="button">Update my broad region</button><button class="action secondary" id="hive-region-clear" type="button">Stop sharing my region</button>
+<div class="consent-divide"></div>
+<label class="consent-check"><input type="checkbox" id="hive-public-singleton-ack" />
+<span>Show my saved broad region on the PUBLIC Hive map, even if I am the only contributor</span></label>
+<small>This is a separate new permission. The public map shows only your chosen world region's generic marker and its explicitly public contributor count; never GPS, actual drives or identity. Your previous region choice is NOT automatically made public.</small>
+<button class="action secondary" id="hive-region-publish" type="button">Publish my broad region</button>
+<button class="action secondary" id="hive-region-hide" type="button">Hide my public region</button>
+<small id="hive-public-region-status" aria-live="polite">Not publicly listed</small></div><p class="note" id="hive-access-note">Manage sharing from your PIN-protected HTTPS GHOST address. No SSH tunnel is needed after owner HTTPS setup.</p>
 <button class="action" id="hive-join" type="button">Yes, contribute automatically every hour</button>
 <button class="action secondary" id="hive-disable" type="button">Turn off contribution</button>
 <div class="consent-divide"></div>
@@ -324,6 +331,9 @@ function render(d){
    $("hive-region-choice").disabled=!current;
    $("hive-region-choice").value=current;
  }
+ $("hive-public-region-status").textContent=hive.public_listing===true?
+     "Public broad-region display ENABLED; any contributor can view this world-region marker.":
+     "Not publicly listed; owner-only regional choice.";
  $("fleet-vehicles").textContent=number(fleet.participating_vehicles);
  $("local-predictions").textContent=number(local.predictions_scored);
  $("local-accuracy").textContent=local.within_2f_percent===null?"—":fixed(local.within_2f_percent)+"%";
@@ -381,7 +391,7 @@ async function control(action,payload){
 }
 async function perform(action,payload){
  consentMessage("Updating your preference…");
- for(const id of ["hive-join","hive-disable","hive-revoke","hive-region-update","hive-region-clear"])$(id).disabled=true;
+ for(const id of ["hive-join","hive-disable","hive-revoke","hive-region-update","hive-region-clear","hive-region-publish","hive-region-hide"])$(id).disabled=true;
  try{
    const result=await control(action,payload);
    if(action==="join" && !(result.mode==="OPTED_IN" && result.automatic_uploads===true))
@@ -396,6 +406,8 @@ async function perform(action,payload){
       disable:"Contribution turned off. No new research summaries will be sent.",
       "region-set":"Your voluntary broad region was updated.",
       "region-clear":"Your shared region was removed.",
+      "region-publish":"Your saved broad region is now explicitly approved for public display even if you are the first contributor.",
+      "region-hide":"Public display removed; your private region choice is retained.",
       revoke:"Remote deletion confirmed and enrollment revoked."
    };
    consentMessage(messages[action]+(result.region_update?.regional_sharing==="NOT_CONFIRMED"?
@@ -405,7 +417,7 @@ async function perform(action,payload){
    if(action==="revoke")$("hive-delete-confirm").value="";
    await refresh();
  }catch(error){consentMessage("Change not completed: "+error.message);}
- finally{for(const id of ["hive-join","hive-disable","hive-revoke","hive-region-update","hive-region-clear"])$(id).disabled=false;}
+ finally{for(const id of ["hive-join","hive-disable","hive-revoke","hive-region-update","hive-region-clear","hive-region-publish","hive-region-hide"])$(id).disabled=false;}
 }
 $("hive-region-optin").addEventListener("change",()=>{
  $("hive-region-choice").disabled=!$("hive-region-optin").checked;
@@ -418,6 +430,14 @@ $("hive-region-update").addEventListener("click",()=>{
  perform("region-set",{acknowledge_optional_region:true,region_code:code});
 });
 $("hive-region-clear").addEventListener("click",()=>perform("region-clear",{}));
+$("hive-region-publish").addEventListener("click",()=>{
+  if(!$("hive-public-singleton-ack").checked){
+    consentMessage("Check the separate one-contributor public region permission first.");
+    return;
+  }
+  perform("region-publish",{acknowledge_public_singleton:true});
+});
+$("hive-region-hide").addEventListener("click",()=>perform("region-hide",{}));
 $("hive-join").addEventListener("click",()=>{
  const code=$("hive-region-optin").checked?$("hive-region-choice").value:null;
  if($("hive-region-optin").checked&&!code){
