@@ -104,6 +104,23 @@ class EpisodeChallengeTests(unittest.TestCase):
                      "automatic_execution","network_uploads"):
             self.assertFalse(report[flag])
 
+    def test_equal_event_weighting_and_multi_day_research_gate(self):
+        self.future(events=5)
+        with closing(sqlite3.connect(self.db)) as con:
+            con.execute("UPDATE vehicle_events SET event_type='park'")
+            con.commit()
+        report=episode_challenge(self.db,self.watch,self.candidate,now=NOW+5*DAY)
+        self.assertEqual(report["matched_forecasts"],120)
+        self.assertEqual(len(report["model_groups"]),1)
+        row=report["model_groups"][0]
+        self.assertEqual(row["forecast_count"],120)
+        self.assertEqual(row["episodes"],5)
+        self.assertEqual(row["evidence_days"],3)
+        self.assertEqual(row["challenger_mae_f"],1.44)
+        self.assertEqual(row["production_mae_f"],5.76)
+        self.assertEqual(row["persistence_mae_f"],5.76)
+        self.assertEqual(row["assessment"],"CHALLENGER_BETTER_IN_INFERRED_EPISODES")
+
     def test_one_event_has_insufficient_evidence_even_with_many_forecasts(self):
         self.future(events=1)
         report=episode_challenge(self.db,self.watch,self.candidate,now=NOW+5*DAY)
