@@ -14,7 +14,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
-import shutil
+import pwd
 import signal
 import sqlite3
 import subprocess
@@ -148,15 +148,25 @@ def _wait_health(*,expected:int,public_schema:bool,seconds=25):
 
 def _stage(revision:str)->Path:
     release=STAGED/revision
+    if STAGED.is_symlink():
+        raise RuntimeError("Coordinator release root must not be a symlink")
     if release.exists() or release.is_symlink():
-        if not release.is_dir() or (release/"COMMIT").read_text().strip()!=revision:
+        if release.is_symlink() or not release.is_dir() or (release/"COMMIT").read_text().strip()!=revision:
             raise RuntimeError("Existing coordinator stage does not match")
         return release
     STAGED.mkdir(parents=True,exist_ok=True,mode=0o700)
     os.chmod(STAGED,0o700)
     release.mkdir(mode=0o700)
-    # Staging from a clean pinned checkout; do NOT change the research viewer.
-    shutil.copytree(SOURCE/"genesis",release/"genesis",symlinks=False)
+    # Only committed files: git archive excludes ignored/untracked Python,
+    # caches, symlinks injected into the working tree and local secrets.
+    archive=subprocess.Popen(["git","-C",str(SOURCE),"archive",revision,"genesis"],
+                             stdout=subprocess.PIPE)
+    try:
+        checked("tar","-xf","-","-C",str(release),stdin=archive.stdout)
+    finally:
+        archive.stdout.close()
+        if archive.wait()!=0:
+            raise RuntimeError("Git archive failed; coordinator not stopped")
     (release/"COMMIT").write_text(revision+"\n")
     os.chmod(release,0o700)
     checked(str(PY),"-m","genesis.hive_server","--help",
@@ -239,8 +249,7 @@ def execute(*,apply:bool):
         _online_backup(DB,backup)
         if any(_db_counts(backup)[k]!=old[k] for k in ("enrolled","monthly","regions")):
             raise RuntimeError("Backup differs from original coordinator database")
-        _install_unit(unit_text(release,os.getlogin() if False else
-                                __import__("pwd").getpwuid(os.getuid()).pw_name))
+        _install_unit(unit_text(release,pwd.getpwuid(os.getuid()).pw_name))
         unit_started=True
         _wait_health(expected=old["enrolled"],public_schema=True)
         after=_db_counts()
