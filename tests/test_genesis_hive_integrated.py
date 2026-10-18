@@ -107,7 +107,7 @@ class HiveLocalIntegrationTests(unittest.TestCase):
     def test_fleet_ui_displays_verified_overall_enrollment_but_never_synthesizes_monthly_counts(self):
         html=(ROOT/"web/templates/hive.html").read_text()
         for key in ('window.hiveReporting=Number.isInteger(fleet.participating_vehicles)',
-                    'overallOnly("No monthly cohort is large enough',
+                    'overallOnly("Public monthly history appears once a reporter',
                     'Overall enrollment · not a monthly count',
                     'within the SAME UTC month',
                     'Your selected broad region (private view)',
