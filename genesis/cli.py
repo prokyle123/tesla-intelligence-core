@@ -22,6 +22,7 @@ from .thermal_mission import thermal_episode_challenge
 from .episode_lab import parked_thermal_research
 from .thermal_tournament import run_tournament
 from .prospective_shadow import freeze_shadow, score_shadow, shadow_status
+from .product_core import ProductLedger, run_product_cycle
 
 def run_once(source_db: Path, research_db: Path, max_rows: int = 6000) -> dict:
     source_db = Path(source_db).expanduser().resolve()
@@ -161,6 +162,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--architect-db", type=Path, default=config.data_dir() / "architect.sqlite3")
     p.add_argument("--shadow-db", type=Path,
                    default=config.data_dir() / "prospective_shadow.sqlite3")
+    p.add_argument("--product-db", type=Path,
+                   default=config.data_dir() / "product.sqlite3")
     commands = p.add_subparsers(dest="command", required=True)
     run = commands.add_parser("run-once", help="One explicit, read-only research cycle")
     run.add_argument("--max-rows", type=int, default=6000)
@@ -205,6 +208,12 @@ def main(argv: list[str] | None = None) -> int:
     check.add_argument("--max-scan",type=int,default=100000)
     commands.add_parser("shadow-status",
                  help="Read status and aggregate history of frozen shadow")
+    product = commands.add_parser("product-cycle",
+                 help="Operator-invoked research cycle with isolated product history")
+    product.add_argument("--max-scan",type=int,default=100000)
+    product.add_argument("--save",action="store_true",
+                         help="Save aggregate-only findings in private product ledger")
+    commands.add_parser("product-status",help="Read local product research history")
     demo = commands.add_parser("simulate-fleet", help="Run a synthetic offline global-model learning demo")
     demo.add_argument("--nodes", type=int, default=32)
     demo.add_argument("--rounds", type=int, default=30)
@@ -252,6 +261,15 @@ def main(argv: list[str] | None = None) -> int:
                                   max_scan=args.max_scan)
         elif args.command == "shadow-status":
             result = shadow_status(args.shadow_db,args.source_db)
+        elif args.command == "product-cycle":
+            result = run_product_cycle(
+                args.source_db,args.product_db,
+                max_scan=args.max_scan,save=args.save,
+                protected_paths=(args.research_db,args.architect_db,args.shadow_db))
+        elif args.command == "product-status":
+            result = {"status":"LOCAL_RESEARCH_ONLY",
+                      "runs":ProductLedger(args.product_db).read_recent(30),
+                      "production_changes":False,"network_uploads":False}
         else:
             result = network_status()
     except (SourceUnavailable, ValueError) as exc:
