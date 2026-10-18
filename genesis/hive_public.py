@@ -36,7 +36,8 @@ def summary(db:Path, *,now:datetime|None=None)->dict:
             FROM monthly_research m JOIN participants p
             ON m.participant=p.id WHERE p.enabled=1""").fetchone()[0] or 0
         participant_columns={r[1] for r in con.execute("PRAGMA table_info(participants)")}
-        opted=("p.public_monthly=1" if "public_monthly" in participant_columns else "0=1")
+        opted=("p.public_monthly=1 AND p.public_monthly_since IS NOT NULL AND m.month>=p.public_monthly_since"
+               if {"public_monthly","public_monthly_since"}<=participant_columns else "0=1")
         rows=con.execute(f"""SELECT m.month,COUNT(DISTINCT m.participant),
                         SUM(m.scored_predictions),SUM(m.total_abs_error_c),
                         SUM(CASE WHEN {opted} THEN 1 ELSE 0 END),
