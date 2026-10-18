@@ -80,11 +80,13 @@ def _private_consent():
     except (OSError,ValueError,TypeError,json.JSONDecodeError):
         pass
     result["region_code"]=None
+    result["public_listing"]=False
     try:
         region=root/"regional-consent.json"
         if region.is_file() and not region.is_symlink() and not region.stat().st_mode & 0o077:
             optional=json.loads(region.read_text())
             result["region_code"]=optional.get("region_code") if optional.get("enabled") is True else None
+            result["public_listing"]=result["region_code"] is not None and optional.get("public_listing") is True
     except (ValueError,OSError,TypeError,UnboundLocalError):
         pass
     return result
@@ -256,6 +258,7 @@ def local_snapshot(path:Path|None=None, *, now:float|None=None)->dict:
     result["hive"]["last_success_at_utc"]=consent.get("last_success_at_utc")
     result["hive"]["hourly_enabled"]=consent.get("hourly_enabled",False)
     result["hive"]["region_code"]=consent.get("region_code")
+    result["hive"]["public_listing"]=consent.get("public_listing",False)
     result["hive"]["real_transfer_enabled"]=consent.get("hourly_enabled",False)
     hub=_local_coordinator()
     if hub is not None:
@@ -296,7 +299,7 @@ import threading as _threading
 from flask import request as _request
 
 _CONTROL_LOCK=_threading.Lock()
-_ALLOWED_ACTIONS=frozenset(("preview","consent","join","send","disable","revoke","region-set","region-clear"))
+_ALLOWED_ACTIONS=frozenset(("preview","consent","join","send","disable","revoke","region-set","region-clear","region-publish","region-hide"))
 
 
 def _client_root() -> Path:
@@ -364,10 +367,13 @@ def _run_hive_action(action:str,*,month:str|None=None,region_code:str|None=None)
     args=[_sys.executable,"-m","genesis.hive_member",
           "--state-dir",str(_client_root()),
           "--source-db",str(config.DB_PATH)]
-    if action in ("region-set","region-clear"):
+    if action in ("region-set","region-clear","region-publish","region-hide"):
+        command={"region-set":"set","region-clear":"clear",
+                 "region-publish":"publish","region-hide":"hide"}[action]
         args=[_sys.executable,"-m","genesis.hive_region_client",
-              "--state-dir",str(_client_root()),
-              "set" if action=="region-set" else "clear"]
+              "--state-dir",str(_client_root()),command]
+        if action=="region-publish":
+            args.append("--acknowledge-public-singleton")
         if action=="region-set":
             if region_code not in (
                 "NORTH_AMERICA_WEST","NORTH_AMERICA_EAST","SOUTH_AMERICA",
@@ -453,6 +459,12 @@ def hive_control(action:str):
             current=_private_consent()
             if current.get("mode")!="OPTED_IN" or not current.get("hourly_enabled"):
                 return jsonify({"error":"ACTIVE_HIVE_OPT_IN_REQUIRED"}),409
+        if action=="region-publish":
+            if payload.get("acknowledge_public_singleton") is not True:
+                return jsonify({"error":"EXPLICIT_SINGLE_REPORTER_PUBLIC_CONSENT_REQUIRED"}),400
+            current=_private_consent()
+            if current.get("mode")!="OPTED_IN" or not current.get("hourly_enabled") or not current.get("region_code"):
+                return jsonify({"error":"SELECT_AND_SAVE_BROAD_REGION_FIRST"}),409
         if action=="join" and not _hourly_service_ready():
             return jsonify({"error":"HOURLY_TRANSFER_TIMER_NOT_RUNNING"}),503
         if action=="send":
