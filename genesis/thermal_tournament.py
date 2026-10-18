@@ -133,6 +133,12 @@ def tournament_from_episodes(episodes: list[list[tuple[float,float,float]]],
         "holdout_episode_bootstrap_80pct_interval_c":None,
         "source_rows_scanned":counts.get("scanned"),
         "missing_heater_preconditioning_rows":counts.get("unknown_heater_rows",0),
+        "usable_episodes_complete_heater_state":counts.get("usable_episodes_with_complete_heater_state"),
+        "usable_episodes_unknown_heater_state":counts.get("usable_episodes_with_unknown_heater_state"),
+        "heater_state_verified_for_all_episode_training_and_tests":(
+            counts.get("usable_episodes_with_unknown_heater_state",0)==0
+            if counts.get("usable_episodes_with_unknown_heater_state") is not None
+            else None),
         "next_mission":"Collect sufficient separate qualifying parked episodes and investigate heater-state data availability.",
         "caveats":["PREVIOUSLY_EXPLORED_HISTORICAL_DATA_NOT_PROSPECTIVE",
                    "ONE_HOUR_FIXED_AMBIENT_PROXY",
@@ -145,6 +151,8 @@ def tournament_from_episodes(episodes: list[list[tuple[float,float,float]]],
     }
     if counts.get("unknown_heater_rows",0):
         report["caveats"].append("UNKNOWN_HEATER_OR_PRECONDITION_STATE_DURING_SOME_PARKED_ROWS")
+    if counts.get("usable_episodes_with_unknown_heater_state",0):
+        report["caveats"].append("SOME_EVALUATED_EPISODES_HAVE_UNVERIFIED_HEATER_STATE")
     if (len(train)<MIN_TRAIN_EPISODES or len(valid)<MIN_VALID_EPISODES
         or len(test)<MIN_TEST_EPISODES or pairs[0]<MIN_TRAIN_PAIRS
         or min(pairs[1:])<MIN_GROUP_PAIRS):
@@ -201,10 +209,16 @@ def tournament_from_episodes(episodes: list[list[tuple[float,float,float]]],
           and report["historical_holdout"]["improvement_pct"]>=MIN_HOLDOUT_GAIN_PCT
           and report["historical_holdout"]["episodes_better"]>len(test)//2
           and ci[0]>0):
-        report["status"]="RESEARCH_ONLY_HISTORICAL_WIN"
-        report["next_mission"]=(
-            "Freeze the selected model definition; score newly arriving parked episodes"
-            " without changing the candidate or its hyperparameters.")
+        if counts.get("usable_episodes_with_unknown_heater_state",0):
+            report["status"]="RESEARCH_WIN_WITH_UNVERIFIED_HEATER_STATE"
+            report["next_mission"]=(
+                "Heater/preconditioning telemetry incomplete in evaluated episodes."
+                " Verify sensing and rerun before freezing any candidate.")
+        else:
+            report["status"]="RESEARCH_ONLY_HISTORICAL_WIN"
+            report["next_mission"]=(
+                "Freeze the selected model definition; score newly arriving parked episodes"
+                " without changing the candidate or its hyperparameters.")
     else:
         report["status"]="HOLDOUT_CHALLENGE_FAILED"
         report["next_mission"]=(

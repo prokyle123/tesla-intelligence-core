@@ -29,13 +29,15 @@ def scan_episodes(source_db: Path, max_rows: int = 100000) -> dict:
         raise SourceUnavailable("Telemetry database not available.")
     uri="file:"+quote(str(path),safe="/")+"?mode=ro"
     episodes=[]
+    verified_episodes=[]
     current=[]
+    unknown_in_episode=False
     overflow=False
     previous=None
     count={"scanned":0,"candidate_episodes":0,"short_episodes":0,
            "oversized_episodes":0,"unknown_heater_rows":0}
     def flush():
-        nonlocal current,overflow
+        nonlocal current,overflow,unknown_in_episode
         if overflow:
             count["oversized_episodes"]+=1
         elif current:
@@ -45,10 +47,12 @@ def scan_episodes(source_db: Path, max_rows: int = 100000) -> dict:
                 if len(episodes)>=MAX_EPISODES:
                     raise SourceUnavailable("Too many parked episodes for research limit.")
                 episodes.append(pairs)
+                verified_episodes.append(not unknown_in_episode)
             else:
                 count["short_episodes"]+=1
         current=[]
         overflow=False
+        unknown_in_episode=False
     try:
         with closing(sqlite3.connect(uri,uri=True,timeout=2.0)) as con:
             con.execute("PRAGMA query_only=ON")
@@ -93,6 +97,8 @@ def scan_episodes(source_db: Path, max_rows: int = 100000) -> dict:
                     if not parked or not contiguous:
                         flush()
                 if parked:
+                    if heater is None or precond is None:
+                        unknown_in_episode=True
                     if len(current)<MAX_EPISODE and not overflow:
                         current.append(row)
                     else:
@@ -104,7 +110,9 @@ def scan_episodes(source_db: Path, max_rows: int = 100000) -> dict:
             flush()
     except sqlite3.Error as exc:
         raise SourceUnavailable("Could not read thermal episodes safely.") from exc
-    return {"episodes":episodes,"counts":count}
+    count["usable_episodes_with_complete_heater_state"]=sum(verified_episodes)
+    count["usable_episodes_with_unknown_heater_state"]=len(verified_episodes)-sum(verified_episodes)
+    return {"episodes":episodes,"counts":count,"verified_heater_episodes":verified_episodes}
 
 
 def _error(pairs, alpha):
