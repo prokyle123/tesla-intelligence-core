@@ -1,16 +1,20 @@
-# GHOST GENESIS — Product roadmap (v0.2 preview)
+# GHOST GENESIS + HIVE — Integrated product roadmap (October 2026)
 
-Status: **developer preview, separate from Classic GHOST**. Never use the
-Classic installer to deploy this unreleased branch to a working Pi. Do
-not advertise these retrospective associations as real-world discoveries.
+Status: **integrated GHOST product goal, separate development rollout**. The existing
+Classic Home, collector and production models remain protected. GENESIS is a
+manual research preview; the additional Hive tab is an opt-in monthly aggregate
+client. Do not present retrospective associations as confirmed discoveries.
+The full branch remains a draft: do not deploy it via the Classic installer.
 
 ## Product intent
 
 The final product is an installed local-first intelligence laboratory
 that can investigate Tesla telemetry, measure future predictive skill,
 explain its confidence and failures, retain evidence, and propose safe
-new experiments; it never drives the car. Hivemind and Fleet Observatory
-remain future opt-in services and are **not implemented federated learning**.
+new experiments; it never drives the car. Hive monthly aggregate reporting,
+separate local coordinator, owner consent, regional privacy gates and a static
+public-dashboard preview are implemented. **Federated model learning is NOT
+implemented**; Hive consent does not authorize model-weight transfer.
 
 ## Product milestones
 
@@ -22,7 +26,7 @@ remain future opt-in services and are **not implemented federated learning**.
 | P3: Prospective research | Frozen candidate, completed post-freeze parking episodes, drift/history | Manual diagnostic exists | Verified arrival-time/episode boundaries, sufficient new data, incumbent GHOST forecast comparison |
 | P4: Release packaging | One-command install/update/rollback, controlled CPU/RAM, Python dependency self-check | Staging/rollback preview only | Fresh Raspberry Pi installation + Debian/WSL smoke; no Classic downgrade |
 | P5: Product launch | Complete docs, onboarding, health alerts, backup/restore, monitoring | Not yet | Signed release, security review, performance soak, owner approval |
-| P6: Hivemind/Fleet | Opt-in privacy-preserving cohort research | Fictional offline demo only | Independent threat model, privacy/transport review, explicit opt-in; not a v2 launch blocker |
+| P6: Hivemind/Fleet | Opt-in pseudonymous monthly aggregates and public observatory | Local coordinator, consented monthly sums, hourly sync and private/public dashboards implemented | TLS-hosted coordinator, own-credential onboarding, hardening, fleet validation and additional consent for future metrics |
 
 ### First product workflow (not installed or running automatically)
 
@@ -83,8 +87,9 @@ Rollback does not change experiment data, Classic GHOST or its models.
 - **Safety:** no changes to /opt/ghost-tesla-ai, /etc/ghost-tesla-ai,
   /var/lib/ghost-tesla-ai, systemd units, TeslaMate, Tessie polling or
   Classic readiness forecasts from this stage/preview.
-- **No timers:** scheduled research must be reviewed and enabled in a
-  later milestone, with quotas and proof it cannot interfere with Classic.
+- **Separate scheduling:** GENESIS scientific research remains manually invoked;
+  Hive's existing consent-gated hourly *aggregate submission* timer is a distinct
+  service. No automated GENESIS experiments or model promotions are enabled.
 - **Prospective caveat:** source timestamps are not verified ingestion
   timestamps and thermal/heater observation can be incomplete. A historical
   or tentative post-freeze gain is not evidence of verified product skill.
@@ -96,6 +101,12 @@ Rollback does not change experiment data, Classic GHOST or its models.
 3. Typed release schema, signed immutable versions, backup/rollback contract.
 4. Evidence-grade prospective validation using new actual outcomes and
    calibration against incumbent GHOST predictions.
-5. Controlled opt-in local scheduler with performance caps, retries and audits.
+5. Controlled GENESIS research scheduler proposal with resource caps; no automatic
+   activation without a Pi load audit and explicit owner approval.
+6. Dedicated HTTPS Hive coordinator, per-installation credential onboarding,
+   abuse limits, revocation and independently validated public-feed pipeline.
+7. Additional consented fleet metric versions (including ±2°F hit counts),
+   repeated cross-vehicle experiments, then signed model artifacts and prospective
+   collaborative learning only after safety and privacy review.
 
 No claim of a final general-availability release is made at this stage.
