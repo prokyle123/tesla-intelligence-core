@@ -90,6 +90,15 @@ class DashboardUITests(unittest.TestCase):
         self.assertNotIn('fetch("/api/genesis/truth-watch-record"',html)
         self.assertNotIn('fetch("/api/genesis/truth-watch-freeze"',html)
 
+    def test_frozen_challenger_panel_never_starts_an_experiment(self):
+        html=HTML.read_text()
+        for key in ("challenger-status","challenger-models","challenger-coverage"):
+            self.assertIn('id="'+key+'"',html)
+        self.assertIn('fetch("/api/genesis/challenger"',html)
+        self.assertIn('challenger-freeze',html)
+        self.assertIn('void readChallenger()',html)
+        self.assertNotIn('fetch("/api/genesis/challenger-freeze"',html)
+
     def test_no_vehicle_actions_or_raw_sample_exposure(self):
         html=HTML.read_text()
         self.assertIn("/api/genesis/overview",html)
