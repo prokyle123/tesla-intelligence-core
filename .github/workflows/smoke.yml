@@ -47,6 +47,9 @@ jobs:
       - name: Portable evaluator and trip regression tests
         run: python3 -m unittest discover -s tests -p 'test_release_contract.py' -v
 
+      - name: Install Flask for isolated GENESIS route tests
+        run: python3 -m pip install 'Flask>=3,<4'
+
       - name: GENESIS offline research and privacy regression tests
         run: python3 -m unittest discover -s tests -p 'test_genesis*.py' -v
 
