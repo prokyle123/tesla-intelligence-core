@@ -308,7 +308,7 @@ import threading as _threading
 from flask import request as _request
 
 _CONTROL_LOCK=_threading.Lock()
-_ALLOWED_ACTIONS=frozenset(("preview","consent","join","send","disable","revoke","region-set","region-clear","region-publish","region-hide","monthly-publish","monthly-hide"))
+_ALLOWED_ACTIONS=frozenset(("preview","consent","join","send","disable","revoke","region-set","region-clear","region-publish","region-hide","monthly-publish","monthly-hide","peer-compare"))
 
 
 def _client_root() -> Path:
@@ -420,8 +420,7 @@ def _run_hive_action(action:str,*,month:str|None=None,region_code:str|None=None)
     return data
 
 
-@bp.get("/api/hive/peer-comparison")
-def hive_peer_comparison():
+def _hive_peer_comparison():
     """Read-only, no credential in browser; request is bound to enrolled client."""
     not_ready={"schema":"ghost-hive-independent-comparison-v1",
                "scope":"LOCAL_GHOST_ONLY","status":"PEER_SERVICE_UNAVAILABLE",
@@ -480,6 +479,12 @@ def hive_control(action:str):
     payload=_request.get_json(silent=True)
     if not isinstance(payload,dict):
         return jsonify({"error":"INVALID_REQUEST"}),400
+    if action=="peer-compare":
+        if payload:
+            return jsonify({"error":"UNEXPECTED_PEER_COMPARISON_FIELDS"}),400
+        # OWNER ONLY: the enrolled token is never proxied into a public GET.
+        # All calculations are read-only; no new upload consent is implied.
+        return _hive_peer_comparison()
     if not _CONTROL_LOCK.acquire(blocking=False):
         return jsonify({"error":"HIVE_OPERATION_IN_PROGRESS"}),409
     try:
