@@ -27,7 +27,7 @@ class RegionError(ValueError):pass
 def validate_region_payload(value:Any)->dict:
     if not isinstance(value,dict) or set(value)!={"schema","region_code"}:
         raise RegionError("Unexpected location data fields")
-    if value["schema"]!=REGION_SCHEMA or value["region_code"] not in REGIONS:
+    if value["schema"]!=REGION_SCHEMA or type(value["region_code"]) is not str or value["region_code"] not in REGIONS:
         raise RegionError("Unsupported broad region")
     return {"schema":REGION_SCHEMA,"region_code":value["region_code"]}
 
