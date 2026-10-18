@@ -74,6 +74,21 @@ class ThermalTournamentTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             tournament_from_episodes(episodes(3001))
 
+    def test_successful_fit_still_flags_unverified_heater_episodes(self):
+        from test_genesis_episode_lab import fixture
+        with tempfile.TemporaryDirectory() as td:
+            db=Path(td)/"source.sqlite3"
+            fixture(db,episodes=30)
+            with sqlite3.connect(db) as con:
+                con.execute("UPDATE telemetry SET battery_heater_on=NULL")
+            result=run_tournament(db,max_scan=1000)
+            self.assertEqual(result["usable_episodes_unknown_heater_state"],30)
+            self.assertEqual(result["usable_episodes_complete_heater_state"],0)
+            self.assertFalse(result["heater_state_verified_for_all_episode_training_and_tests"])
+            self.assertIn("SOME_EVALUATED_EPISODES_HAVE_UNVERIFIED_HEATER_STATE",result["caveats"])
+            self.assertNotEqual(result["status"],"RESEARCH_ONLY_HISTORICAL_WIN")
+            self.assertFalse(result["can_promote"])
+
     def test_real_source_path_read_only_and_without_identifiers(self):
         from test_genesis_episode_lab import fixture
         with tempfile.TemporaryDirectory() as td:
