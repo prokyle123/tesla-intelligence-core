@@ -1,6 +1,7 @@
 """End-to-end broad-region privacy: separate opt-in; no individual location."""
 from __future__ import annotations
 from pathlib import Path
+from datetime import datetime,timezone
 import tempfile
 import unittest
 from genesis.hive_server import create_app,enroll
@@ -18,6 +19,9 @@ class HiveBroadRegionTests(unittest.TestCase):
         self.app.testing=True
         self.client=self.app.test_client()
         self.member_token=enroll(self.db)
+
+    def snapshot(self):
+        return summary(self.db,now=datetime(2026,10,18,12,tzinfo=timezone.utc))
 
     def submit(self,token,*,path,method,data=None):
         return self.client.open(path,method=method,
@@ -39,7 +43,7 @@ class HiveBroadRegionTests(unittest.TestCase):
     def test_one_consented_reporter_never_generates_public_dot(self):
         self.publish(self.member_token)
         self.assertEqual(self.pick(self.member_token).status_code,202)
-        snapshot=check(summary(self.db))
+        snapshot=check(self.snapshot())
         self.assertEqual(snapshot["reporting_nodes"],1)
         self.assertEqual(snapshot["regions"],[])
         self.assertIsNone(snapshot["countries"])
@@ -48,7 +52,7 @@ class HiveBroadRegionTests(unittest.TestCase):
           data={"schema":REGION_SCHEMA,"region_code":"NORTH_AMERICA_EAST",
                 "latitude":41.8,"longitude":-87.6})
         self.assertEqual(bad.status_code,400)
-        self.assertEqual(check(summary(self.db))["regions"],[])
+        self.assertEqual(check(self.snapshot())["regions"],[])
 
     def test_ten_consented_members_publish_only_approved_centroid(self):
         self.publish(self.member_token)
@@ -58,23 +62,23 @@ class HiveBroadRegionTests(unittest.TestCase):
             key=enroll(self.db);tokens.append(key)
             self.publish(key)
             self.assertEqual(self.pick(key).status_code,202)
-        public=check(summary(self.db))
+        public=check(self.snapshot())
         self.assertEqual(public["reporting_nodes"],10)
         self.assertEqual(len(public["regions"]),1)
         region=public["regions"][0]
         self.assertEqual(region,{"code":"NORTH_AMERICA_EAST",
             "label":"Eastern North America","x":180,"y":110,"reporting_nodes":10})
         self.assertEqual(self.submit(tokens[0],path="/v1/region",method="DELETE").status_code,200)
-        self.assertEqual(check(summary(self.db))["regions"],[])
+        self.assertEqual(check(self.snapshot())["regions"],[])
         # Only active reporting owners count. Revocation must erase location consent.
         self.assertEqual(self.submit(tokens[1],path="/v1/enrollment",method="DELETE").status_code,200)
-        self.assertEqual(check(summary(self.db))["reporting_nodes"],9)
+        self.assertEqual(check(self.snapshot())["reporting_nodes"],9)
 
     def test_region_requires_registered_client_and_schema(self):
         anon=self.client.put("/v1/region",json={"schema":REGION_SCHEMA,"region_code":"EUROPE"})
         self.assertEqual(anon.status_code,401)
         other=self.pick(self.member_token,code="EXACT_HOME")
         self.assertEqual(other.status_code,400)
-        self.assertEqual(check(summary(self.db))["regions"],[])
+        self.assertEqual(check(self.snapshot())["regions"],[])
 
 if __name__=="__main__":unittest.main()
