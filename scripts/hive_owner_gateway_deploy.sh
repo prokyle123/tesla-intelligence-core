@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Guarded PIN/Hive owner authorization. No Home, model, consent or fleet changes.
+# Guarded PIN/Hive owner authorization. Home, model, consent and fleet data remain unchanged.
 set -Eeuo pipefail
 [[ "$(id -u)" != "0" ]] || { echo "Run as your normal GHOST user";exit 2; }
 MODE=check
@@ -16,7 +16,6 @@ test -f "$LIVE/web/templates/hive.html"
 cd "$ROOT"
 BEFORE_HOME="$(sha256sum "$LIVE/web/templates/index.html"|cut -d' ' -f1)"
 BEFORE_SERVER="$(sha256sum "$LIVE/ghost_tesla_ai/server.py"|cut -d' ' -f1)"
-BEFORE_HIVE_UI="$(sha256sum "$LIVE/web/templates/hive.html"|cut -d' ' -f1)"
 PARENT="$HOME/ghost-hive-owner-backups"
 BACKUP="$PARENT/$(date -u +%Y%m%dT%H%M%SZ)-$$"
 mkdir -p "$PARENT"
@@ -46,7 +45,7 @@ if [[ "$MODE" == check ]];then
  echo "HIVE OWNER AUTH CHECK PASS — no source or service changes"
  exit 0
 fi
-echo "[3/4] Backup and install exactly three reviewed owner API/gateway files..."
+echo "[3/4] Backup and install exactly four reviewed owner API/gateway/UI files..."
 sudo -v
 sudo python3 "$PATCH" --live "$LIVE" --backup "$BACKUP" --apply
 changed=1
@@ -94,9 +93,9 @@ else:
 PY
 test "$(sha256sum "$LIVE/web/templates/index.html"|cut -d' ' -f1)" = "$BEFORE_HOME"
 test "$(sha256sum "$LIVE/ghost_tesla_ai/server.py"|cut -d' ' -f1)" = "$BEFORE_SERVER"
-test "$(sha256sum "$LIVE/web/templates/hive.html"|cut -d' ' -f1)" = "$BEFORE_HIVE_UI"
+grep -q "Owner sign-in required. Use your PIN-protected HTTPS GHOST address" "$LIVE/web/templates/hive.html"
 changed=0
 trap - ERR
 echo "HIVE OWNER ACCESS INSTALL PASS"
-echo "Classic Home/server, Fleet UI and consent unchanged."
+echo "Classic Home/server, Fleet data and consent unchanged. Owner-help UI updated."
 echo "Rollback manifest: $BACKUP/latest.json"
