@@ -20,7 +20,8 @@ import secrets
 import sqlite3
 import time
 
-from flask import Flask,request,jsonify,abort
+from flask import Flask,request,jsonify,abort,render_template
+from .hive_analytics import cohort_dashboard,synthetic_demo
 from werkzeug.serving import make_server
 from .hive_protocol import validate,ProtocolError,MIN_COHORT,MAX_BODY,METRIC
 
@@ -89,7 +90,7 @@ def revoke(path: Path, token: str) -> bool:
 def create_app(path: Path) -> Flask:
     db=_private(path)
     initialize(db)
-    app=Flask("genesis-hive")
+    app=Flask("genesis-hive",template_folder="web")
     app.config["MAX_CONTENT_LENGTH"]=MAX_BODY
 
     @app.after_request
@@ -97,6 +98,12 @@ def create_app(path: Path) -> Flask:
         resp.headers["Cache-Control"]="no-store"
         resp.headers["X-Content-Type-Options"]="nosniff"
         resp.headers["X-Frame-Options"]="DENY"
+        resp.headers["Referrer-Policy"]="no-referrer"
+        resp.headers["Content-Security-Policy"]=(
+            "default-src 'self'; style-src 'self' 'unsafe-inline'; "
+            "script-src 'self' 'unsafe-inline'; img-src 'self' data:; "
+            "object-src 'none'; frame-ancestors 'none'; "
+            "connect-src 'self'; base-uri 'none'; form-action 'none'")
         return resp
 
     @app.get("/health")
@@ -106,6 +113,22 @@ def create_app(path: Path) -> Flask:
                         "cohort_gate":MIN_COHORT,
                         "secure_aggregation":False,
                         "differential_privacy":False})
+
+    @app.get("/hive")
+    def hive_dashboard():
+        return render_template("hive_analytics.html")
+
+    @app.get("/api/hive/analytics")
+    def hive_analytics():
+        origin=request.args.get("origin","synthetic")
+        if origin not in ("synthetic","qualified_post_freeze"):
+            return jsonify({"error":"UNSUPPORTED_COHORT_TYPE"}),400
+        if request.args.get("demo")=="1":
+            return jsonify(synthetic_demo())
+        # This route is loopback-only, protected by the same SSH tunnel
+        # boundary as the standalone development dashboard. The future
+        # internet-facing dashboard MUST have proper per-user auth.
+        return jsonify(cohort_dashboard(db,origin=origin))
 
     def authenticate():
         token=request.headers.get("Authorization","")
