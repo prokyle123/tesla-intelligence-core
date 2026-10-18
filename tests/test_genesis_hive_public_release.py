@@ -88,7 +88,7 @@ class PublicDashboardReleaseTests(unittest.TestCase):
     def test_public_dashboard_shows_real_network_readiness_without_local_leaks(self):
         html=(ROOT/"docs/hive/index.html").read_text()
         self.assertIn("Released Monthly Cohorts",html)
-        self.assertIn("Overall enrollment only",html)
+        self.assertIn("enrolled reporting installations overall.",html)
         self.assertIn("within the SAME UTC month",html)
         self.assertIn("new separately consented aggregate metric",html)
         self.assertIn('window.hiveReleaseThreshold',html)
