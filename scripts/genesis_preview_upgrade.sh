@@ -121,6 +121,11 @@ for endpoint in ("prediction-quality","thermal-context","paired-baseline","prosp
         assert doc["status"] in ("NOT_FROZEN","AWAITING_FUTURE_EVIDENCE",
                                  "POST_FREEZE_CHALLENGE_AVAILABLE",
                                  "CAPACITY_REVIEW_REQUIRED","SOURCE_UNAVAILABLE"),doc["status"]
+    if endpoint=="episode-challenge":
+        assert doc["status"] in ("NOT_FROZEN","NO_MATCHED_EPISODE_EVIDENCE",
+                                 "EPISODE_EVIDENCE_AVAILABLE",
+                                 "CAPACITY_REVIEW_REQUIRED",
+                                 "EVENT_CAPACITY_REVIEW_REQUIRED"),doc["status"]
     print(endpoint,":",doc["status"])
 PY
 
