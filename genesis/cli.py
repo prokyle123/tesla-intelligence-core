@@ -26,6 +26,7 @@ from .product_core import ProductLedger, run_product_cycle
 from .prospective_truth_watch import freeze_watch, check_watch
 from .truth_watch_history import record_history, read_history
 from .frozen_challenger import freeze_challenger, challenger_status
+from .episode_challenge import episode_challenge
 
 def run_once(source_db: Path, research_db: Path, max_rows: int = 6000) -> dict:
     source_db = Path(source_db).expanduser().resolve()
@@ -230,6 +231,7 @@ def main(argv: list[str] | None = None) -> int:
     commands.add_parser("truth-watch-history",help="Read saved snapshots without creating or changing files")
     commands.add_parser("challenger-freeze",help="Explicitly fit/freeze physical temperature challenger without changing GHOST")
     commands.add_parser("challenger-check",help="Read-only frozen challenger vs GHOST vs persistence outcomes")
+    commands.add_parser("episode-challenge",help="Read-only, equal-event weighted challenger evaluation")
     demo = commands.add_parser("simulate-fleet", help="Run a synthetic offline global-model learning demo")
     demo.add_argument("--nodes", type=int, default=32)
     demo.add_argument("--rounds", type=int, default=30)
@@ -294,6 +296,8 @@ def main(argv: list[str] | None = None) -> int:
             result = freeze_challenger(args.source_db,args.truth_watch_file,args.challenger_file)
         elif args.command == "challenger-check":
             result = challenger_status(args.source_db,args.truth_watch_file,args.challenger_file)
+        elif args.command == "episode-challenge":
+            result = episode_challenge(args.source_db,args.truth_watch_file,args.challenger_file)
         elif args.command == "product-status":
             result = {"status":"LOCAL_RESEARCH_ONLY",
                       "runs":ProductLedger(args.product_db).read_recent(30),
