@@ -89,7 +89,20 @@ footer{border-top:1px solid var(--border);margin-top:35px;padding-top:18px;color
 <div id="truth-models" class="chart-list"><div class="empty">No model diagnostics loaded yet.</div></div>
 <p class="note" id="truth-note">Attention flags are research leads, not statistical proof of drift. No vehicle commands or model promotion.</p>
 </div>
-<div class="panel"><div class="section-title"><h2>Evidence limitations</h2></div><p class="note">Results use observationally inferred parked episodes. Current telemetry may not reveal when the battery heater, conditioning, or changing outside temperatures affected the pack. The tested historical data has already been explored.</p><div id="model-caveats"></div></div>
+<div class="grid2" aria-label="Local thermal research context">
+<div class="panel">
+<div class="section-title"><h2>Thermal Conditions Lab</h2><span id="context-status" class="pill dim">Read-only · waiting</span></div>
+<p class="note">Which forecast-source conditions line up with higher errors? Groups cover ambient temperature, reported vehicle state and battery-heater evidence. This does not establish causes.</p>
+<div id="context-coverage" class="note">Context coverage has not been checked.</div>
+<div id="context-groups" class="chart-list"><div class="empty">Open the Models tab to inspect actual data.</div></div>
+</div>
+<div class="panel">
+<div class="section-title"><h2>Next Research Priorities</h2><span class="pill dim">Review only</span></div>
+<p class="note">GENESIS selects the most informative follow-up questions from verified scored history. Proposals cannot execute experiments, transfer data or promote models.</p>
+<div id="context-missions" class="chart-list"><div class="empty">Waiting for enough comparable evidence.</div></div>
+<p id="context-caveat" class="note">Current source conditions are not necessarily the conditions at the future forecast target.</p>
+</div>
+</div><div class="panel"><div class="section-title"><h2>Evidence limitations</h2></div><p class="note">Results use observationally inferred parked episodes. Current telemetry may not reveal when the battery heater, conditioning, or changing outside temperatures affected the pack. The tested historical data has already been explored.</p><div id="model-caveats"></div></div>
 </section>
 <section class="tab-panel" data-panel="investigations" hidden>
 <div class="heading"><div><div class="eyebrow">Research workspace / Investigations</div><h1>Hypothesis Architect</h1><p>Understand which question GENESIS selected and what evidence is needed next. No experiment can execute arbitrary generated code.</p></div></div>
@@ -144,7 +157,7 @@ const percent = n => Number.isFinite(Number(n)) ? (Number(n)>0?"+":"")+Number(n)
 const number = (n,places=2) => Number.isFinite(Number(n)) ? Number(n).toFixed(places) : "—";
 const pretty = s => String(s||"No result").replaceAll("_"," ").replace(/\b\w/g,x=>x.toUpperCase());
 const dateText = n => { const dt=new Date(Number(n)*1000); return Number.isFinite(dt.getTime()) ? dt.toLocaleString() : "Unknown date"; };
-let cache=null,historySelected=null,healthOk=false,truthLastRead=0,truthPending=false;
+let cache=null,historySelected=null,healthOk=false,truthLastRead=0,truthPending=false,contextLastRead=0,contextPending=false;
 function label(id,value){el(id).textContent=value;}
 function view(tab) {
   for(const button of document.querySelectorAll("[data-tab]")) {
@@ -154,6 +167,7 @@ function view(tab) {
   }
   for(const panel of document.querySelectorAll("[data-panel]"))panel.hidden=panel.dataset.panel!==tab;
   if(tab==="models" && Date.now()-truthLastRead>300000)void readTruth();
+  if(tab==="models" && Date.now()-contextLastRead>300000)void readContext();
 }
 for(const button of document.querySelectorAll("[data-tab]"))button.addEventListener("click",()=>view(button.dataset.tab));
 function failure(message) {
@@ -401,6 +415,63 @@ async function readTruth(){
   el("truth-summary").replaceChildren(make("div","Could not read scored local prediction evidence.","empty"));
   el("truth-models").replaceChildren();
  }finally{truthPending=false;}
+}
+async function readContext(){
+ if(contextPending)return;
+ contextPending=true;
+ contextLastRead=Date.now();
+ try{
+  const r=await fetch("/api/genesis/thermal-context",{cache:"no-store",credentials:"same-origin"});
+  if(!r.ok)throw Error("Context lab unavailable");
+  const d=await r.json();
+  label("context-status",d.status==="OK"?"Real GHOST source context":pretty(d.status));
+  label("context-coverage","Forecasts with source context: "+
+    String(d.matched_source_predictions||0)+" · missing source records: "+
+    String(d.unmatched_source_predictions||0));
+  const groups=el("context-groups");groups.replaceChildren();
+  const rows=Array.isArray(d.dimensions)?d.dimensions:[];
+  if(!rows.length)groups.append(make("div","No supported context fields or scored outcomes to segment.","empty"));
+  for(const item of rows.slice(0,18)){
+   const block=make("div",undefined,"item");
+   const title=make("div",undefined,"rowline");
+   title.append(make("strong",String(item.model)+" · "+String(item.horizon_minutes)+"m"));
+   title.append(make("small",pretty(item.group)));
+   block.append(title);
+   block.append(make("div",pretty(item.dimension)+" · "+
+     pretty(item.assessment),"detail"));
+   const now=item.recent||{},prev=item.previous||{};
+   block.append(make("div","Previous: "+String(prev.samples||0)+" / "+
+     (Number.isFinite(prev.mae_f)?number(prev.mae_f,2)+"°F":"—")+
+     " · Recent: "+String(now.samples||0)+" / "+
+     (Number.isFinite(now.mae_f)?number(now.mae_f,2)+"°F":"—"),"note"));
+   if(Number.isFinite(item.delta_mae_f))
+    block.append(make("div","Error change: "+
+      (item.delta_mae_f>=0?"+":"")+number(item.delta_mae_f,2)+"°F","note"));
+   groups.append(block);
+  }
+  if(d.groups_omitted||rows.length>18)
+    groups.append(make("div","Additional context groups not shown. "+
+      "Evidence remains available in the read-only local API.","note"));
+  const missions=el("context-missions");missions.replaceChildren();
+  const plans=Array.isArray(d.priorities)?d.priorities:[];
+  if(!plans.length)missions.append(make("div","No generation-consistent worsening group has enough evidence yet.","empty"));
+  for(const plan of plans){
+   const item=make("div",undefined,"item");
+   item.append(make("strong",String(plan.model)+" · "+pretty(plan.group)));
+   item.append(make("div",String(plan.question),"detail"));
+   item.append(make("div",String(plan.samples_previous)+" previous / "+
+     String(plan.samples_recent)+" recent scored forecasts · "+
+     pretty(plan.state),"note"));
+   missions.append(item);
+  }
+  label("context-caveat","Only forecast-source conditions are used. Groups share underlying forecasts."+
+    " Weather, charging and heater signals are observational, not proof of causality."+
+    " Priorities require operator review and cannot execute.");
+ }catch(e){
+  label("context-status","Context unavailable");
+  el("context-groups").replaceChildren(make("div","Could not evaluate local context data.","empty"));
+  el("context-missions").replaceChildren(make("div","No research priorities available.","empty"));
+ }finally{contextPending=false;}
 }
 async function readHive(){
  // GENESIS research UI is GET-only. Prefer the already-existing integrated
