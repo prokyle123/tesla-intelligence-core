@@ -38,6 +38,19 @@ class DashboardUITests(unittest.TestCase):
             "health-badge","connection","refresh",
         ):
             self.assertIn(required,p.ids)
+    def test_hive_panel_uses_actual_integrated_status_and_current_privacy_gate(self):
+        html=HTML.read_text()
+        self.assertIn('id="hive-status-detail"',html)
+        self.assertIn('fetch("/api/hive/local"',html)
+        self.assertIn('fetch("/api/genesis/hive"',html)
+        self.assertIn('d.scope==="LOCAL_GHOST_ONLY"',html)
+        self.assertIn('active?"OPTED IN":"OFF"',html)
+        self.assertIn('10 reporting installations per UTC month',html)
+        self.assertNotIn("25 nodes",html)
+        self.assertNotIn("Hivemind is not connected",html)
+        self.assertNotIn("No production modification · No fleet uploads",html)
+        self.assertNotIn("/api/hive/control/",html)
+
     def test_no_vehicle_actions_or_raw_sample_exposure(self):
         html=HTML.read_text()
         self.assertIn("/api/genesis/overview",html)
