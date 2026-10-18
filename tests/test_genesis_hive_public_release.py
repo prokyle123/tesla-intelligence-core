@@ -85,6 +85,24 @@ class PublicDashboardReleaseTests(unittest.TestCase):
         self.assertNotIn('<dialog ',public)
         self.assertIn('fetch("./network.json"',public)
 
+    def test_public_dashboard_shows_real_network_readiness_without_local_leaks(self):
+        html=(ROOT/"docs/hive/index.html").read_text()
+        self.assertIn("Released Monthly Cohorts",html)
+        self.assertIn("Overall enrollment only",html)
+        self.assertIn("within the SAME UTC month",html)
+        self.assertIn("new separately consented aggregate metric",html)
+        self.assertIn('window.hiveReleaseThreshold',html)
+        self.assertNotIn('/api/hive/local',html)
+        self.assertNotIn('d.recent_quality',html)
+
+    def test_private_quality_cards_have_live_bindings(self):
+        private=(ROOT/"web/templates/hive.html").read_text()
+        for key in ("hive-7d-quality","hive-30d-quality","hive-30d-error",
+                    "hive-7d-samples","hive-30d-samples"):
+            self.assertIn('id="'+key+'"',private)
+            self.assertIn('$("'+key+'").textContent=',private)
+        self.assertIn('d.recent_quality||{}',private)
+
     def test_public_workflow_contains_only_public_files(self):
         wf=(ROOT/".github/workflows/hive-public-pages.yml").read_text()
         self.assertIn("docs/hive/index.html",wf)
