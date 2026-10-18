@@ -81,6 +81,15 @@ class DashboardUITests(unittest.TestCase):
         self.assertIn('if(tab==="investigations"',html)
         self.assertNotIn('fetch("/api/genesis/prospective-freeze"',html)
 
+    def test_m9_private_research_history_stays_read_only_in_browser(self):
+        html=HTML.read_text()
+        self.assertIn('id="prospective-history"',html)
+        self.assertIn('d.history||{}',html)
+        self.assertIn('m.evidence_days||0',html)
+        self.assertIn('truth-watch-record',html)
+        self.assertNotIn('fetch("/api/genesis/truth-watch-record"',html)
+        self.assertNotIn('fetch("/api/genesis/truth-watch-freeze"',html)
+
     def test_no_vehicle_actions_or_raw_sample_exposure(self):
         html=HTML.read_text()
         self.assertIn("/api/genesis/overview",html)
