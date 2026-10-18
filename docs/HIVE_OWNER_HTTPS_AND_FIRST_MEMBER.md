@@ -28,6 +28,10 @@ bash scripts/hive_owner_private_https_setup.sh
 
 When an existing PIN-protected Funnel/Serve domain is in use, the setup script preserves it. Ensure the existing domain forwards to the PIN gateway on `127.0.0.1:8777` rather than directly exposing raw GHOST port 8766. To remove or change sharing, browse that HTTPS address, sign in, then open `/hive`. **No SSH tunnel required in normal operation.**
 
+### Region maintenance after joining
+
+The owner dialog now has separate **Update my broad region** and **Stop sharing my region** buttons. These authenticated actions reuse the reviewed `genesis.hive_region_client` transport and require explicit confirmation for a new region selection. They do not re-enroll a contributor, change the six-field monthly forecast schema, or force an extra aggregate upload. The local owner-only region row updates after coordinator confirmation; deleting the region calls the coordinator's authenticated DELETE endpoint.
+
 The **guarded owner updater** replaces only `ghost_tesla_ai/hive_local.py`, `ghost_tesla_ai/funnel_gateway.py`, the new `ghost_tesla_ai/hive_owner_proof.py` and the Hive owner's help text in `web/templates/hive.html`, after matching exact reviewed old source bytes. It backs up old files, restarts only Classic Web and an already-running gateway, and probes a malformed report-preview request to verify authorization *without changing consent, uploading, revoking or deleting anything*. Any unexpected live source edits cause preflight to stop.
 
 ## Real first-contributor reporting
