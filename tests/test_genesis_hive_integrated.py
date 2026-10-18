@@ -112,7 +112,7 @@ class HiveLocalIntegrationTests(unittest.TestCase):
                     'within the SAME UTC month',
                     'Your selected broad region (private view)',
                     'data-privacy-scope","OWNER_ONLY"',
-                    'Country and actual driving-location rankings are not collected'):
+                    'Countries and actual drive routes are not collected'):
             self.assertIn(key,html)
         self.assertIn('r.status==="SHARED_GROUP"',html)
         self.assertIn('r.reporting_nodes>=threshold',html)
