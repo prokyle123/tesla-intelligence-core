@@ -122,7 +122,7 @@ class HiveLocalIntegrationTests(unittest.TestCase):
             self.assertEqual(page.status_code,200)
             self.assertIn(b"GHOST <span>HIVE</span>",page.data)
             self.assertIn(b"Contributing Vehicles",page.data)
-            self.assertIn(b"Join the Hive",page.data)
+            self.assertIn(b"Contribute to GHOST Hive",page.data)
             api=client.get("/api/hive/local")
             self.assertEqual(api.status_code,200)
             self.assertEqual(api.get_json()["local"]["predictions_scored"],3)
@@ -142,16 +142,16 @@ class HiveLocalIntegrationTests(unittest.TestCase):
 
     def test_integrated_ui_has_no_second_nav_and_explicit_missing_data(self):
         src=(ROOT/"web/templates/hive.html").read_text()
-        for required in ("GHOST <span>HIVE</span>","Where Contributors Participate",
+        for required in ("GHOST <span>HIVE</span>","Where Our Contributors Drive",
                          "Prediction Accuracy","Battery Temperature Error",
                          "Research Activity","Top Contributing Regions",
-                         "Join the Hive","/api/hive/local"):
+                         "Contribute to GHOST Hive","/api/hive/local"):
             self.assertIn(required,src)
         self.assertNotIn("<nav",src)
         self.assertNotIn('href=',src)
         self.assertNotIn("427"," ".join(src.split("hero-sats")[-1:]))
         self.assertIn("Fleet network not connected",src)
-        self.assertIn("No location data collected or shared.",src)
+        self.assertIn("Contribution locations are not collected.",src)
 
 if __name__=="__main__":
     unittest.main()
