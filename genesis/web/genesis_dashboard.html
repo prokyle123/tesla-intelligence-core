@@ -135,6 +135,13 @@ footer{border-top:1px solid var(--border);margin-top:35px;padding-top:18px;color
 <div id="challenger-models" class="chart-list"><div class="empty">Run the local challenger-freeze command after reviewing the historical training prerequisites.</div></div>
 <p class="note">Reconstructed predictions use stored forecast-source readings. This is not authenticated ingestion chronology, independent episodes, or permission to promote a model.</p>
 </div>
+<div class="panel" aria-label="Episode-balanced three-way thermal challenge">
+<div class="section-title"><h2>Episode-Balanced Research</h2><span class="pill dim" id="episode-status">Waiting for event evidence</span></div>
+<p class="note">GENESIS groups post-freeze forecasts by inferred GHOST driving, charging, parked, sleep, cold-soak or preconditioning events. Each event counts equally, preventing long sessions from dominating the comparison. Events are inferred, not independently verified.</p>
+<div id="episode-coverage" class="note">No episode-scored future evidence checked.</div>
+<div id="episode-models" class="chart-list"><div class="empty">Open Investigations to check eligible post-freeze events.</div></div>
+<p class="note">A minimum of five inferred events, three UTC days and 100 matched forecasts is a research triage threshold, not proof of independent validation. M9/M10 freeze files remain unchanged.</p>
+</div>
 <div class="panel"><div class="section-title"><h2>Evidence-led next investigations</h2><span class="pill dim">Proposed · not executed</span></div><p class="note">Review scored prediction failures and propose repeatable investigations. No automatic training, model changes or commands.</p><div id="context-missions-investigations" class="chart-list"><div class="empty">Loading evidence-based plans when opened.</div></div></div>
 <div class="panel"><div class="section-title"><h2>Prior Hypothesis Architect notes</h2><small>Available only if the separate Architect ledger was saved</small></div><div id="architect-previous" class="empty">No additional Architect records loaded.</div></div>
 </section>
@@ -179,7 +186,7 @@ const percent = n => Number.isFinite(Number(n)) ? (Number(n)>0?"+":"")+Number(n)
 const number = (n,places=2) => Number.isFinite(Number(n)) ? Number(n).toFixed(places) : "—";
 const pretty = s => String(s||"No result").replaceAll("_"," ").replace(/\b\w/g,x=>x.toUpperCase());
 const dateText = n => { const dt=new Date(Number(n)*1000); return Number.isFinite(dt.getTime()) ? dt.toLocaleString() : "Unknown date"; };
-let cache=null,historySelected=null,healthOk=false,truthLastRead=0,truthPending=false,contextLastRead=0,contextPending=false,pairedLastRead=0,pairedPending=false,prospectiveLastRead=0,prospectivePending=false,challengerLastRead=0,challengerPending=false;
+let cache=null,historySelected=null,healthOk=false,truthLastRead=0,truthPending=false,contextLastRead=0,contextPending=false,pairedLastRead=0,pairedPending=false,prospectiveLastRead=0,prospectivePending=false,challengerLastRead=0,challengerPending=false,episodeLastRead=0,episodePending=false;
 function label(id,value){el(id).textContent=value;}
 function view(tab) {
   for(const button of document.querySelectorAll("[data-tab]")) {
@@ -192,6 +199,7 @@ function view(tab) {
   if((tab==="models" || tab==="investigations") && Date.now()-contextLastRead>300000)void readContext();
   if(tab==="investigations" && Date.now()-prospectiveLastRead>300000)void readProspective();
   if(tab==="investigations" && Date.now()-challengerLastRead>300000)void readChallenger();
+  if(tab==="investigations" && Date.now()-episodeLastRead>300000)void readEpisodeChallenge();
   if(tab==="models" && Date.now()-pairedLastRead>300000)void readPaired();
 }
 for(const button of document.querySelectorAll("[data-tab]"))button.addEventListener("click",()=>view(button.dataset.tab));
@@ -639,6 +647,46 @@ async function readChallenger(){
   label("challenger-coverage","Could not inspect the local challenger.");
   el("challenger-models").replaceChildren();
  }finally{challengerPending=false;}
+}
+async function readEpisodeChallenge(){
+ if(episodePending)return;
+ episodePending=true;
+ episodeLastRead=Date.now();
+ try{
+  const response=await fetch("/api/genesis/episode-challenge",
+    {cache:"no-store",credentials:"same-origin"});
+  if(!response.ok)throw Error("Episode evaluation unavailable");
+  const data=await response.json();
+  label("episode-status",data.status==="NOT_FROZEN"?"Not frozen":pretty(data.status));
+  label("episode-coverage","Matched: "+String(data.matched_forecasts||0)+
+    " · No source event: "+String(data.unmatched_event_forecasts||0)+
+    " · Incomplete event scores: "+String(data.incomplete_matched_forecasts||0));
+  const list=el("episode-models");list.replaceChildren();
+  const rows=Array.isArray(data.model_groups)?data.model_groups:[];
+  if(!rows.length)
+   list.append(make("div","No eligible post-freeze predictions linked to inferred vehicle events yet. Results will accumulate naturally as the existing GHOST system records more outcomes.","empty"));
+  for(const item of rows.slice(0,18)){
+   const card=make("div",undefined,"item");
+   const heading=make("div",undefined,"rowline");
+   heading.append(make("strong",String(item.model)+" · "+String(item.horizon_minutes)+"m"));
+   heading.append(make("small",pretty(item.event_type)));
+   card.append(heading);
+   card.append(make("div",pretty(item.assessment)+" · "+String(item.episodes||0)+
+     " inferred events · "+String(item.evidence_days||0)+" UTC days · "+
+     String(item.forecast_count||0)+" forecasts","detail"));
+   const metric=value=>Number.isFinite(value)?number(value,2)+"°F":"—";
+   card.append(make("div","Equal-event MAE: GHOST "+metric(item.production_mae_f)+
+     " · GENESIS "+metric(item.challenger_mae_f)+
+     " · Persistence "+metric(item.persistence_mae_f),"note"));
+   list.append(card);
+  }
+  if(rows.length>18||data.groups_omitted)
+    list.append(make("div","More event categories are available in the local read-only API.","note"));
+ }catch(e){
+  label("episode-status","Evidence unavailable");
+  label("episode-coverage","Could not inspect local inferred-event outcomes.");
+  el("episode-models").replaceChildren();
+ }finally{episodePending=false;}
 }
 async function readHive(){
  // GENESIS research UI is GET-only. Prefer the already-existing integrated
