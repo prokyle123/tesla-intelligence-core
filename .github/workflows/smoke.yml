@@ -1,7 +1,17 @@
 name: smoke
 on:
   push:
+    branches: [main]
   pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smoke-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   source-sanity:
@@ -51,6 +61,5 @@ jobs:
           print("Verified",len(files),"dashboard photos")
           PY
 
-      - name: Secret-shaped string sanity check
-        run: |
-          ! grep -RIE '(tail[0-9a-f]{6,}\.ts\.net|5YJ[0-9A-Z]{14}|sk-[A-Za-z0-9]{20,}|Bearer [A-Za-z0-9._-]{20,})' --exclude-dir=.git .
+      - name: Check tracked public files for identifying addresses and secrets
+        run: python3 scripts/check_public_exposure.py

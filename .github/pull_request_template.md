@@ -16,3 +16,10 @@ Describe how you tested the change.
 ## Screenshots
 
 If this changes the dashboard, include before/after screenshots with private vehicle information redacted.
+
+## Public release hygiene
+
+- [ ] This was developed on a separate branch and is intended for **Squash and merge**.
+- [ ] No Tailscale device IP/hostname, VIN, API key, access token, private location, or unredacted vehicle history was added.
+- [ ] Any screenshots or generated assets were manually reviewed before committing.
+- [ ] I described any effect on GitHub Actions, deployments, installers, or public releases.
