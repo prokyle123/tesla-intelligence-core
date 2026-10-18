@@ -17,6 +17,7 @@ from .thermal_context import thermal_context
 from .paired_baseline import paired_baseline
 from .prospective_truth_watch import check_watch
 from .frozen_challenger import challenger_status
+from .episode_challenge import episode_challenge
 from .truth_watch_history import read_history
 from .hive_transfer import status as hive_client_status
 
@@ -116,6 +117,23 @@ def genesis_challenger():
     except (ValueError,OSError,TypeError,KeyError) as exc:
         report={"status":"CHALLENGER_UNAVAILABLE","scope":"LOCAL_GHOST_ONLY",
                 "reason":type(exc).__name__,"models":[],
+                "production_changes":False,"network_uploads":False,
+                "can_promote":False,"automatic_execution":False}
+    return _headers(jsonify(report))
+
+
+@blueprint.get("/api/genesis/episode-challenge")
+def genesis_episode_challenge():
+    # Research-only, same-target episode-balanced scores; never triggers work.
+    source=current_app.config.get("GENESIS_SOURCE_DB") or str(config.source_db())
+    state=_private_data_dir()
+    try:
+        report=episode_challenge(
+            Path(source),state/"prospective-truth-watch.json",
+            state/"prospective-challenger.json")
+    except (ValueError,OSError,TypeError,KeyError) as exc:
+        report={"status":"EPISODE_EVALUATION_UNAVAILABLE","scope":"LOCAL_GHOST_ONLY",
+                "reason":type(exc).__name__,"model_groups":[],
                 "production_changes":False,"network_uploads":False,
                 "can_promote":False,"automatic_execution":False}
     return _headers(jsonify(report))
