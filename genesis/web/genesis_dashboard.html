@@ -82,6 +82,13 @@ footer{border-top:1px solid var(--border);margin-top:35px;padding-top:18px;color
 <div class="panel"><div class="section-title"><h2>Validation leaderboard</h2><small>Episode-balanced MAE, °C</small></div><p class="note">All models were fitted using historical training episodes. The validation set selected a challenger; its later holdout is reported separately.</p><div class="divider"></div><div id="model-leaderboard" class="chart-list"><div class="empty">Detailed rankings appear with the next product research cycle.</div></div></div>
 <div class="panel"><div class="section-title"><h2>Selected model assessment</h2><span id="model-status" class="pill dim">No candidate evaluated</span></div><div class="eyebrow">Validation-selected challenger</div><div class="big-status aqua" id="model-selected">—</div><div class="divider"></div><div id="model-scores" class="comparison"><div class="empty">No holdout evidence yet.</div></div><p id="model-rule" class="notice">Research-only: validation improvement does not qualify a model for production.</p></div>
 </div>
+<div class="panel" aria-label="Prediction Truth Lab - local scored GHOST outcomes">
+<div class="section-title"><h2>Prediction Truth Lab</h2><span class="pill dim" id="truth-status">Read-only · waiting</span></div>
+<p class="note">Actual resolved GHOST battery-temperature forecasts, compared across two <strong>non-overlapping</strong> seven-day periods. A model's generation must match before we flag a possible performance change.</p>
+<div id="truth-summary" class="grid4" style="grid-template-columns:repeat(2,minmax(0,1fr));margin:15px 0"><div class="empty">Open this Models tab to read scored prediction evidence.</div></div>
+<div id="truth-models" class="chart-list"><div class="empty">No model diagnostics loaded yet.</div></div>
+<p class="note" id="truth-note">Attention flags are research leads, not statistical proof of drift. No vehicle commands or model promotion.</p>
+</div>
 <div class="panel"><div class="section-title"><h2>Evidence limitations</h2></div><p class="note">Results use observationally inferred parked episodes. Current telemetry may not reveal when the battery heater, conditioning, or changing outside temperatures affected the pack. The tested historical data has already been explored.</p><div id="model-caveats"></div></div>
 </section>
 <section class="tab-panel" data-panel="investigations" hidden>
@@ -137,7 +144,7 @@ const percent = n => Number.isFinite(Number(n)) ? (Number(n)>0?"+":"")+Number(n)
 const number = (n,places=2) => Number.isFinite(Number(n)) ? Number(n).toFixed(places) : "—";
 const pretty = s => String(s||"No result").replaceAll("_"," ").replace(/\b\w/g,x=>x.toUpperCase());
 const dateText = n => { const dt=new Date(Number(n)*1000); return Number.isFinite(dt.getTime()) ? dt.toLocaleString() : "Unknown date"; };
-let cache=null,historySelected=null,healthOk=false;
+let cache=null,historySelected=null,healthOk=false,truthLastRead=0,truthPending=false;
 function label(id,value){el(id).textContent=value;}
 function view(tab) {
   for(const button of document.querySelectorAll("[data-tab]")) {
@@ -146,6 +153,7 @@ function view(tab) {
     if(current)button.setAttribute("aria-current","page");else button.removeAttribute("aria-current");
   }
   for(const panel of document.querySelectorAll("[data-panel]"))panel.hidden=panel.dataset.panel!==tab;
+  if(tab==="models" && Date.now()-truthLastRead>300000)void readTruth();
 }
 for(const button of document.querySelectorAll("[data-tab]"))button.addEventListener("click",()=>view(button.dataset.tab));
 function failure(message) {
@@ -312,6 +320,66 @@ async function readVehicle(){
  label("vehicle-charge",available&&d.charger_kw!==null?number(d.charger_kw,1)+" kW":"—");
  label("vehicle-age",available?number(d.age_minutes,1)+" min ago":"Unavailable");
  } catch(e){label("vehicle-state","Source unavailable");}
+}
+async function readTruth(){
+ if(truthPending)return;
+ truthPending=true;
+ truthLastRead=Date.now();
+ try{
+  const response=await fetch("/api/genesis/prediction-quality",{cache:"no-store",credentials:"same-origin"});
+  if(!response.ok)throw Error("Prediction Truth Lab unavailable");
+  const data=await response.json();
+  label("truth-status",data.status==="OK"?"Actual GHOST outcomes":pretty(data.status));
+  const box=el("truth-summary");box.replaceChildren();
+  for(const spec of [
+    {name:"Recent 7 days",v:data.recent||{}},
+    {name:"Previous 7 days",v:data.previous||{}}
+  ]){
+   const tile=make("div",undefined,"stat");
+   tile.append(make("div",spec.name,"eyebrow"),
+               make("div",Number.isFinite(spec.v.mae_f)?number(spec.v.mae_f,2)+" °F":"—","value aqua"),
+               make("div",String(spec.v.samples||0)+" temperature forecasts · "+
+                 (Number.isFinite(spec.v.within_2f_percent)?number(spec.v.within_2f_percent,1)+"% within ±2°F":"no accuracy score"),"hint"));
+   box.append(tile);
+  }
+  const list=el("truth-models");list.replaceChildren();
+  if(!Array.isArray(data.models)||!data.models.length){
+   list.append(make("div",data.status==="NO_SCORED_EVIDENCE"?
+     "No eligible scored temperature forecasts in the last 14 days.":
+     "Model-level comparisons are unavailable for this source.","empty"));
+  }else{
+   for(const row of data.models){
+    const block=make("div",undefined,"item");
+    const line=make("div",undefined,"rowline");
+    line.append(make("strong",String(row.model)+" · "+String(row.horizon_minutes)+"m"));
+    line.append(make("small",pretty(row.state)));
+    block.append(line);
+    const v=row.recent||{},p=row.previous||{};
+    const desc=make("div","Recent: "+String(v.samples||0)+" scores / "+
+      (Number.isFinite(v.mae_f)?number(v.mae_f,2)+" °F":"—")+
+      "  |  Previous: "+String(p.samples||0)+" scores / "+
+      (Number.isFinite(p.mae_f)?number(p.mae_f,2)+" °F":"—"),"detail");
+    block.append(desc);
+    if(Number.isFinite(row.mae_change_f)&&Number.isFinite(row.accuracy_change_pp)){
+     block.append(make("div","Change: "+
+       (row.mae_change_f>=0?"+":"")+number(row.mae_change_f,2)+
+       " °F mean error · "+
+       (row.accuracy_change_pp>=0?"+":"")+number(row.accuracy_change_pp,1)+
+       " percentage points within ±2°F","note"));
+    }else{
+     block.append(make("div","Comparison withheld: insufficient overlapping generation evidence or too few scored outcomes.","note"));
+    }
+    list.append(block);
+   }
+   if(data.models_omitted)list.append(make("p",String(data.models_omitted)+" additional smaller model groups omitted.","note"));
+  }
+  label("truth-note","Two disjoint seven-day windows; resolution-time cohorts may mix different conditions."+
+    " Errors from repeated forecasts are correlated. Flags are research leads, never proof of drift or permission to promote models.");
+ }catch(e){
+  label("truth-status","Evidence unavailable");
+  el("truth-summary").replaceChildren(make("div","Could not read scored local prediction evidence.","empty"));
+  el("truth-models").replaceChildren();
+ }finally{truthPending=false;}
 }
 async function readHive(){
  // GENESIS research UI is GET-only. Prefer the already-existing integrated
