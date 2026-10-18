@@ -12,6 +12,7 @@ from .research import discover
 from .source import SourceUnavailable, load_numeric_history
 from .store import ResearchStore
 from .validation import retrospective_audit
+from .coverage import coverage_report
 
 def run_once(source_db: Path, research_db: Path, max_rows: int = 6000) -> dict:
     source_db = Path(source_db).expanduser().resolve()
@@ -71,6 +72,12 @@ def audit_candidates(source_db: Path, research_db: Path,
     return retrospective_audit(rows,pairs,recent_window)
 
 
+def inspect_coverage(source_db: Path, max_rows: int = 12000) -> dict:
+    """No research DB reads or writes, only local aggregate evidence counts."""
+    rows = load_numeric_history(source_db,limit=max_rows)
+    return coverage_report(rows)
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="Experimental offline GHOST GENESIS lab")
     p.add_argument("--source-db", type=Path, default=config.source_db())
@@ -84,6 +91,8 @@ def main(argv: list[str] | None = None) -> int:
     audit.add_argument("--max-rows", type=int, default=12000)
     audit.add_argument("--recent-window", type=int, default=6000)
     commands.add_parser("hivemind-status", help="Inspect disabled-by-default fleet controls")
+    context = commands.add_parser("coverage", help="Read-only local signal and regime coverage")
+    context.add_argument("--max-rows", type=int, default=12000)
     demo = commands.add_parser("simulate-fleet", help="Run a synthetic offline global-model learning demo")
     demo.add_argument("--nodes", type=int, default=32)
     demo.add_argument("--rounds", type=int, default=30)
@@ -99,6 +108,8 @@ def main(argv: list[str] | None = None) -> int:
             result = audit_candidates(args.source_db,args.research_db,args.max_rows,args.recent_window)
         elif args.command == "simulate-fleet":
             result = simulate_fleet(vehicles=args.nodes, rounds=args.rounds)
+        elif args.command == "coverage":
+            result = inspect_coverage(args.source_db,args.max_rows)
         else:
             result = network_status()
     except (SourceUnavailable, ValueError) as exc:
