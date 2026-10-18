@@ -9,6 +9,7 @@ are a separate reviewed milestone.
 """
 from __future__ import annotations
 
+from contextlib import closing
 from datetime import datetime, timezone
 import math
 from pathlib import Path
@@ -94,10 +95,16 @@ def local_snapshot(path:Path|None=None, *, now:float|None=None)->dict:
     if path is None:
         path=config.DB_PATH
     try:
-        with _read_only(path) as con:
+        with closing(_read_only(path)) as con:
             tables={r[0] for r in con.execute(
                 "SELECT name FROM sqlite_master WHERE type='table'")}
             if "telemetry" in tables:
+                telemetry_columns={r[1] for r in con.execute("PRAGMA table_info(telemetry)")}
+                if "car_id" in telemetry_columns:
+                    count=con.execute("SELECT COUNT(DISTINCT car_id) FROM telemetry").fetchone()[0]
+                    if count>1:
+                        result["error"]="MULTIPLE_VEHICLES_REQUIRE_PER_VEHICLE_ISOLATION"
+                        return result
                 row=con.execute("SELECT COUNT(*) n,MAX(ts) latest FROM telemetry").fetchone()
                 result["local"]["telemetry_samples"]=int(row["n"])
                 stamp=_num(row["latest"])
