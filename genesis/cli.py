@@ -23,6 +23,7 @@ from .episode_lab import parked_thermal_research
 from .thermal_tournament import run_tournament
 from .prospective_shadow import freeze_shadow, score_shadow, shadow_status
 from .product_core import ProductLedger, run_product_cycle
+from .prospective_truth_watch import freeze_watch, check_watch
 
 def run_once(source_db: Path, research_db: Path, max_rows: int = 6000) -> dict:
     source_db = Path(source_db).expanduser().resolve()
@@ -165,6 +166,8 @@ def main(argv: list[str] | None = None) -> int:
                    default=config.data_dir() / "prospective_shadow.sqlite3")
     p.add_argument("--product-db", type=Path,
                    default=config.data_dir() / "product.sqlite3")
+    p.add_argument("--truth-watch-file", type=Path,
+                   default=config.data_dir() / "prospective-truth-watch.json")
     commands = p.add_subparsers(dest="command", required=True)
     run = commands.add_parser("run-once", help="One explicit, read-only research cycle")
     run.add_argument("--max-rows", type=int, default=6000)
@@ -215,6 +218,8 @@ def main(argv: list[str] | None = None) -> int:
     product.add_argument("--save",action="store_true",
                          help="Save aggregate-only findings in private product ledger")
     commands.add_parser("product-status",help="Read local product research history")
+    commands.add_parser("truth-watch-freeze",help="Explicitly freeze incumbent generations and future forecast watermark")
+    commands.add_parser("truth-watch-check",help="Score eligible post-freeze outcomes; source and watch ledger read-only")
     demo = commands.add_parser("simulate-fleet", help="Run a synthetic offline global-model learning demo")
     demo.add_argument("--nodes", type=int, default=32)
     demo.add_argument("--rounds", type=int, default=30)
@@ -267,6 +272,10 @@ def main(argv: list[str] | None = None) -> int:
                 args.source_db,args.product_db,
                 max_scan=args.max_scan,save=args.save,
                 protected_paths=(args.research_db,args.architect_db,args.shadow_db))
+        elif args.command == "truth-watch-freeze":
+            result = freeze_watch(args.source_db,args.truth_watch_file)
+        elif args.command == "truth-watch-check":
+            result = check_watch(args.source_db,args.truth_watch_file)
         elif args.command == "product-status":
             result = {"status":"LOCAL_RESEARCH_ONLY",
                       "runs":ProductLedger(args.product_db).read_recent(30),
