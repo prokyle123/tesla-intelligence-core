@@ -387,12 +387,6 @@ def _run_hive_action(action:str,*,month:str|None=None,region_code:str|None=None)
                  "region-publish":"publish","region-hide":"hide"}[action]
         args=[_sys.executable,"-m","genesis.hive_region_client",
               "--state-dir",str(_client_root()),command]
-        if action=="monthly-publish":
-            if payload.get("acknowledge_public_monthly_from_one") is not True:
-                return jsonify({"error":"EXPLICIT_PUBLIC_MONTHLY_CONSENT_REQUIRED"}),400
-            current=_private_consent()
-            if current.get("mode")!="OPTED_IN" or not current.get("hourly_enabled"):
-                return jsonify({"error":"ACTIVE_HIVE_OPT_IN_REQUIRED"}),409
         if action=="region-publish":
             args.append("--acknowledge-public-singleton")
         if action=="region-set":
@@ -477,6 +471,12 @@ def hive_control(action:str):
                 "NORTH_AMERICA_WEST","NORTH_AMERICA_EAST","SOUTH_AMERICA",
                 "EUROPE","AFRICA","ASIA","OCEANIA"):
                 return jsonify({"error":"VALID_BROAD_REGION_REQUIRED"}),400
+            current=_private_consent()
+            if current.get("mode")!="OPTED_IN" or not current.get("hourly_enabled"):
+                return jsonify({"error":"ACTIVE_HIVE_OPT_IN_REQUIRED"}),409
+        if action=="monthly-publish":
+            if payload.get("acknowledge_public_monthly_from_one") is not True:
+                return jsonify({"error":"EXPLICIT_PUBLIC_MONTHLY_CONSENT_REQUIRED"}),400
             current=_private_consent()
             if current.get("mode")!="OPTED_IN" or not current.get("hourly_enabled"):
                 return jsonify({"error":"ACTIVE_HIVE_OPT_IN_REQUIRED"}),409
