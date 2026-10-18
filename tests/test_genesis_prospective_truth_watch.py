@@ -34,7 +34,6 @@ class ProspectiveTruthWatchTests(unittest.TestCase):
       "pack_temp_60m",gen,60,pred,actual,source))
    c.commit()
  def test_future_only_and_immutable_watch(self):
-  before=hashlib.sha256(self.db.read_bytes()).hexdigest()
   self.assertEqual(check_watch(self.db,self.state,now=NOW)["status"],"NOT_FROZEN")
   freeze=freeze_watch(self.db,self.state,now=NOW)
   self.assertEqual(freeze["status"],"FROZEN_AWAITING_NEW_SCORES")
@@ -60,7 +59,9 @@ class ProspectiveTruthWatchTests(unittest.TestCase):
   self.assertEqual(row["persistence_mae_f"],0)
   self.assertEqual(row["model_advantage_f"],-7.2)
   self.assertEqual(row["assessment"],"PERSISTENCE_BETTER_REVIEW")
-  self.assertEqual(before,hashlib.sha256(self.db.read_bytes()).hexdigest() if False else before)
+  after_inserts=hashlib.sha256(self.db.read_bytes()).hexdigest()
+  check_watch(self.db,self.state,now=NOW+10800)
+  self.assertEqual(after_inserts,hashlib.sha256(self.db.read_bytes()).hexdigest())
   dump=json.dumps(report)
   for bad in ("PRIVATE_CAR","PRIVATE_ROUTE","source_telemetry_id","predicted_at","resolved_at"):
    self.assertNotIn(bad,dump)
