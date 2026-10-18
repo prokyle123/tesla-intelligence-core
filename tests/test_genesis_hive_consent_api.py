@@ -42,7 +42,7 @@ class HiveConsentApiTests(unittest.TestCase):
             "source":"ghost_prediction_audit",
         }
 
-    def worker(self,action,*,month=None):
+    def worker(self,action,*,month=None,region_code=None):
         self.operations.append((action,month))
         if action=="preview":
             return {"eligible":True,"payload":self.sample,"month":"2026-10"}
@@ -51,6 +51,7 @@ class HiveConsentApiTests(unittest.TestCase):
         if action=="sync-now":
             return {"state":"ACCEPTED","month":"2026-10","network_request":True}
         if action=="region-set":
+            self.assertEqual(region_code,"NORTH_AMERICA_EAST")
             return {"regional_sharing":"OPTED_IN"}
         if action=="region-clear":
             return {"regional_sharing":"OFF"}
@@ -158,6 +159,18 @@ class HiveConsentApiTests(unittest.TestCase):
         self.assertEqual(denied.status_code,400)
         self.assertEqual(self.operations,[])
 
+    def test_separate_macro_region_is_never_implicitly_enabled(self):
+        req={"acknowledge_pseudonymous_sharing":True,
+             "allow_hourly_aggregates":True}
+        self.submit("join",req)
+        self.assertNotIn(("region-set",None),self.operations)
+        self.operations.clear()
+        result=self.submit("join",{**req,"region_code":"NORTH_AMERICA_EAST"})
+        self.assertEqual(result.status_code,200)
+        self.assertEqual(result.get_json()["region_update"]["regional_sharing"],"OPTED_IN")
+        self.assertEqual(self.operations,[
+            ("join",None),("sync-now",None),("region-set",None)])
+        
     def test_failed_immediate_upload_leaves_hourly_opted_in(self):
         def fails_worker(action,*,month=None,region_code=None):
             if action=="join":return {"mode":"OPTED_IN","automatic_uploads":True}
