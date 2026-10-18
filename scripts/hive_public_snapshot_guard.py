@@ -91,6 +91,13 @@ def check(d):
             measure(row["mean_error_f"])
             if row["reporting_nodes"]>d["reporting_nodes"]:raise ValueError("Cohort exceeds network")
             qualified.append(row)
+        elif row["status"]=="EXPLICIT_PUBLIC_OPT_IN":
+            integer(row["reporting_nodes"],1)
+            integer(row["predictions_checked"],1)
+            measure(row["mean_error_f"])
+            if row["reporting_nodes"]>d["reporting_nodes"]:
+                raise ValueError("Explicit cohort larger than total")
+            qualified.append(row)
         elif row["status"]=="SMALL_GROUP_PRIVATE":
             if any(row[x] is not None for x in ("reporting_nodes","predictions_checked","mean_error_f")):
                 raise ValueError("Private monthly values leaked")
