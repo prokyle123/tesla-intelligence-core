@@ -63,3 +63,39 @@ automatic promotion.
 
 Do not modify the original Home dashboard or silently expand existing HIVE
 consent. Do not run the experimental research engine automatically.
+
+## Follow-on M5: error direction and target-match integrity
+
+This keeps the **same GET-only local research endpoint** and adds calculated
+aggregates to both disjoint periods and every displayed model/horizon group:
+
+- Percentage of resolved forecasts missing by **more than 5°F** and 10°F.
+  All resolved nonnegative errors are counted, including severe misses.
+- Mean **signed** temperature error. The GHOST truth resolver uses
+  `predicted_value - actual_value`: positive means overpredicting pack
+  temperature; negative means underpredicting. Overpredict and underpredict
+  proportions are computed only among records with signed-error evidence,
+  with the denominator shown as `signed_samples`.
+- Proportion of measured actual temperatures matched **more than ten minutes
+  from the intended target timestamp**, computed only among records with
+  `resolution_gap_seconds`. Its denominator is shown as `gap_samples`.
+- When an older database lacks those optional columns, missing information
+  remains `null` and is not fabricated as a good zero-bias result.
+
+These details help prioritize a science question; they do **not** automatically
+attribute failures to cold weather, battery heating, aging, charging, or
+forecast model defects. No GPS, VIN, raw data or event times are returned.
+GENESIS only aggregates values inside SQLite with read-only connection
+permissions.
+
+### Actual first M4 observations (owner's Ghost, Oct 18 2026)
+
+Previous disjoint seven days: 17,805 resolved pack forecasts, MAE 2.22°F,
+65.4% within ±2°F. Most recent seven days: 17,749, MAE 4.47°F, 39.4%
+within ±2°F. Main models at 60 and 180 minutes both deteriorated.
+
+M5 will test whether those model misses skew consistently hot or cold and
+whether the truth-matching window is contributing. Those questions cannot
+be answered from MAE alone. More detailed cold-weather regime comparisons
+would still need verified historical ambient temperatures, battery-heater
+state, telemetry coverage, and appropriate baseline matching.
