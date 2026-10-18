@@ -366,7 +366,7 @@ async function control(action,payload){
  try{data=await response.json();}catch(e){throw Error("Hive control returned an invalid response.");}
  if(!response.ok){
    if(data.error==="OWNER_AUTHORIZATION_REQUIRED")
-     throw Error("Owner access required: open this page through an authenticated SSH tunnel on http://127.0.0.1:8766/hive.");
+     throw Error("Owner sign-in required. Use your PIN-protected HTTPS GHOST address from Tailscale Serve (or your approved Funnel), then retry. Direct LAN/tailnet HTTP on port 8766 is read-only for these controls.");
    if(data.error==="HOURLY_TRANSFER_TIMER_NOT_RUNNING")
      throw Error("Hourly Hive service is not yet installed or active on this GHOST instance.");
    throw Error(data.error||"Hive action was refused.");
@@ -421,7 +421,7 @@ $("hive-revoke").addEventListener("click",()=>{
 $("consent-status").addEventListener("click",()=>$("sharing-dialog").showModal());
 $("close-dialog").addEventListener("click",()=>$("sharing-dialog").close());
 if(location.hostname!=="127.0.0.1"&&location.hostname!=="::1"){
- $("hive-access-note").textContent="To change sharing safely, open this page through an authenticated SSH tunnel at http://127.0.0.1:8766/hive. No token copy/paste is required.";
+ $("hive-access-note").textContent="Manage Hive using the PIN-protected HTTPS GHOST address configured during setup. Direct access to port 8766 does not grant owner rights. No browser token or SSH tunnel is required once HTTPS Serve is configured.";
 }
 wirePeriods();
 refresh();
