@@ -25,6 +25,7 @@ from .prospective_shadow import freeze_shadow, score_shadow, shadow_status
 from .product_core import ProductLedger, run_product_cycle
 from .prospective_truth_watch import freeze_watch, check_watch
 from .truth_watch_history import record_history, read_history
+from .frozen_challenger import freeze_challenger, challenger_status
 
 def run_once(source_db: Path, research_db: Path, max_rows: int = 6000) -> dict:
     source_db = Path(source_db).expanduser().resolve()
@@ -171,6 +172,8 @@ def main(argv: list[str] | None = None) -> int:
                    default=config.data_dir() / "prospective-truth-watch.json")
     p.add_argument("--truth-history-db", type=Path,
                    default=config.data_dir() / "prospective-truth-history.sqlite3")
+    p.add_argument("--challenger-file", type=Path,
+                   default=config.data_dir() / "prospective-challenger.json")
     commands = p.add_subparsers(dest="command", required=True)
     run = commands.add_parser("run-once", help="One explicit, read-only research cycle")
     run.add_argument("--max-rows", type=int, default=6000)
@@ -225,6 +228,8 @@ def main(argv: list[str] | None = None) -> int:
     commands.add_parser("truth-watch-check",help="Score eligible post-freeze outcomes; source and watch ledger read-only")
     commands.add_parser("truth-watch-record",help="Explicitly record an aggregate-only private research snapshot")
     commands.add_parser("truth-watch-history",help="Read saved snapshots without creating or changing files")
+    commands.add_parser("challenger-freeze",help="Explicitly fit/freeze physical temperature challenger without changing GHOST")
+    commands.add_parser("challenger-check",help="Read-only frozen challenger vs GHOST vs persistence outcomes")
     demo = commands.add_parser("simulate-fleet", help="Run a synthetic offline global-model learning demo")
     demo.add_argument("--nodes", type=int, default=32)
     demo.add_argument("--rounds", type=int, default=30)
@@ -285,6 +290,10 @@ def main(argv: list[str] | None = None) -> int:
             result = record_history(args.source_db,args.truth_watch_file,args.truth_history_db)
         elif args.command == "truth-watch-history":
             result = read_history(args.truth_watch_file,args.truth_history_db)
+        elif args.command == "challenger-freeze":
+            result = freeze_challenger(args.source_db,args.truth_watch_file,args.challenger_file)
+        elif args.command == "challenger-check":
+            result = challenger_status(args.source_db,args.truth_watch_file,args.challenger_file)
         elif args.command == "product-status":
             result = {"status":"LOCAL_RESEARCH_ONLY",
                       "runs":ProductLedger(args.product_db).read_recent(30),
