@@ -14,13 +14,13 @@ REGION_SCHEMA="ghost-hive-region-v1"
 # These markers are intentionally wide macro-regions, not states or cities.
 # x/y describe approximate placement in the SVG base map with viewBox 760x330.
 REGIONS={
-    "NORTH_AMERICA_WEST":("Western North America",128,111),
-    "NORTH_AMERICA_EAST":("Eastern North America",180,110),
-    "SOUTH_AMERICA":("South America",166,235),
-    "EUROPE":("Europe",371,99),
-    "AFRICA":("Africa",397,189),
-    "ASIA":("Asia",520,118),
-    "OCEANIA":("Oceania",653,260),
+    "NORTH_AMERICA_WEST":("Western North America",137,78),
+    "NORTH_AMERICA_EAST":("Eastern North America",201,82),
+    "SOUTH_AMERICA":("South America",253,194),
+    "EUROPE":("Europe",412,70),
+    "AFRICA":("Africa",422,165),
+    "ASIA":("Asia",570,87),
+    "OCEANIA":("Oceania",665,214),
 }
 class RegionError(ValueError):pass
 
