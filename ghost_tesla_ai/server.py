@@ -41,6 +41,8 @@ from .forecast_quality_v2_api import bp as ghost_forecast_quality_v2_bp
 app.register_blueprint(ghost_forecast_quality_v2_bp)
 from .trip_quality_v3_api import bp as ghost_trip_quality_v3_bp
 app.register_blueprint(ghost_trip_quality_v3_bp)
+from .hive_local import bp as ghost_hive_local_bp
+app.register_blueprint(ghost_hive_local_bp)
 
 # Separate opt-in research UI. With the flag absent/false, GHOST Classic
 # remains unchanged; no Genesis storage is opened and no work is scheduled.
