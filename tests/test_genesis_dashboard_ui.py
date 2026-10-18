@@ -99,6 +99,16 @@ class DashboardUITests(unittest.TestCase):
         self.assertIn('void readChallenger()',html)
         self.assertNotIn('fetch("/api/genesis/challenger-freeze"',html)
 
+    def test_episode_challenge_is_get_only_and_labeled_inferred(self):
+        html=HTML.read_text()
+        for element in ("episode-status","episode-coverage","episode-models"):
+            self.assertIn('id="'+element+'"',html)
+        self.assertIn('fetch("/api/genesis/episode-challenge"',html)
+        self.assertIn('void readEpisodeChallenge()',html)
+        self.assertIn('Events are inferred',html)
+        self.assertIn('not independently verified',html)
+        self.assertNotIn('fetch("/api/genesis/episode-run"',html)
+
     def test_no_vehicle_actions_or_raw_sample_exposure(self):
         html=HTML.read_text()
         self.assertIn("/api/genesis/overview",html)
