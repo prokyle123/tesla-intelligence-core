@@ -66,6 +66,7 @@ if ss -H -ltn '( sport = :8767 )' | grep -q .; then
   fail "Port 8767 did not become available. No other process will be killed."
 fi
 
+cd "$BASE/current"
 nohup "$PY" -m genesis.workspace --data-dir "$STATE" --port 8767 \
   > "$STATE/dashboard.log" 2>&1 </dev/null &
 NEW_PID="$!"
