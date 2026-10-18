@@ -57,6 +57,28 @@ class PublicFirstMonthlyTests(unittest.TestCase):
         self.assertEqual(hidden.status_code,200)
         self.assertIsNone(self.feed()["predictions_checked"])
 
+    def test_consent_never_back_publishes_previous_month(self):
+        self.send(self.first,25,25.)
+        with closing(sqlite3.connect(self.db)) as con:
+            con.execute("""INSERT INTO monthly_research
+                (participant,month,scored_predictions,total_abs_error_c,received_at)
+                VALUES(1,'2026-09',25,300,0)""")
+            con.commit()
+        consent={"schema":"ghost-hive-monthly-public-v1",
+                 "acknowledge_public_from_one":True}
+        from unittest.mock import patch
+        import time
+        october=time.strptime("2026-10-18","%Y-%m-%d")
+        with patch("genesis.hive_server.time.gmtime",return_value=october):
+            resp=self.request(self.first,"/v1/monthly-publication",body=consent)
+        self.assertEqual(resp.status_code,202,resp.get_json())
+        feed=self.feed()
+        sept=next(x for x in feed["monthly"] if x["month"]=="2026-09")
+        october_row=next(x for x in feed["monthly"] if x["month"]=="2026-10")
+        self.assertEqual(sept["status"],"SMALL_GROUP_PRIVATE")
+        self.assertIsNone(sept["predictions_checked"])
+        self.assertEqual(october_row["status"],"EXPLICIT_PUBLIC_OPT_IN")
+
     def test_nonconsenting_peer_cannot_leak_into_one_public_members_metrics(self):
         second=enroll(self.db)
         self.send(self.first,25,25)
