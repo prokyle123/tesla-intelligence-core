@@ -41,7 +41,7 @@ def summary(db:Path, *,now:datetime|None=None)->dict:
             ON m.participant=p.id WHERE p.enabled=1
             AND m.month>=? AND m.month<=?
             GROUP BY m.month""",(months[0],months[-1])).fetchall()
-        approved_regions=public_regions(con,threshold=MIN_REGION_MEMBERS)
+        approved_regions=public_regions(con,threshold=MIN_REGION_MEMBERS,month=now_month)
     saved={r[0]:r for r in rows}
     timeline=[]
     for month in months:

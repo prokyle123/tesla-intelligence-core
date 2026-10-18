@@ -31,7 +31,7 @@ def validate_region_payload(value:Any)->dict:
         raise RegionError("Unsupported broad region")
     return {"schema":REGION_SCHEMA,"region_code":value["region_code"]}
 
-def public_regions(con,threshold:int=MIN_REGION_MEMBERS)->list[dict]:
+def public_regions(con,threshold:int=MIN_REGION_MEMBERS,*,month:str)->list[dict]:
     if threshold<MIN_REGION_MEMBERS:
         raise RegionError("Unacceptable regional privacy threshold")
     existing={r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
@@ -42,10 +42,11 @@ def public_regions(con,threshold:int=MIN_REGION_MEMBERS)->list[dict]:
       FROM region_consents r JOIN participants p ON p.id=r.participant
       WHERE p.enabled=1 AND r.enabled=1
         AND EXISTS (
-          SELECT 1 FROM monthly_research m WHERE m.participant=r.participant
+          SELECT 1 FROM monthly_research m
+          WHERE m.participant=r.participant AND m.month=?
         )
       GROUP BY r.region_code
-    """).fetchall()
+    """,(month,)).fetchall()
     out=[]
     for key,count in rows:
         if key not in REGIONS or count<threshold:continue
