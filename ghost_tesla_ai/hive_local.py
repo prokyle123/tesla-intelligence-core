@@ -446,16 +446,15 @@ def hive_control(action:str):
                         "region-set",region_code=payload["region_code"])
                 except (_subprocess.SubprocessError,ValueError,RuntimeError,OSError,json.JSONDecodeError):
                     result["region_update"]={"regional_sharing":"NOT_CONFIRMED"}
-            else:
-                # Rejoining without choosing a region MUST NOT silently retain a
-                # previous published regional consent.
+            elif _private_consent().get("region_code"):
+                # A previous regional choice is withdrawn if owner re-joins
+                # without re-selecting it.
                 try:
                     result["region_update"]=_run_hive_action("region-clear")
                 except (_subprocess.SubprocessError,ValueError,RuntimeError,OSError,json.JSONDecodeError):
                     result["region_update"]={"regional_sharing":"REMOTE_REMOVAL_NOT_CONFIRMED"}
-        if action=="disable":
-            # Explicit OFF: disable future uploads and separately request
-            # deletion of any previous regional placement.
+        if action=="disable" and _private_consent().get("region_code"):
+            # Separate location consent is removed on opt-out when present.
             try:
                 result["region_update"]=_run_hive_action("region-clear")
             except (_subprocess.SubprocessError,ValueError,RuntimeError,OSError,json.JSONDecodeError):
