@@ -104,7 +104,7 @@ fi
 echo "[5/5] Confirming real research diagnostic endpoints..."
 "$PY" - <<'PY'
 import json, urllib.request
-for endpoint in ("prediction-quality","thermal-context","paired-baseline"):
+for endpoint in ("prediction-quality","thermal-context","paired-baseline","prospective-watch"):
     url="http://127.0.0.1:8767/api/genesis/"+endpoint
     with urllib.request.urlopen(url,timeout=30) as response:
         doc=json.load(response)
@@ -113,6 +113,10 @@ for endpoint in ("prediction-quality","thermal-context","paired-baseline"):
     assert doc.get("network_uploads") is False,endpoint
     assert doc.get("can_promote") is False,endpoint
     assert isinstance(doc.get("status"),str),endpoint
+    if endpoint=="prospective-watch":
+        assert doc["status"] in ("NOT_FROZEN","AWAITING_FUTURE_EVIDENCE",
+                                  "POST_FREEZE_EVIDENCE_AVAILABLE",
+                                  "CAPACITY_REVIEW_REQUIRED"),doc["status"]
     print(endpoint,":",doc["status"])
 PY
 
