@@ -19,6 +19,7 @@ from .architect import architect_cycle
 from .architect_store import ArchitectLedger
 from .conflict_mission import inspect_conflicts
 from .thermal_mission import thermal_episode_challenge
+from .episode_lab import parked_thermal_research
 
 def run_once(source_db: Path, research_db: Path, max_rows: int = 6000) -> dict:
     source_db = Path(source_db).expanduser().resolve()
@@ -132,7 +133,7 @@ def mission_followup(source_db: Path, architect_db: Path,
     if mission=="RESOLVE_SENSOR_CONTEXT":
         report=inspect_conflicts(blocks)
     elif mission=="CHALLENGE_SHADOW_MODEL":
-        report=thermal_episode_challenge(blocks)
+        report=parked_thermal_research(source_db)
     else:
         # Only vetted mission types are executable; unknown/unapproved plans
         # cannot become network requests or dynamically loaded Python code.
@@ -186,6 +187,9 @@ def main(argv: list[str] | None = None) -> int:
     thermal = commands.add_parser("mission-thermal",
                                  help="Read-only parked pack-temperature +60m challenge")
     thermal.add_argument("--rows-per-block",type=int,default=2400)
+    thermal_full=commands.add_parser("mission-thermal-full",
+                      help="Challenge a one-hour model across complete parked episodes")
+    thermal_full.add_argument("--max-scan",type=int,default=100000)
     demo = commands.add_parser("simulate-fleet", help="Run a synthetic offline global-model learning demo")
     demo.add_argument("--nodes", type=int, default=32)
     demo.add_argument("--rounds", type=int, default=30)
@@ -221,6 +225,8 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "mission-thermal":
             result = thermal_episode_challenge(historical_blocks(
                 args.source_db,blocks=5,rows_per_block=args.rows_per_block))
+        elif args.command == "mission-thermal-full":
+            result = parked_thermal_research(args.source_db,max_rows=args.max_scan)
         else:
             result = network_status()
     except (SourceUnavailable, ValueError) as exc:
