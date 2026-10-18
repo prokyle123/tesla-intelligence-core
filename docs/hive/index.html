@@ -158,23 +158,11 @@ function vehicleBars(container,months){
  const available=data.filter(r=>(r.status==="SHARED_GROUP"||r.status==="EXPLICIT_PUBLIC_OPT_IN")&&Number.isFinite(r.reporting_nodes));
  if(!available.length){
   const total=Number.isInteger(window.hiveReporting)?window.hiveReporting:null;
-  const min=Number.isInteger(window.hiveReleaseThreshold)?window.hiveReleaseThreshold:10;
   const box=document.createElement("div");box.className="empty";
-  box.textContent=(total===null?"No verified reporting count available.":number(total)+" reporting installations in the network overall.")+
-    " Monthly metrics require at least "+number(min)+" reporting installations within the SAME UTC month.";
+  box.textContent=(total===null?"No verified reporter total available.":
+    number(total)+" enrolled reporting installations overall.")+
+    " Public monthly values will appear once a member expressly permits first-member publication, or a cohort qualifies under its original sharing terms.";
   container.append(box);
-  if(total!==null){
-   const bar=document.createElement("div");bar.className="progress";
-   bar.style.width="min(82%,360px)";bar.style.margin="10px auto";
-   bar.setAttribute("role","progressbar");bar.setAttribute("aria-label","Overall reporting installations, not monthly qualification");
-   bar.setAttribute("aria-valuemin","0");bar.setAttribute("aria-valuemax",String(min));
-   bar.setAttribute("aria-valuenow",String(Math.min(min,total)));
-   const fill=document.createElement("span");
-   fill.style.width=String(100*Math.min(min,total)/min)+"%";bar.append(fill);container.append(bar);
-   const label=document.createElement("small");label.className="subtle";
-   label.textContent="Overall enrollment only · not a verified monthly cohort";
-   container.append(label);
-  }
   return;
  }
  const max=Math.max(1,...available.map(r=>r.reporting_nodes));
