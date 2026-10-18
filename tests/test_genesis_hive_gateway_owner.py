@@ -90,6 +90,31 @@ class OwnerGatewayTests(unittest.TestCase):
             self.assertEqual(response.status_code,200,response.get_json())
             send.assert_called_once_with("region-clear",month=None,region_code=None)
 
+    def test_singleton_publication_requires_separate_active_owner_authorization(self):
+        timepoint=1800000000
+        path="/api/hive/control/region-publish"
+        body=json.dumps({"acknowledge_public_singleton":True}).encode()
+        with patch("ghost_tesla_ai.hive_owner_proof.time.time",return_value=timepoint), \
+             patch("ghost_tesla_ai.hive_local._private_consent",
+                   return_value={"mode":"OPTED_IN","hourly_enabled":True,
+                                 "region_code":"NORTH_AMERICA_EAST"}), \
+             patch("ghost_tesla_ai.hive_local._run_hive_action",
+                   return_value={"public_listing":True}) as send:
+            headers={"Origin":ORIGIN,"Content-Type":"application/json",
+                     **proof.sign("POST",path,ORIGIN,body,now=timepoint)}
+            result=self.client.post(path,data=body,headers=headers)
+            self.assertEqual(result.status_code,200,result.get_json())
+            self.assertEqual(result.get_json()["public_listing"],True)
+            send.assert_called_once_with("region-publish",month=None,region_code=None)
+            missing=b"{}"
+            invalid=self.client.post(path,data=missing,
+                headers={"Origin":ORIGIN,"Content-Type":"application/json",
+                         **proof.sign("POST",path,ORIGIN,missing,now=timepoint)})
+            self.assertEqual(invalid.status_code,400)
+            self.assertEqual(invalid.get_json()["error"],
+                             "EXPLICIT_SINGLE_REPORTER_PUBLIC_CONSENT_REQUIRED")
+            send.assert_called_once()
+
     def test_proof_binds_body_origin_path_and_time(self):
         h=proof.sign("POST","/api/hive/control/disable",ORIGIN,b"{}",now=1800000000)
         with patch("ghost_tesla_ai.hive_owner_proof.time.time",return_value=1800000000):
