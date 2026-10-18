@@ -23,7 +23,7 @@ implemented**; Hive consent does not authorize model-weight transfer.
 | P0: Research integrity | Numeric-only telemetry read; isolated hypotheses; no vehicle control | Implemented, exploratory | Fail-closed multi-vehicle, no source writes, documented interpretation |
 | P1: Product core | One operator-invoked cycle, isolated research ledger, historical experiment status | **Implemented in branch** | Deterministic tests and real Ghost smoke test, reproducible recovery |
 | P2: Research console | Separate browser dashboard, history and hypothesis status | **Loopback preview in branch** | Real Pi screenshot QA on PC and mobile, proper authenticated entrypoint |
-| P3: Prospective research | Frozen candidate, completed post-freeze parking episodes, drift/history | Manual diagnostic exists | Verified arrival-time/episode boundaries, sufficient new data, incumbent GHOST forecast comparison |
+| P3: Prospective research | Frozen challenger vs production GHOST and persistence, with private evidence history and event-balanced analysis | **M9/M10 frozen on Ghost; M11 inferred-event scorer developed** | Verify actual new scores across multiple events, source-time integrity, independent evidence and no model promotion |
 | P4: Release packaging | One-command install/update/rollback, controlled CPU/RAM, Python dependency self-check | Staging/rollback preview only | Fresh Raspberry Pi installation + Debian/WSL smoke; no Classic downgrade |
 | P5: Product launch | Complete docs, onboarding, health alerts, backup/restore, monitoring | Not yet | Signed release, security review, performance soak, owner approval |
 | P6: Hivemind/Fleet | Opt-in pseudonymous monthly aggregates and public observatory | Local coordinator, consented monthly sums, hourly sync and private/public dashboards implemented | TLS-hosted coordinator, own-credential onboarding, hardening, fleet validation and additional consent for future metrics |
@@ -99,8 +99,9 @@ Rollback does not change experiment data, Classic GHOST or its models.
 1. Read-only live Pi acceptance of the new operator product cycle + dashboard.
 2. Authenticated gateway integration while preserving the Classic boundary.
 3. Typed release schema, signed immutable versions, backup/rollback contract.
-4. Evidence-grade prospective validation using new actual outcomes and
-   calibration against incumbent GHOST predictions.
+4. Mature M11's inferred-event episode-balanced comparisons using genuinely
+   new post-freeze actual outcomes, check event-engine revisions and trusted
+   prediction-time feature commitments. No unverified improvement claims.
 5. Controlled GENESIS research scheduler proposal with resource caps; no automatic
    activation without a Pi load audit and explicit owner approval.
 6. Dedicated HTTPS Hive coordinator, per-installation credential onboarding,
