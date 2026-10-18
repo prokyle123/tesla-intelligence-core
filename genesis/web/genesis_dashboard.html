@@ -360,6 +360,26 @@ async function readTruth(){
       "  |  Previous: "+String(p.samples||0)+" scores / "+
       (Number.isFinite(p.mae_f)?number(p.mae_f,2)+" °F":"—"),"detail");
     block.append(desc);
+    // Signed error is prediction minus actual temperature, according to
+    // GHOST's production truth resolver. Coverage is shown explicitly.
+    for(const [title,spec] of [["Recent",v],["Previous",p]]){
+     const diagnostics=[];
+     if(Number.isFinite(spec.mean_signed_error_f)){
+      diagnostics.push("signed bias "+(spec.mean_signed_error_f>=0?"+":"")+
+        number(spec.mean_signed_error_f,2)+" °F");
+      diagnostics.push(number(spec.overpredict_percent,1)+"% overestimated");
+      diagnostics.push(number(spec.underpredict_percent,1)+"% underestimated");
+      diagnostics.push(String(spec.signed_samples||0)+" signed scores");
+     }
+     if(Number.isFinite(spec.above_5f_percent))
+      diagnostics.push(number(spec.above_5f_percent,1)+"% missed by >5°F");
+     if(Number.isFinite(spec.above_10f_percent))
+      diagnostics.push(number(spec.above_10f_percent,1)+"% missed by >10°F");
+     if(Number.isFinite(spec.target_gap_over_10m_percent))
+      diagnostics.push(number(spec.target_gap_over_10m_percent,1)+
+        "% truth measurements >10m from target ("+String(spec.gap_samples||0)+" matched)");
+     if(diagnostics.length)block.append(make("div",title+": "+diagnostics.join(" · "),"note"));
+    }
     if(Number.isFinite(row.mae_change_f)&&Number.isFinite(row.accuracy_change_pp)){
      block.append(make("div","Change: "+
        (row.mae_change_f>=0?"+":"")+number(row.mae_change_f,2)+
@@ -373,8 +393,9 @@ async function readTruth(){
    }
    if(data.models_omitted)list.append(make("p",String(data.models_omitted)+" additional smaller model groups omitted.","note"));
   }
-  label("truth-note","Two disjoint seven-day windows; resolution-time cohorts may mix different conditions."+
-    " Errors from repeated forecasts are correlated. Flags are research leads, never proof of drift or permission to promote models.");
+  label("truth-note","Positive signed bias means predicted battery temperature exceeded actual temperature."+
+    " Truth measurement gap is time from forecast target, not scorer delay. Two disjoint resolution-time weeks can still differ in weather and charging mix."+
+    " Repeated forecasts are correlated; diagnostics are hypotheses, not validated causes or approval to promote models.");
  }catch(e){
   label("truth-status","Evidence unavailable");
   el("truth-summary").replaceChildren(make("div","Could not read scored local prediction evidence.","empty"));
