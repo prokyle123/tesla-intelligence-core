@@ -116,11 +116,11 @@ function renderRegions(groups){
  list.replaceChildren();pins.replaceChildren();
  const safe=Array.isArray(groups)?groups.filter(r=>
    typeof r==="object" && r!==null && Number.isInteger(r.reporting_nodes) &&
-   r.reporting_nodes>=10 && Number.isInteger(r.x)&&Number.isInteger(r.y) &&
+   (r.reporting_nodes>=10 || (r.visibility==="EXPLICIT_PUBLIC_OPT_IN" && r.reporting_nodes>=1)) && Number.isInteger(r.x)&&Number.isInteger(r.y) &&
    typeof r.label==="string" && r.x>=0&&r.x<=760&&r.y>=0&&r.y<=330):[];
  if(!safe.length){
   const empty=document.createElement("div");empty.className="empty";
-  empty.textContent="No publishable regional groups yet. A dot appears only with 10 or more opted-in, reporting installations in a broad region.";
+  empty.textContent="No publishable regional groups yet. A broad-region dot appears from one installation that explicitly chooses public listing, or from a qualified ten-member cohort.";
   list.append(empty);
   $("region-map-note").textContent="No qualified region dots yet. Never exact vehicle positions.";
   return;
@@ -131,18 +131,18 @@ function renderRegions(groups){
                             class:"pin-halo"});
    const core=shape("circle",{cx:r.x,cy:r.y,r:Math.min(7,3+Math.sqrt(r.reporting_nodes)/3),
                             class:"pin-core"});
-   const caption=shape("title",{},r.label+" — "+r.reporting_nodes+" enrolled reporting installations");
+   const caption=shape("title",{},r.label+" — "+r.reporting_nodes+" "+(r.visibility==="EXPLICIT_PUBLIC_OPT_IN"?"explicit public listings":"qualified reporters"));
    core.append(caption);pins.append(halo,core);
    const item=document.createElement("div");item.className="region-result";
    const text=document.createElement("div");text.className="region-line";
    const label=document.createElement("span");label.textContent=(i+1)+". "+r.label;
-   const value=document.createElement("strong");value.textContent=String(r.reporting_nodes)+" nodes";
+   const value=document.createElement("strong");value.textContent=String(r.reporting_nodes)+(r.visibility==="EXPLICIT_PUBLIC_OPT_IN"?" public":" nodes");
    text.append(label,value);
    const bar=document.createElement("div");bar.className="progress";
    const fill=document.createElement("span");fill.style.width=String(100*r.reporting_nodes/max)+"%";
    bar.append(fill);item.append(text,bar);list.append(item);
  });
- $("region-map-note").textContent="Cyan lights show consenting broad-region cohorts (10+); locations are approximate category centers, not vehicle positions.";
+ $("region-map-note").textContent="Cyan lights show expressly public-listed broad regions (from one contributor) or qualified cohorts; generic region centers, NEVER driving locations.";
 }
 
 let vehicleWindow="6m";
