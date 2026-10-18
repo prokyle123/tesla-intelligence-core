@@ -276,7 +276,9 @@ def main(argv=None):
     p.add_argument("--port",type=int,default=8778)
     sp=p.add_subparsers(dest="command",required=True)
     sp.add_parser("serve")
-    sp.add_parser("enroll")
+    enrollment=sp.add_parser("enroll")
+    enrollment.add_argument("--token-file",type=Path,
+        help="Write token to a newly created private 0600 file, without printing it")
     sp.add_parser("init")
     revoke_p=sp.add_parser("revoke")
     revoke_p.add_argument("--token-file",type=Path,required=True)
@@ -284,9 +286,24 @@ def main(argv=None):
     if args.command=="init":
         initialize(args.db); print("HIVE_PRIVATE_DATABASE_INITIALIZED");return 0
     if args.command=="enroll":
+        path=args.token_file.expanduser().absolute() if args.token_file else None
+        if path is not None:
+            if path.exists() or path.is_symlink():
+                p.error("Token file already exists; refusing overwrite")
+            if not path.parent.is_dir() or path.parent.stat().st_mode & 0o077:
+                p.error("Token directory must exist with private 0700 permissions")
         token=enroll(args.db)
-        print("PARTICIPANT_TOKEN_SHOW_ONCE:",token)
-        print("Keep the token in a 0600 file. Never paste it into a public chat.")
+        if path is not None:
+            try:
+                fd=os.open(path,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+                with os.fdopen(fd,"w") as out:out.write(token+"\n")
+            except Exception:
+                revoke(args.db,token)
+                raise
+            print("PRIVATE_ENROLLMENT_TOKEN_FILE:",path)
+        else:
+            print("PARTICIPANT_TOKEN_SHOW_ONCE:",token)
+            print("Keep the token in a 0600 file. Never paste it into a public chat.")
         return 0
     if args.command=="revoke":
         file=args.token_file.expanduser()
