@@ -52,3 +52,21 @@ def read(root:Path, *,timeout:float=1.8)->dict:
             "self_excluded_from_peers","peer_metric","source","limitations",
             "can_promote","network_uploads")
     return {k:payload[k] for k in fields if k in payload}
+
+
+def main(argv=None)->int:
+    import argparse
+    import sys
+    p=argparse.ArgumentParser(description="Read-only personal Hive peer comparison")
+    p.add_argument("--state-dir",type=Path,required=True)
+    args=p.parse_args(argv)
+    try:
+        print(json.dumps(read(args.state_dir),sort_keys=True))
+        return 0
+    except (OSError,ValueError,member.ConsentError):
+        print("HIVE_PEER_COMPARISON_UNAVAILABLE",file=sys.stderr)
+        return 1
+
+
+if __name__=="__main__":
+    raise SystemExit(main())
