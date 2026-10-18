@@ -107,6 +107,8 @@ class HiveBroadRegionTests(unittest.TestCase):
             con.execute("INSERT INTO region_consents SELECT participant,region_code,enabled,changed_at FROM prior_regions")
             con.execute("DROP TABLE prior_regions")
             con.commit()
+        # Old database with modern exporter still hides old region choice.
+        self.assertEqual(check(self.snapshot())["regions"],[])
         initialize(self.db)
         with closing(sqlite3.connect(self.db)) as con:
             cols={x[1] for x in con.execute("PRAGMA table_info(region_consents)")}
