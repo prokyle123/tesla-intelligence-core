@@ -113,3 +113,28 @@ Before any real cross-owner learning:
 **Deployment rule:** develop on feature branches, require passing safety
 regressions, review diff and only squash-merge tested work. Never overwrite
 the running Ghost install as an unreviewed experiment.
+
+
+## Read-only Pi preflight — required before enabling GENESIS
+
+Once this draft branch has been reviewed, run the following from a
+*separate working checkout* of the repo on the Pi:
+
+~~~bash
+python3 scripts/genesis_host_preflight.py
+~~~
+
+The report shows architecture, available RAM and storage, read-only telemetry
+row count, service states, Genesis flags and warnings. It deliberately omits
+network addresses, vehicle identifiers, actual observations and secrets.
+The preflight performs no writes or network calls. Copy only that JSON
+summary back for an installation decision.
+
+To try a synthetic fleet round without touching any production information:
+
+~~~bash
+python3 -m genesis.cli simulate-fleet --nodes 32 --rounds 30
+~~~
+
+This is explicitly a **simulation**, NOT secure aggregation or differential
+privacy and not representative of real fleet accuracy.
