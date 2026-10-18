@@ -99,6 +99,31 @@ class HiveLocalIntegrationTests(unittest.TestCase):
         for bad in ("PRIVATE_CAR","PRIVATE_ROUTE_LATLON","car_id","raw_json","gps","vin","longitude","latitude"):
             self.assertNotIn('"'+bad+'"' if len(bad)<9 else bad,serialized)
 
+    def test_rolling_local_quality_is_real_scored_evidence_and_never_uploaded(self):
+        from genesis.hive_member import preview
+        with sqlite3.connect(self.db) as con:
+            con.executemany("INSERT INTO prediction_audit VALUES(?,?,?,?,?,?)",[
+                (self.now-16*86400,self.now-15*86400,"resolved","battery_temp_c",0.5,"PRIVATE_CAR"),
+                (self.now-36*86400,self.now-35*86400,"resolved","battery_temp_c",1.0,"PRIVATE_CAR"),
+                (self.now+100,self.now+100,"resolved","battery_temp_c",0.1,"PRIVATE_CAR"),
+            ])
+        before=hashlib.sha256(self.db.read_bytes()).hexdigest()
+        report=local_snapshot(self.db,now=self.now)
+        self.assertEqual(report["recent_quality"]["7d"]["temp_predictions_scored"],2)
+        self.assertEqual(report["recent_quality"]["30d"]["temp_predictions_scored"],3)
+        self.assertEqual(report["recent_quality"]["7d"]["within_2f_percent"],50)
+        self.assertEqual(report["recent_quality"]["30d"]["within_2f_percent"],66.7)
+        self.assertEqual(report["recent_quality"]["30d"]["temp_mae_f"],1.8)
+        self.assertEqual(hashlib.sha256(self.db.read_bytes()).hexdigest(),before)
+        self.assertNotIn("recent_quality",str(preview(self.db,month="2026-10").get("payload")))
+        self.assertNotIn("PRIVATE_CAR",json.dumps(report))
+
+    def test_no_recent_quality_returns_null_accuracy_not_fake_zero(self):
+        later=local_snapshot(self.db,now=self.now+40*86400)
+        self.assertEqual(later["recent_quality"]["7d"]["temp_predictions_scored"],0)
+        self.assertIsNone(later["recent_quality"]["7d"]["within_2f_percent"])
+        self.assertIsNone(later["recent_quality"]["7d"]["temp_mae_f"])
+
     def test_multicar_source_is_rejected_rather_than_combined(self):
         with sqlite3.connect(self.db) as con:
             con.execute("INSERT INTO telemetry VALUES(?,?,?)",
