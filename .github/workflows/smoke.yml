@@ -65,6 +65,31 @@ jobs:
           GHOST_GENESIS_PREFIX="$tmp/genesis" bash scripts/genesis_stage_preview.sh status
           test -L "$tmp/genesis/current"
 
+      - name: Validate GENESIS dashboard JavaScript
+        run: |
+          python3 - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          class Script(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.collect = False
+                  self.parts = []
+              def handle_starttag(self, tag, attrs):
+                  self.collect = tag == "script" and not dict(attrs).get("src")
+              def handle_endtag(self, tag):
+                  if tag == "script":
+                      self.collect = False
+              def handle_data(self, data):
+                  if self.collect:
+                      self.parts.append(data)
+          parser = Script()
+          parser.feed(Path("genesis/web/genesis_dashboard.html").read_text())
+          assert len(parser.parts) == 1, "Expected one embedded dashboard script"
+          Path("/tmp/genesis-dashboard.js").write_text(parser.parts[0])
+          PY
+          node --check /tmp/genesis-dashboard.js
+
       - name: Check committed diff whitespace
         run: git diff --check HEAD~1 HEAD
 

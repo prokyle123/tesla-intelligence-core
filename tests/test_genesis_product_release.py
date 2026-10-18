@@ -44,6 +44,20 @@ def mock_tournament(*,status="HOLDOUT_CHALLENGE_FAILED"):
         "usable_episodes_complete_heater_state":17,
         "usable_episodes_unknown_heater_state":293,
         "next_mission":"Retain persistence and improve heater-state evidence.",
+        "source_rows_scanned":88219,
+        "holdout_episode_bootstrap_80pct_interval_c":[-0.08,0.05],
+        "models_compared":[
+            {
+              "model":name,
+              "validation_episode_balanced_mae_c":score,
+              "validation_improvement_pct":round((1.1-score)/1.1*100,2),
+              "validation_episodes_better":36,
+              "validation_episodes_evaluated":62,
+            } for name,score in (
+                ("AFFINE_THERMAL",.9),("PERSISTENCE",1.1),
+                ("DRIFT_ONLY",1.2),("THERMAL_ASYMMETRIC",1.3),
+                ("AMBIENT_RELAXATION",1.4))
+        ],
     }
 
 
@@ -91,6 +105,10 @@ class ProductReleaseTests(unittest.TestCase):
         history=ProductLedger(self.product).read_recent()
         self.assertEqual([row["id"] for row in history],[2,1])
         self.assertEqual(history[1]["report"]["status"],"REJECTED")
+        self.assertEqual(len(history[1]["report"]["thermal_leaderboard"]),5)
+        self.assertEqual(history[1]["report"]["thermal_leaderboard"][0]["model"],"AFFINE_THERMAL")
+        self.assertEqual(history[1]["report"]["source_rows_scanned"],88219)
+        self.assertEqual(history[1]["report"]["thermal_uncertainty"],[-0.08,0.05])
         self.assertEqual(self.product.stat().st_mode & 0o777,0o600)
         self.assertEqual(baseline,hashlib.sha256(self.source.read_bytes()).hexdigest())
         dumped=json.dumps(history)
