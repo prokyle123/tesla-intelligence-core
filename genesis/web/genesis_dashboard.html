@@ -609,6 +609,7 @@ async function readChallenger(){
   label("challenger-coverage","Complete same-event comparisons: "+String(data.matched_pairs||0)+
     " · missing paired evidence: "+String(data.incomplete_pairs||0)+
     " · generation exclusions: "+String(data.generation_excluded||0)+
+    " · unsupported horizons: "+String(data.unsupported_horizon_pairs||0)+
     " · missing ambient: "+String(data.missing_ambient_pairs||0));
   for(const candidate of Array.isArray(data.candidates)?data.candidates:[]){
     const box=make("div",undefined,"item");
