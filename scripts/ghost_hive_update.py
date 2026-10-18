@@ -33,7 +33,10 @@ REVIEWED_PRIOR_GIT_BLOBS={
         "4693603cfca9c7e0378cfbee5604e0c361c49b76"},
     "web/templates/hive.html":{
         "c13ae37fac325d6290570cb70579f67eeef14a8f",
-        "6bed38fe5705494d8890332251ca964196033243"},
+        "6bed38fe5705494d8890332251ca964196033243",
+        # Exact reviewed v1.2 page currently installed on the owner's Pi.
+        # Allow only this known predecessor for the optional v1.3 chart fix.
+        "e83a01b554457e490fa95e6a6be559ccecc4f996"},
 }
 
 def git_blob_sha(data:bytes)->str:
