@@ -232,20 +232,9 @@ function vehicleBars(container,months){
    const suffix=document.createElement("span");
    suffix.textContent="Overall enrollment · not a monthly count";
    metric.append(value,suffix);container.append(metric);
-   const bar=document.createElement("div");bar.className="progress";
-   bar.style.width="min(84%,360px)";bar.style.margin="12px auto 7px";
-   bar.setAttribute("role","progressbar");
-   bar.setAttribute("aria-label","Overall reporting enrollment only; not a monthly qualified cohort");
-   bar.setAttribute("aria-valuemin","0");
-   bar.setAttribute("aria-valuemax",String(threshold));
-   bar.setAttribute("aria-valuenow",String(Math.min(total,threshold)));
-   const fill=document.createElement("span");
-   fill.style.width=String(100*Math.min(total,threshold)/threshold)+"%";
-   bar.append(fill);container.append(bar);
-   const caveat=document.createElement("small");caveat.className="subtle";
-   caveat.textContent="Overall enrollment only · small-group months require separate permission; original group threshold "+
-     String(threshold)+" reporters within the SAME UTC month";
-   container.append(caveat);
+   const note=document.createElement("small");note.className="subtle";
+   note.textContent="Live, real overall contributor count. Historical month bars appear only when those specific figures may be published.";
+   container.append(note);
   }
  }
  if(vehicleWindow==="7d"||vehicleWindow==="30d"){
