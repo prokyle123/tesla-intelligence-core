@@ -145,13 +145,13 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"
 const ns="http://www.w3.org/2000/svg";
 const shape=(tag,a,text)=>{const e=document.createElementNS(ns,tag);for(const [k,v] of Object.entries(a))e.setAttribute(k,String(v));if(text!==undefined)e.textContent=String(text);return e;};
 const PRIVATE_REGION_CENTERS={
- "NORTH_AMERICA_WEST":[128,111,"Western North America"],
- "NORTH_AMERICA_EAST":[180,110,"Eastern North America"],
- "SOUTH_AMERICA":[166,235,"South America"],
- "EUROPE":[371,99,"Europe"],
- "AFRICA":[397,189,"Africa"],
- "ASIA":[520,118,"Asia"],
- "OCEANIA":[653,260,"Oceania"]
+ "NORTH_AMERICA_WEST":[137,78,"Western North America"],
+ "NORTH_AMERICA_EAST":[201,82,"Eastern North America"],
+ "SOUTH_AMERICA":[253,194,"South America"],
+ "EUROPE":[412,70,"Europe"],
+ "AFRICA":[422,165,"Africa"],
+ "ASIA":[570,87,"Asia"],
+ "OCEANIA":[665,214,"Oceania"]
 };
 function renderRegions(groups,localChoice=null){
  const list=$("regions-list");
