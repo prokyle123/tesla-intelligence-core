@@ -90,6 +90,10 @@ class PublicDashboardReleaseTests(unittest.TestCase):
         self.assertIn("docs/hive/index.html",wf)
         self.assertIn("hive_public_snapshot_guard.py",wf)
         self.assertIn("https://*",wf)
+        # Prevent any HTTPS downgrade or redirected feed before publishing.
+        self.assertIn("--proto '=https'",wf)
+        self.assertIn("--proto-redir '=https'",wf)
+        self.assertIn("--max-redirs 0",wf)
         self.assertIn("upload-pages-artifact",wf)
         self.assertNotIn("ghost_ai.sqlite3",wf)
         self.assertNotIn("hive.sqlite3",wf)
