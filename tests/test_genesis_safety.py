@@ -108,10 +108,14 @@ class GenesisPrivacyAndDiscoveryTests(unittest.TestCase):
         self.assertTrue(any(x.status == "SHADOW" for x in original))
         # Store 40 experiments with the rejected results at the end,
         # reproducing the actual first-Pi-cycle reporting bug.
-        ordered = [x for x in original if x.status == "SHADOW"]
-        ordered += [x for x in original if x.status == "REJECTED"]
+        accepted = [x for x in original if x.status == "SHADOW"]
+        rejected = [x for x in original if x.status == "REJECTED"]
+        # Extend the synthetic fixture with rejected candidates to reproduce
+        # the real-world result (32 rejects hid 8 accepted discoveries).
+        rejected.extend(rejected[:max(0, 26 - len(rejected))])
+        ordered = accepted + rejected
         self.assertGreater(len(ordered), 25)
-        self.assertGreater(len(ordered) - len([x for x in ordered if x.status == "SHADOW"]), 25)
+        self.assertGreater(len(rejected), 25)
         store = ResearchStore(self.research)
         store.save(self.core, 6000, ordered)
         report = overview(self.research)
