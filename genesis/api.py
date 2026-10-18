@@ -16,6 +16,7 @@ from .prediction_truth import prediction_truth
 from .thermal_context import thermal_context
 from .paired_baseline import paired_baseline
 from .prospective_truth_watch import check_watch
+from .truth_watch_history import read_history
 from .hive_transfer import status as hive_client_status
 
 blueprint = Blueprint("ghost_genesis", __name__, template_folder="web")
@@ -90,8 +91,10 @@ def genesis_prospective_watch():
     # an immutable private file before any future evidence is eligible.
     source=current_app.config.get("GENESIS_SOURCE_DB") or str(config.source_db())
     frozen=_private_data_dir() / "prospective-truth-watch.json"
+    history=_private_data_dir() / "prospective-truth-history.sqlite3"
     try:
         report=check_watch(Path(source),frozen)
+        report["history"]=read_history(frozen,history,limit=14)
     except (ValueError,OSError) as exc:
         report={"status":"WATCH_UNAVAILABLE","scope":"LOCAL_GHOST_ONLY",
                 "reason":type(exc).__name__,"models":[],
