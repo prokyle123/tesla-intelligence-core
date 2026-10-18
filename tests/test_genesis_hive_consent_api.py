@@ -170,7 +170,7 @@ class HiveConsentApiTests(unittest.TestCase):
         self.assertEqual(result.get_json()["region_update"]["regional_sharing"],"OPTED_IN")
         self.assertEqual(self.operations,[
             ("join",None),("sync-now",None),("region-set",None)])
-        
+
     def test_failed_immediate_upload_leaves_hourly_opted_in(self):
         def fails_worker(action,*,month=None,region_code=None):
             if action=="join":return {"mode":"OPTED_IN","automatic_uploads":True}
