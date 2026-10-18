@@ -15,6 +15,8 @@ concurrency:
   cancel-in-progress: false
 jobs:
   publish:
+    # Wait for site configuration or an operator-triggered deployment.
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.HIVE_PUBLIC_FEED_URL != '' }}
     runs-on: ubuntu-latest
     environment:
       name: github-pages
