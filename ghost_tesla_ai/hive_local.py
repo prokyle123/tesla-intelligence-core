@@ -79,6 +79,14 @@ def _private_consent():
             result["last_success_at_utc"]=data.get("time_utc")
     except (OSError,ValueError,TypeError,json.JSONDecodeError):
         pass
+    region=root/"regional-consent.json"
+    result["region_code"]=None
+    if region.is_file() and not region.is_symlink() and not region.stat().st_mode & 0o077:
+        try:
+            optional=json.loads(region.read_text())
+            result["region_code"]=optional.get("region_code") if optional.get("enabled") is True else None
+        except (ValueError,OSError,TypeError):
+            pass
     return result
 
 
@@ -228,6 +236,7 @@ def local_snapshot(path:Path|None=None, *, now:float|None=None)->dict:
     result["hive"]["last_success_month"]=consent["last_success_month"]
     result["hive"]["last_success_at_utc"]=consent.get("last_success_at_utc")
     result["hive"]["hourly_enabled"]=consent.get("hourly_enabled",False)
+    result["hive"]["region_code"]=consent.get("region_code")
     result["hive"]["real_transfer_enabled"]=consent.get("hourly_enabled",False)
     hub=_local_coordinator()
     if hub is not None:
@@ -312,9 +321,9 @@ def _hourly_service_ready() -> bool:
         return False
 
 
-def _run_hive_action(action:str,*,month:str|None=None) -> dict:
+def _run_hive_action(action:str,*,month:str|None=None,region_code:str|None=None) -> dict:
     """Execute reviewed standalone monthly-aggregate module, not a shell."""
-    if action not in (_ALLOWED_ACTIONS | {"sync-now"}):
+    if action not in (_ALLOWED_ACTIONS | {"sync-now","region-set","region-clear"}):
         raise ValueError("Unsupported action")
     app=Path(os.environ.get("GHOST_HIVE_CODE_DIR",
         str(Path.home()/"genesis-product/current"))).expanduser().absolute()
@@ -323,7 +332,17 @@ def _run_hive_action(action:str,*,month:str|None=None) -> dict:
     args=[_sys.executable,"-m","genesis.hive_member",
           "--state-dir",str(_client_root()),
           "--source-db",str(config.DB_PATH)]
-    if action=="sync-now":
+    if action in ("region-set","region-clear"):
+        args=[_sys.executable,"-m","genesis.hive_region_client",
+              "--state-dir",str(_client_root()),
+              "set" if action=="region-set" else "clear"]
+        if action=="region-set":
+            if region_code not in (
+                "NORTH_AMERICA_WEST","NORTH_AMERICA_EAST","SOUTH_AMERICA",
+                "EUROPE","AFRICA","ASIA","OCEANIA"):
+                raise ValueError("Broad region not approved")
+            args.extend(["--region-code",region_code])
+    elif action=="sync-now":
         args=[_sys.executable,"-m","genesis.hive_hourly",
               "--state-dir",str(_client_root()),
               "--source-db",str(config.DB_PATH)]
@@ -389,6 +408,9 @@ def hive_control(action:str):
             return jsonify({"error":"INFORMED_CONSENT_REQUIRED"}),400
         if action=="join" and payload.get("allow_hourly_aggregates") is not True:
             return jsonify({"error":"HOURLY_TRANSFER_CONSENT_REQUIRED"}),400
+        if action=="join" and payload.get("region_code") is not None and payload.get("region_code") not in (
+            "NORTH_AMERICA_WEST","NORTH_AMERICA_EAST","SOUTH_AMERICA","EUROPE","AFRICA","ASIA","OCEANIA"):
+            return jsonify({"error":"INVALID_OPTIONAL_BROAD_REGION"}),400
         if action=="join" and not _hourly_service_ready():
             return jsonify({"error":"HOURLY_TRANSFER_TIMER_NOT_RUNNING"}),503
         if action=="send":
@@ -416,6 +438,27 @@ def hive_control(action:str):
                     "network_request":bool(first.get("network_request",False))}
             except (_subprocess.SubprocessError,ValueError,RuntimeError,OSError,json.JSONDecodeError):
                 result["first_upload"]={"state":"RETRY_SCHEDULED","network_request":False}
+            if payload.get("region_code"):
+                # A distinct optional informed selection. No geolocation inference.
+                try:
+                    result["region_update"]=_run_hive_action(
+                        "region-set",region_code=payload["region_code"])
+                except (_subprocess.SubprocessError,ValueError,RuntimeError,OSError,json.JSONDecodeError):
+                    result["region_update"]={"regional_sharing":"NOT_CONFIRMED"}
+            else:
+                # Rejoining without choosing a region MUST NOT silently retain a
+                # previous published regional consent.
+                try:
+                    result["region_update"]=_run_hive_action("region-clear")
+                except (_subprocess.SubprocessError,ValueError,RuntimeError,OSError,json.JSONDecodeError):
+                    result["region_update"]={"regional_sharing":"REMOTE_REMOVAL_NOT_CONFIRMED"}
+        if action=="disable":
+            # Explicit OFF: disable future uploads and separately request
+            # deletion of any previous regional placement.
+            try:
+                result["region_update"]=_run_hive_action("region-clear")
+            except (_subprocess.SubprocessError,ValueError,RuntimeError,OSError,json.JSONDecodeError):
+                result["region_update"]={"regional_sharing":"REMOTE_REMOVAL_NOT_CONFIRMED"}
         if action=="preview" and result.get("eligible") and result.get("payload"):
             result["preview_sha256"]=_payload_fingerprint(result["payload"])
         response=jsonify(result)
