@@ -38,7 +38,8 @@ def public_regions(con,threshold:int=MIN_REGION_MEMBERS,*,month:str)->list[dict]
     if "region_consents" not in existing:
         return []
     rows=con.execute("""
-      SELECT r.region_code,COUNT(DISTINCT r.participant) AS contributors
+      SELECT r.region_code,COUNT(DISTINCT r.participant) AS contributors,
+        SUM(CASE WHEN r.public_listing=1 THEN 1 ELSE 0 END) AS explicit_public
       FROM region_consents r JOIN participants p ON p.id=r.participant
       WHERE p.enabled=1 AND r.enabled=1
         AND EXISTS (
@@ -48,9 +49,17 @@ def public_regions(con,threshold:int=MIN_REGION_MEMBERS,*,month:str)->list[dict]
       GROUP BY r.region_code
     """,(month,)).fetchall()
     out=[]
-    for key,count in rows:
-        if key not in REGIONS or count<threshold:continue
+    for key,count,explicit_public in rows:
+        if key not in REGIONS:continue
         label,x,y=REGIONS[key]
-        out.append({"code":key,"label":label,"x":x,"y":y,
-                    "reporting_nodes":int(count)})
+        if count>=threshold:
+            out.append({"code":key,"label":label,"x":x,"y":y,
+                        "reporting_nodes":int(count)})
+        elif explicit_public:
+            # Only explicitly single-publisher-consented installations are
+            # counted. The other reporters in this sub-threshold region stay
+            # absent from both the exported count and map metadata.
+            out.append({"code":key,"label":label,"x":x,"y":y,
+                        "reporting_nodes":int(explicit_public),
+                        "visibility":"EXPLICIT_PUBLIC_OPT_IN"})
     return sorted(out,key=lambda v:(-v["reporting_nodes"],v["code"]))
