@@ -166,3 +166,29 @@ guarantee performance on future trips. Later M1 must freeze the experiment,
 wait for genuinely new observations, and audit model drift without selecting
 the outcome beforehand. The audit uses no personal timestamps, coordinates,
 vehicle identifiers or raw sensor streams in its output.
+
+## M1 evidence-coverage correction after first real Pi run
+
+The first retrospective run checked 8 candidates against 6,000 older telemetry
+records. Only 2 relationships met the simple historical fold rule, and zero
+passed a prospective evaluation. Every pair reported only CHARGING-regime
+coverage. This is a warning about sample composition, not evidence that the
+car never drove.
+
+An audit-quality correction adds UNKNOWN and CONFLICT categories rather than
+treating missing speed/power readings as parked. It counts both raw and
+10-minute-thinned observation coverage. Changes between sensor observations
+are tested only across adjacent readings no more than 30 minutes apart, in
+the same unambiguous regime. Jumping between unrelated trips can no longer
+look like a meaningful physical delta.
+
+Commands in a temporary checkout (read-only, no service changes):
+
+    python3 -m genesis.cli --source-db /var/lib/ghost-tesla-ai/ghost_ai.sqlite3 coverage --max-rows 12000
+
+    python3 -m genesis.cli --source-db /var/lib/ghost-tesla-ai/ghost_ai.sqlite3 --research-db /tmp/genesis-first-research.i4UGDw/research.sqlite3 audit-candidates --max-rows 12000 --recent-window 6000
+
+These only emit private counts and inference metadata; the source and ledger
+remain unchanged. The coverage output must not be published as a fleet
+metric. A historical association is neither a causal discovery nor proof
+of real-time future forecasting accuracy.
