@@ -46,10 +46,10 @@
 <div id="activity-chart" class="graph" style="height:115px"><div class="empty">Waiting for research outcomes</div></div><p class="note">These are local verified results, not uploads or shared fleet activity.</p></div>
 <div class="panel content"><div class="panel-heading"><h3><span class="cyan">✧</span> Top Contributing Regions</h3></div><div id="regions-list" class="regions"><div class="empty">No contributor regions have been shared. Opt-in region summaries can appear here later.</div></div></div>
 <div class="panel content"><div class="panel-heading"><h3><span class="cyan">◇</span> Data Privacy & Security</h3></div>
-<div class="privacy-grid"><div class="priv"><i>♙</i><span><b>No public identities</b><small>Contributor names are not shown</small></span></div><div class="priv"><i>▢</i><span><b>Opt-in only</b><small>Off by default</small></span></div><div class="priv"><i>▣</i><span><b>Transfer disabled</b><small>Real data sharing not enabled yet</small></span></div><div class="priv"><i>▥</i><span><b>Research only</b><small>No vehicle commands</small></span></div></div>
+<div class="privacy-grid"><div class="priv"><i>♙</i><span><b>No public identities</b><small>Contributor names are not shown</small></span></div><div class="priv"><i>▢</i><span><b>Opt-in only</b><small>Off by default</small></span></div><div class="priv"><i>▣</i><span><b>Monthly summaries</b><small>Opt-in hourly updates only</small></span></div><div class="priv"><i>▥</i><span><b>Research only</b><small>No vehicle commands</small></span></div></div>
 <div class="foot-banner"><b>Built by Tesla Owners, for Tesla Owners</b><small>Your local predictions and data stay on your own GHOST instance until a reviewed sharing feature is deliberately enabled.</small></div></div>
 </section>
-<div class="bottom-note">GHOST HIVE · Local integration preview · No real-data transfer enabled · No fabricated fleet statistics</div>
+<div class="bottom-note">GHOST HIVE · Local research preview · Consent-gated aggregate transfer only · No fabricated fleet statistics</div>
 </div>
 <dialog class="full-screen-modal" id="sharing-dialog" aria-labelledby="sharing-title">
 <h3 id="sharing-title">Contribute to GHOST Hive</h3>
@@ -148,6 +148,8 @@ async function control(action,payload){
  if(!response.ok){
    if(data.error==="OWNER_AUTHORIZATION_REQUIRED")
      throw Error("Owner access required: open this page through an authenticated SSH tunnel on http://127.0.0.1:8766/hive.");
+   if(data.error==="HOURLY_TRANSFER_TIMER_NOT_RUNNING")
+     throw Error("Hourly Hive service is not yet installed or active on this GHOST instance.");
    throw Error(data.error||"Hive action was refused.");
  }
  return data;

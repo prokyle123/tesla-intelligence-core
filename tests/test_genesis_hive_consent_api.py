@@ -31,6 +31,9 @@ class HiveConsentApiTests(unittest.TestCase):
         self.work.start()
         self.addCleanup(self.work.stop)
         self.operations=[]
+        ready=patch.object(hive_local,"_hourly_service_ready",return_value=True)
+        ready.start()
+        self.addCleanup(ready.stop)
         self.sample={
             "schema":"ghost-hive-monthly-v1",
             "metric":"ghost-battery-temp-forecast-mae-v1",
@@ -102,6 +105,16 @@ class HiveConsentApiTests(unittest.TestCase):
         self.assertEqual(self.submit("revoke",{"confirmation":"DELETE"}).get_json()["remote_deleted"],True)
         self.assertEqual(self.operations[-1],("revoke",None))
 
+
+    def test_hourly_timer_unavailable_prevents_join(self):
+        with patch.object(hive_local,"_hourly_service_ready",return_value=False):
+            denied=self.submit("join",{
+                "acknowledge_pseudonymous_sharing":True,
+                "allow_hourly_aggregates":True,
+            })
+        self.assertEqual(denied.status_code,503)
+        self.assertEqual(denied.get_json()["error"],"HOURLY_TRANSFER_TIMER_NOT_RUNNING")
+        self.assertEqual(self.operations,[])
 
     def test_ssh_tunnel_consent_without_browser_token(self):
         req={"acknowledge_pseudonymous_sharing":True,
