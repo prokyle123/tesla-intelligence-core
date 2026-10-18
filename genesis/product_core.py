@@ -85,6 +85,7 @@ class ProductLedger:
             "status","research_mode","research_trials","architect_status_counts",
             "selected_mission","mission_followup","thermal_status","thermal_winner",
             "thermal_validation","thermal_holdout","thermal_episode_counts",
+            "thermal_leaderboard","thermal_uncertainty","source_rows_scanned",
             "heater_quality","network_uploads","production_changes",
             "can_promote","caveats","next_action"
         }
@@ -163,6 +164,18 @@ def run_product_cycle(source_db: Path,product_db: Path,
         "thermal_validation":_numeric_dict(thermal["validation"]),
         "thermal_holdout":_numeric_dict(thermal["historical_holdout"]),
         "thermal_episode_counts":thermal["episode_counts"],
+        "thermal_leaderboard":[
+            {
+                "model":item["model"],
+                "validation_mae_c":item["validation_episode_balanced_mae_c"],
+                "validation_gain_pct":item["validation_improvement_pct"],
+                "episodes_better":item["validation_episodes_better"],
+                "episodes_evaluated":item["validation_episodes_evaluated"],
+            }
+            for item in thermal.get("models_compared", [])[:5]
+        ],
+        "thermal_uncertainty":thermal.get("holdout_episode_bootstrap_80pct_interval_c"),
+        "source_rows_scanned":thermal.get("source_rows_scanned"),
         "heater_quality":{
             "verified_episodes":thermal["usable_episodes_complete_heater_state"],
             "unverified_episodes":thermal["usable_episodes_unknown_heater_state"]},
