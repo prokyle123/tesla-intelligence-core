@@ -25,6 +25,7 @@ from .hive_analytics import cohort_dashboard,synthetic_demo
 from .hive_monthly import validate_aggregate, AggregateError, MAX_BODY as REAL_MAX_BODY
 from .hive_public import summary as public_summary
 from .hive_models import validate_model_manifest, ModelMetadataError
+from .hive_regions import validate_region_payload, RegionError, REGIONS
 
 from werkzeug.serving import make_server
 from .hive_protocol import validate,ProtocolError,MIN_COHORT,MAX_BODY,METRIC
@@ -46,6 +47,12 @@ CREATE TABLE IF NOT EXISTS monthly_research(
  scored_predictions INTEGER NOT NULL, total_abs_error_c REAL NOT NULL,
  received_at INTEGER NOT NULL,
  PRIMARY KEY(participant,month),
+ FOREIGN KEY(participant) REFERENCES participants(id)
+);
+CREATE TABLE IF NOT EXISTS region_consents(
+ participant INTEGER PRIMARY KEY,
+ region_code TEXT NOT NULL, enabled INTEGER NOT NULL DEFAULT 1,
+ changed_at INTEGER NOT NULL,
  FOREIGN KEY(participant) REFERENCES participants(id)
 );
 CREATE TABLE IF NOT EXISTS model_manifests(
@@ -101,6 +108,7 @@ def revoke(path: Path, token: str) -> bool:
         con.execute("DELETE FROM contributions WHERE participant=?",(row[0],))
         con.execute("DELETE FROM monthly_research WHERE participant=?",(row[0],))
         con.execute("DELETE FROM model_manifests WHERE participant=?",(row[0],))
+        con.execute("DELETE FROM region_consents WHERE participant=?",(row[0],))
         con.execute("UPDATE participants SET enabled=0 WHERE id=?",(row[0],))
         con.commit()
     return True
@@ -174,6 +182,7 @@ def create_app(path: Path) -> Flask:
             con.execute("DELETE FROM contributions WHERE participant=?",(user,))
             con.execute("DELETE FROM monthly_research WHERE participant=?",(user,))
             con.execute("DELETE FROM model_manifests WHERE participant=?",(user,))
+            con.execute("DELETE FROM region_consents WHERE participant=?",(user,))
             con.execute("UPDATE participants SET enabled=0 WHERE id=?",(user,))
             con.commit()
         return jsonify({"revoked":True,"contributions_erased":True}),200
@@ -210,6 +219,39 @@ def create_app(path: Path) -> Flask:
         return jsonify({"accepted":True,"stored":"AGGREGATE_ONLY",
                         "origin":metric["origin"],
                         "publishable":False}),202
+
+    @app.put("/v1/region")
+    def set_broad_region():
+        """Separately opted-in continent-scale region; NEVER infer location."""
+        user=authenticate()
+        if request.mimetype!="application/json":
+            abort(415)
+        if request.content_length is not None and request.content_length>96:
+            abort(413)
+        try:
+            selected=validate_region_payload(request.get_json(silent=True))
+        except RegionError:
+            return jsonify({"error":"INVALID_BROAD_REGION"}),400
+        with closing(sqlite3.connect(db,timeout=4)) as con:
+            con.execute("PRAGMA foreign_keys=ON")
+            con.execute("""INSERT INTO region_consents(
+                participant,region_code,enabled,changed_at) VALUES(?,?,1,?)
+                ON CONFLICT(participant) DO UPDATE SET
+                region_code=excluded.region_code,enabled=1,
+                changed_at=excluded.changed_at""",
+                (user,selected["region_code"],int(time.time())))
+            con.commit()
+        return jsonify({"accepted":True,"regional_sharing":"OPTED_IN",
+                        "region_code":selected["region_code"],
+                        "exact_location_collected":False}),202
+
+    @app.delete("/v1/region")
+    def clear_broad_region():
+        user=authenticate()
+        with closing(sqlite3.connect(db,timeout=4)) as con:
+            con.execute("DELETE FROM region_consents WHERE participant=?",(user,))
+            con.commit()
+        return jsonify({"regional_sharing":"OFF","deleted":True})
 
     @app.post("/v1/monthly-research")
     def monthly_research():
