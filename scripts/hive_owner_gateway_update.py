@@ -24,13 +24,15 @@ FILES=(
 OLD_GIT_BLOBS={
     "ghost_tesla_ai/hive_local.py":{
         "fe335c75c2d0536d1b0a0035a6fb3e244e31e33e",
-        "ac126e62391ffd3a7b29e6cae6999bc4df5f0a37"},
+        "ac126e62391ffd3a7b29e6cae6999bc4df5f0a37",
+        "6d1ae8e327bd3f2713ee9406826f53b46a82179d"},
     "ghost_tesla_ai/funnel_gateway.py":{
         "6ec6a77a26a2971c5ff5c402577101d2700b0ebb"},
     "ghost_tesla_ai/hive_owner_proof.py":set(),
     "web/templates/hive.html":{
         "36b19972e11eda8341fcc82146ce9f157a635bf1",
-        "4226f7c4ceeb1e8d6c7231e97455b218708a795a"},
+        "4226f7c4ceeb1e8d6c7231e97455b218708a795a",
+        "bdb2512538da8e112a0eddea85623bd131c73b8f"},
 }
 NEW_FILE="ghost_tesla_ai/hive_owner_proof.py"
 
