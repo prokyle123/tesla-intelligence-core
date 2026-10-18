@@ -89,7 +89,7 @@ class PublicDashboardReleaseTests(unittest.TestCase):
         html=(ROOT/"docs/hive/index.html").read_text()
         self.assertIn("Released Monthly Cohorts",html)
         self.assertIn("enrolled reporting installations overall.",html)
-        self.assertIn("within the SAME UTC month",html)
+        self.assertIn("small-cohort",html)
         self.assertIn("new separately consented aggregate metric",html)
         self.assertIn('window.hiveReleaseThreshold',html)
         self.assertNotIn('/api/hive/local',html)
