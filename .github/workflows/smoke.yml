@@ -43,6 +43,7 @@ jobs:
           bash -n scripts/hive_public_refresh_timer.sh
           bash -n scripts/hive_v1_ui_deploy.sh
           bash -n scripts/hive_v11_deploy.sh
+          bash -n scripts/hive_v12_deploy.sh
 
       - name: Verify public installer repository
         run: |
