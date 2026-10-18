@@ -76,17 +76,21 @@ echo "[5/5] Verifying upgraded dashboard and API..."
 OK=0
 for i in 1 2 3 4 5 6 7 8 9 10; do
   if "$PY" - <<'PY'
-import json
-import urllib.request
-with urllib.request.urlopen("http://127.0.0.1:8767/api/genesis/health",timeout=2) as r:
-    response=json.load(r)
-assert response.get("ok") is True
-assert response.get("version") == "0.4.0-preview"
-assert response.get("research_only") is True
-assert response.get("production_changes") is False
+import json,sys,urllib.request
+try:
+    with urllib.request.urlopen("http://127.0.0.1:8767/api/genesis/health",timeout=2) as r:
+        response=json.load(r)
+    assert response.get("ok") is True
+    assert response.get("version") == "0.4.0-preview"
+    assert response.get("research_only") is True
+    assert response.get("production_changes") is False
+except Exception:
+    # The new process may still be binding localhost; retry without a traceback.
+    sys.exit(1)
 PY
   then
     OK=1
+    echo "GENESIS viewer ready after readiness attempt $i"
     break
   fi
   sleep .5
@@ -98,7 +102,7 @@ if [[ "$OK" -ne 1 ]]; then
 fi
 
 echo
-echo "GENESIS v0.3 PREVIEW UPGRADE PASS"
+echo "GENESIS v0.4 PREVIEW UPGRADE PASS"
 echo "Viewer PID: $NEW_PID"
 echo "Local URL: http://127.0.0.1:8767/genesis"
 echo "Existing product history preserved in: $STATE"
