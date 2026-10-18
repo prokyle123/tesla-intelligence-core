@@ -13,6 +13,7 @@ from .source import SourceUnavailable, load_numeric_history
 from .store import ResearchStore
 from .validation import retrospective_audit
 from .coverage import coverage_report
+from .history_audit import distributed_coverage
 
 def run_once(source_db: Path, research_db: Path, max_rows: int = 6000) -> dict:
     source_db = Path(source_db).expanduser().resolve()
@@ -78,6 +79,14 @@ def inspect_coverage(source_db: Path, max_rows: int = 12000) -> dict:
     return coverage_report(rows)
 
 
+def historical_coverage(source_db: Path, research_db: Path,
+                        blocks: int = 5, rows_per_block: int = 2400) -> dict:
+    """Read disjoint bounded historical windows; never change either database."""
+    shadows = ResearchStore(research_db).shadow_findings(40)
+    pairs = [(item["feature"],item["target"]) for item in shadows]
+    return distributed_coverage(source_db,pairs,blocks,rows_per_block)
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="Experimental offline GHOST GENESIS lab")
     p.add_argument("--source-db", type=Path, default=config.source_db())
@@ -93,6 +102,10 @@ def main(argv: list[str] | None = None) -> int:
     commands.add_parser("hivemind-status", help="Inspect disabled-by-default fleet controls")
     context = commands.add_parser("coverage", help="Read-only local signal and regime coverage")
     context.add_argument("--max-rows", type=int, default=12000)
+    history = commands.add_parser("historical-coverage",
+                                  help="Read-only multi-era regime and paired-data audit")
+    history.add_argument("--blocks", type=int, default=5)
+    history.add_argument("--rows-per-block", type=int, default=2400)
     demo = commands.add_parser("simulate-fleet", help="Run a synthetic offline global-model learning demo")
     demo.add_argument("--nodes", type=int, default=32)
     demo.add_argument("--rounds", type=int, default=30)
@@ -110,6 +123,9 @@ def main(argv: list[str] | None = None) -> int:
             result = simulate_fleet(vehicles=args.nodes, rounds=args.rounds)
         elif args.command == "coverage":
             result = inspect_coverage(args.source_db,args.max_rows)
+        elif args.command == "historical-coverage":
+            result = historical_coverage(args.source_db,args.research_db,
+                                         args.blocks,args.rows_per_block)
         else:
             result = network_status()
     except (SourceUnavailable, ValueError) as exc:
