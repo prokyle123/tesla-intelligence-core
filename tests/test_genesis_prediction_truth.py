@@ -72,6 +72,47 @@ class PredictionTruthTests(unittest.TestCase):
         self.assertFalse(result["network_uploads"])
         self.assertFalse(result["can_promote"])
 
+    def test_local_diagnostic_bias_severe_misses_and_time_alignment(self):
+        with sqlite3.connect(self.db) as con:
+            con.execute("ALTER TABLE prediction_audit ADD COLUMN signed_error REAL")
+            con.execute("ALTER TABLE prediction_audit ADD COLUMN resolution_gap_seconds REAL")
+            con.execute("""UPDATE prediction_audit
+                SET signed_error = CASE WHEN abs_error = 2.2 THEN 2.2 ELSE -0.8 END,
+                    resolution_gap_seconds = CASE WHEN abs_error = 2.2 THEN 900 ELSE 120 END
+                WHERE status='resolved'""")
+        first=prediction_truth(self.db,now=NOW)
+        recent,previous=first["recent"],first["previous"]
+        self.assertEqual(recent["signed_samples"],240)
+        self.assertEqual(previous["signed_samples"],240)
+        self.assertEqual(recent["overpredict_percent"],100.0)
+        self.assertEqual(previous["underpredict_percent"],100.0)
+        self.assertEqual(recent["mean_signed_error_f"],3.96)
+        self.assertEqual(previous["mean_signed_error_f"],-1.44)
+        self.assertEqual(recent["gap_samples"],240)
+        self.assertEqual(recent["target_gap_over_10m_percent"],100.0)
+        self.assertEqual(previous["target_gap_over_10m_percent"],0.0)
+        self.assertEqual(recent["above_5f_percent"],0.0)
+        with sqlite3.connect(self.db) as con:
+            con.execute("""INSERT INTO prediction_audit
+                (status,resolved_at,target_field,abs_error,model_name,generation,
+                 horizon_minutes,signed_error,resolution_gap_seconds)
+                VALUES(?,?,?,?,?,?,?,?,?)""",
+                ("resolved",NOW-2*DAY,"battery_temp_c",31.0,"severe_miss",7,60,31.0,0))
+        second=prediction_truth(self.db,now=NOW)
+        self.assertEqual(second["recent"]["samples"],241)
+        self.assertEqual(second["recent"]["above_5f_percent"],0.4)
+        self.assertEqual(second["recent"]["above_10f_percent"],0.4)
+        self.assertNotIn("PRIVATE_ROUTE",json.dumps(second))
+
+    def test_missing_optional_columns_do_not_invent_bias_or_gap(self):
+        row=prediction_truth(self.db,now=NOW)["recent"]
+        self.assertIsNone(row["mean_signed_error_f"])
+        self.assertIsNone(row["overpredict_percent"])
+        self.assertIsNone(row["target_gap_over_10m_percent"])
+        self.assertEqual(row["signed_samples"],0)
+        self.assertEqual(row["gap_samples"],0)
+        self.assertEqual(row["above_5f_percent"],0.0)
+
     def test_extreme_resolved_misses_are_not_hidden(self):
         with sqlite3.connect(self.db) as con:
             con.execute("INSERT INTO prediction_audit VALUES(?,?,?,?,?,?,?,?,?)",
