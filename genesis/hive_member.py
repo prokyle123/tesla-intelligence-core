@@ -215,6 +215,32 @@ def send(root:Path,source:Path,*,month:str|None=None,confirm:bool=False)->dict:
             "can_revoke_server":"Ask coordinator to revoke this enrollment token"}
 
 
+def revoke_remote(root:Path,*,confirm:bool=False)->dict:
+    """Immediately stop local uploads; request remote deletion if confirmed."""
+    c=_config(root)
+    disable(root)
+    if not confirm:
+        return {"disabled_locally":True,"remote_deleted":False,
+                "action":"REQUIRES_EXPLICIT_REMOTE_DELETION_CONFIRMATION"}
+    if not c.get("configured") or not c.get("endpoint"):
+        return {"disabled_locally":True,"remote_deleted":False,
+                "action":"NO_ENROLLMENT_CONFIGURED"}
+    endpoint=_endpoint(c["endpoint"])
+    token=_read_private(Path(c["token_file"])).strip()
+    req=Request(endpoint+"/v1/enrollment",method="DELETE",
+                headers={"Authorization":"Bearer "+token})
+    opener=build_opener(ProxyHandler({}),_NoRedirect())
+    try:
+        with opener.open(req,timeout=8) as response:
+            payload=json.load(response)
+            if response.status!=200 or payload.get("revoked") is not True:
+                raise ConsentError("Deletion not confirmed by coordinator")
+    except (HTTPError,URLError) as exc:
+        raise ConsentError("Locally disabled; remote deletion not confirmed") from exc
+    return {"disabled_locally":True,"remote_deleted":True,
+            "note":"Stored contributor aggregates erased; backups may be retained under the server's retention policy."}
+
+
 def main(argv=None)->int:
     p=argparse.ArgumentParser(description="GHOST Hive explicit real aggregate opt-in")
     p.add_argument("--state-dir",type=Path,required=True)
@@ -228,6 +254,8 @@ def main(argv=None)->int:
     g.add_argument("--i-understand-pseudonymous-aggregate-sharing",
                    action="store_true",required=True)
     sub.add_parser("disable")
+    remote=sub.add_parser("revoke-remote")
+    remote.add_argument("--confirm-delete",action="store_true")
     sub.add_parser("status")
     v=sub.add_parser("preview")
     v.add_argument("--month",default=None)
@@ -239,6 +267,7 @@ def main(argv=None)->int:
         "configure":lambda:configure(a.state_dir,a.endpoint,a.token_file),
         "consent":lambda:consent(a.state_dir,acknowledged=a.i_understand_pseudonymous_aggregate_sharing),
         "disable":lambda:disable(a.state_dir),
+        "revoke-remote":lambda:revoke_remote(a.state_dir,confirm=a.confirm_delete),
         "status":lambda:status(a.state_dir),
         "preview":lambda:preview(a.source_db,month=a.month),
         "send":lambda:send(a.state_dir,a.source_db,month=a.month,confirm=a.confirm_upload),
