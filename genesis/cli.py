@@ -14,6 +14,9 @@ from .store import ResearchStore
 from .validation import retrospective_audit
 from .coverage import coverage_report
 from .history_audit import distributed_coverage
+from .history_samples import historical_blocks
+from .architect import architect_cycle
+from .architect_store import ArchitectLedger
 
 def run_once(source_db: Path, research_db: Path, max_rows: int = 6000) -> dict:
     source_db = Path(source_db).expanduser().resolve()
@@ -87,10 +90,31 @@ def historical_coverage(source_db: Path, research_db: Path,
     return distributed_coverage(source_db,pairs,blocks,rows_per_block)
 
 
+def architect_once(source_db: Path, research_db: Path, architect_db: Path,
+                   *, save: bool = False, blocks: int = 5,
+                   rows_per_block: int = 2400) -> dict:
+    """Propose and challenge hypotheses with fixed safe recipes and older eras."""
+    source_db=Path(source_db).expanduser().resolve()
+    research_db=Path(research_db).expanduser().resolve()
+    architect_db=Path(architect_db).expanduser().resolve()
+    if architect_db in {source_db,research_db}:
+        raise ValueError("Architect results must be isolated from GHOST data and the prior research ledger.")
+    history=historical_blocks(source_db,blocks,rows_per_block)
+    # The fixed prototype requires exactly 3 training and 2 later test eras.
+    report=architect_cycle(history)
+    report["stored"]=False
+    if save:
+        run_id=ArchitectLedger(architect_db).save(report,(source_db,research_db))
+        report["stored"]=True
+        report["architect_run_id"]=run_id
+    return report
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="Experimental offline GHOST GENESIS lab")
     p.add_argument("--source-db", type=Path, default=config.source_db())
     p.add_argument("--research-db", type=Path, default=config.research_db())
+    p.add_argument("--architect-db", type=Path, default=config.data_dir() / "architect.sqlite3")
     commands = p.add_subparsers(dest="command", required=True)
     run = commands.add_parser("run-once", help="One explicit, read-only research cycle")
     run.add_argument("--max-rows", type=int, default=6000)
@@ -106,6 +130,12 @@ def main(argv: list[str] | None = None) -> int:
                                   help="Read-only multi-era regime and paired-data audit")
     history.add_argument("--blocks", type=int, default=5)
     history.add_argument("--rows-per-block", type=int, default=2400)
+    architect = commands.add_parser("architect-once",
+                  help="Generate, evaluate and prioritize safe research plans using 5 historical eras")
+    architect.add_argument("--rows-per-block", type=int, default=2400)
+    architect.add_argument("--save", action="store_true",
+                  help="Explicitly save aggregate trial outcomes in independent local Architect SQLite")
+    commands.add_parser("architect-status",help="Read last saved local Architect plans")
     demo = commands.add_parser("simulate-fleet", help="Run a synthetic offline global-model learning demo")
     demo.add_argument("--nodes", type=int, default=32)
     demo.add_argument("--rounds", type=int, default=30)
@@ -126,6 +156,12 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "historical-coverage":
             result = historical_coverage(args.source_db,args.research_db,
                                          args.blocks,args.rows_per_block)
+        elif args.command == "architect-once":
+            result = architect_once(args.source_db,args.research_db,
+                                    args.architect_db,save=args.save,
+                                    rows_per_block=args.rows_per_block)
+        elif args.command == "architect-status":
+            result = ArchitectLedger(args.architect_db).latest()
         else:
             result = network_status()
     except (SourceUnavailable, ValueError) as exc:
