@@ -79,14 +79,14 @@ def _private_consent():
             result["last_success_at_utc"]=data.get("time_utc")
     except (OSError,ValueError,TypeError,json.JSONDecodeError):
         pass
-    region=root/"regional-consent.json"
     result["region_code"]=None
-    if region.is_file() and not region.is_symlink() and not region.stat().st_mode & 0o077:
-        try:
+    try:
+        region=root/"regional-consent.json"
+        if region.is_file() and not region.is_symlink() and not region.stat().st_mode & 0o077:
             optional=json.loads(region.read_text())
             result["region_code"]=optional.get("region_code") if optional.get("enabled") is True else None
-        except (ValueError,OSError,TypeError):
-            pass
+    except (ValueError,OSError,TypeError,UnboundLocalError):
+        pass
     return result
 
 
@@ -246,6 +246,7 @@ def local_snapshot(path:Path|None=None, *, now:float|None=None)->dict:
         result["fleet"]["predictions_checked"]=hub.get("predictions_checked")
         result["fleet"]["mean_error_f"]=hub.get("mean_error_f")
         result["fleet"]["monthly"]=hub.get("monthly",[])
+        result["fleet"]["regions"]=hub.get("regions",[])
     else:
         result["fleet"]["coordinator_connected"]=False
     return result
