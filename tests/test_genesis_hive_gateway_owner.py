@@ -49,9 +49,46 @@ class OwnerGatewayTests(unittest.TestCase):
                    return_value={"region_code":None}):
             result=self.request(headers)
             self.assertEqual(result.status_code,200,result.get_json())
-            action.assert_called_once_with("disable",month=None)
+            action.assert_called_once_with("disable",month=None,region_code=None)
             repeated=self.request(headers)
             self.assertEqual(repeated.status_code,403)
+
+    def test_region_update_requires_new_explicit_owner_consent(self):
+        when=1800000000
+        body=json.dumps({"region_code":"NORTH_AMERICA_EAST",
+                         "acknowledge_optional_region":True}).encode()
+        path="/api/hive/control/region-set"
+        with patch("ghost_tesla_ai.hive_owner_proof.time.time",return_value=when), \
+             patch("ghost_tesla_ai.hive_local._private_consent",
+                   return_value={"mode":"OPTED_IN","hourly_enabled":True}), \
+             patch("ghost_tesla_ai.hive_local._run_hive_action",
+                   return_value={"regional_sharing":"OPTED_IN","region_code":"NORTH_AMERICA_EAST"}) as send:
+            signed=proof.sign("POST",path,ORIGIN,body,now=when)
+            response=self.client.post(path,data=body,
+                headers={"Origin":ORIGIN,"Content-Type":"application/json",**signed})
+            self.assertEqual(response.status_code,200,response.get_json())
+            send.assert_called_once_with("region-set",month=None,region_code="NORTH_AMERICA_EAST")
+            rejected=self.client.post(path,
+                data=json.dumps({"region_code":"NORTH_AMERICA_EAST"}).encode(),
+                headers={"Origin":ORIGIN,"Content-Type":"application/json",
+                         **proof.sign("POST",path,ORIGIN,
+                                     json.dumps({"region_code":"NORTH_AMERICA_EAST"}).encode(),now=when)})
+            self.assertEqual(rejected.status_code,400)
+            self.assertEqual(rejected.get_json()["error"],"EXPLICIT_REGION_CONSENT_REQUIRED")
+            send.assert_called_once()
+
+    def test_region_clear_uses_authenticated_existing_revocation(self):
+        now=1800000000
+        path="/api/hive/control/region-clear"
+        body=b"{}"
+        with patch("ghost_tesla_ai.hive_owner_proof.time.time",return_value=now), \
+             patch("ghost_tesla_ai.hive_local._run_hive_action",
+                   return_value={"regional_sharing":"OFF"}) as send:
+            headers=proof.sign("POST",path,ORIGIN,body,now=now)
+            response=self.client.post(path,data=body,
+                headers={"Origin":ORIGIN,"Content-Type":"application/json",**headers})
+            self.assertEqual(response.status_code,200,response.get_json())
+            send.assert_called_once_with("region-clear",month=None,region_code=None)
 
     def test_proof_binds_body_origin_path_and_time(self):
         h=proof.sign("POST","/api/hive/control/disable",ORIGIN,b"{}",now=1800000000)
