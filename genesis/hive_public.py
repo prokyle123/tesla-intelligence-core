@@ -70,7 +70,7 @@ def summary(db:Path, *,now:datetime|None=None)->dict:
         "regions":approved_regions,"countries":None,
         "private_group_threshold":K,
         "model_weights_shared":False,
-        "privacy_note":"Member totals count reporting enrollments, not verified humans. Monthly model averages and opted-in broad-region points require at least 10 reporting enrollments in the same cohort. No exact location is collected.",
+        "privacy_note":"Member totals count reporting enrollments, not verified humans. Monthly model averages require at least 10 reporting enrollments in the same UTC month. An explicitly opted-in installation may publish its own broad-region marker at one; other small groups remain hidden. No exact location or routes are collected.",
         "federated_models_enabled":False,
     }
 
