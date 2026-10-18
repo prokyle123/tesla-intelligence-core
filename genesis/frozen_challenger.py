@@ -115,7 +115,6 @@ def freeze_challenger(source_db,watch_file,challenger_file, *, now=None):
         con.execute("PRAGMA query_only=ON")
         _source_schema(con)
         high=con.execute("SELECT COALESCE(MAX(id),0),COALESCE(MAX(predicted_at),0) FROM prediction_audit").fetchone()
-        end=min(wall,wall)
         earliest=wall-TRAIN_DAYS*DAY
         holdout=wall-HOLDOUT_DAYS*DAY
         rows=con.execute("""SELECT COUNT(*) FROM prediction_audit
@@ -218,7 +217,7 @@ def challenger_status(source_db,watch_file,challenger_file, *, now=None):
     out={"status":"NOT_FROZEN","scope":"LOCAL_GHOST_ONLY",
          "challenger":"AMBIENT_RELAXATION_FROZEN_V1",
          "matched_pairs":0,"incomplete_pairs":0,"generation_excluded":0,
-         "missing_ambient_pairs":0,"models":[],"limitations":NOTES,
+         "unsupported_horizon_pairs":0,"missing_ambient_pairs":0,"models":[],"limitations":NOTES,
          "production_changes":False,"network_uploads":False,
          "can_promote":False,"automatic_execution":False}
     if not Path(challenger_file).is_file():
@@ -330,7 +329,9 @@ def challenger_status(source_db,watch_file,challenger_file, *, now=None):
             "assessment":status}
     for row in covered:
         key=(row["name"],row["gen"],row["horizon"])
-        if key not in locked or key[2] not in coeff:
+        if key[2] not in coeff:
+            out["unsupported_horizon_pairs"]+=int(row["n"] or 0)
+        elif key not in locked:
             out["generation_excluded"]+=int(row["n"] or 0)
     for model in parent["models"]:
         key=(model["model"],model["generation"],model["horizon_minutes"])
