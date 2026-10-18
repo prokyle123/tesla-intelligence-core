@@ -118,6 +118,7 @@ def _empty():
                "prediction_improvement_percent":None,
                "regions":[],"available":False},
       "monthly":[],
+      "recent_quality":{},
       "contribution_activity":[],
       "privacy":{"coarse_regions_enabled":False,"raw_trips_shared":False,
                  "gps_shared":False,"anonymous":False},
@@ -215,6 +216,24 @@ def local_snapshot(path:Path|None=None, *, now:float|None=None)->dict:
                     month["temp_mae_f"]=_num(float(row["temp_mae"])*1.8,2)
                     month["within_2f_percent"]=_num(
                         100*int(row["temp_hits"] or 0)/tn)
+            # Local-only rolling windows for the owner's real scored evidence.
+            # Never include these in Hive public JSON or member upload payloads.
+            for days in (7,30):
+                recent=con.execute("""
+                    SELECT COUNT(*) n,AVG(abs_error) mae,
+                           SUM(CASE WHEN abs_error*1.8<=? THEN 1 ELSE 0 END) hits
+                    FROM prediction_audit
+                    WHERE status='resolved' AND target_field='battery_temp_c'
+                      AND abs_error IS NOT NULL AND abs_error>=0
+                      AND resolved_at>=? AND resolved_at<=?
+                """,(TEMP_ERROR_GOAL_F,when-days*86400,when)).fetchone()
+                n=int(recent["n"] or 0)
+                result["recent_quality"][f"{days}d"]={
+                    "days":days,
+                    "temp_predictions_scored":n,
+                    "temp_mae_f":_num(recent["mae"]*1.8,2) if n else None,
+                    "within_2f_percent":_num(100*int(recent["hits"] or 0)/n) if n else None,
+                }
             # Daily scored-outcome counts only; no trip timestamps, routes or IDs.
             week_start=when-6*86400
             daily=con.execute("""
