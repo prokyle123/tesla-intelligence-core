@@ -17,12 +17,22 @@ p,.note{color:var(--muted)}a{color:var(--aqua);text-decoration:none}
 .two{display:grid;grid-template-columns:1.3fr 1fr;gap:16px}.item{padding:13px 0;border-top:1px solid var(--line)}
 .meta{font-size:12px;color:var(--muted)}.empty{border:1px dashed var(--line);padding:18px;border-radius:10px;color:var(--muted)}
 .warning{color:#f3cf91;font-size:12px;margin:18px 0}
+.status-line{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.status-mark{border:1px solid var(--line);border-radius:30px;padding:5px 10px;color:var(--aqua);font-size:12px}
+.status-mark.failed{color:#ffce8c;border-color:#7d6041}
+.metric-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+.metric{background:#132838;border-radius:10px;padding:12px}.metric strong{font-size:22px;display:block}
+.metric span{color:var(--muted);font-size:11px}
+.research-history{display:grid;gap:8px;margin-top:12px}
+.history-line{background:#0d1825;padding:11px 13px;border-radius:8px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+#product-mission{margin:12px 0;color:var(--muted)}
+@media(max-width:600px){.metric-row{grid-template-columns:1fr}}
 .track{height:80px;display:flex;align-items:end;gap:3px}.bar{min-height:4px;flex:1;background:linear-gradient(#5cebd3,#377b82);border-radius:3px 3px 0 0}
 footer{margin-top:26px;color:var(--muted);font-size:12px}@media(max-width:760px){.grid{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}}
 </style></head><body><main>
 <header><div><div class="kicker">TESLA INTELLIGENCE CORE · EXPERIMENTAL DIVISION</div><h1>GENESIS<span style="color:var(--aqua)">.</span></h1></div><a href="/">← GHOST Classic</a></header>
 <section class="hero"><div class="kicker">AUTONOMOUS RESEARCH LABORATORY</div><h2 style="font-size:26px;margin:10px 0">Discover. Test. Challenge. Evolve.</h2>
-<p>Experimental hypotheses are tested on later, unseen samples. Research stays isolated from your existing readiness forecasts and production neural models.</p><span class="pill" id="mode">Hivemind: off</span>
+<p>Build evidence from historical Tesla telemetry, challenge predictions, and track what fails. Historical tests are not guaranteed to be independent future validation. Research stays isolated from Classic GHOST.</p><span class="pill" id="mode">Hivemind: off</span>
 </section><div class="warning">RESEARCH ONLY · No autonomous vehicle commands, no model promotion, no generated-code execution, no fleet uploads or user tracking.</div>
 <section class="grid">
 <div class="panel"><div class="name">Local research cycles</div><div class="value" id="runs">—</div><div class="meta">Independent history</div></div>
@@ -30,7 +40,18 @@ footer{margin-top:26px;color:var(--muted);font-size:12px}@media(max-width:760px)
 <div class="panel"><div class="name">Shadow candidates</div><div class="value" id="shadows">—</div><div class="meta">Not production</div></div>
 <div class="panel"><div class="name">Fleet network</div><div class="value" style="color:#6cbfa7">OFF</div><div class="meta">No outgoing traffic</div></div>
 </section>
-<section class="two"><div><div class="panel" style="margin-bottom:16px"><h2>Hypothesis Architect · Research mission</h2><div id="architect" class="empty">No Architect cycles recorded yet. Experiments run manually and remain isolated.</div></div><div class="panel"><h2>Research Lab · Highest-scoring candidates first</h2><div id="findings" class="empty">No local experiments recorded yet.</div></div></div>
+<section class="panel" id="product-studio" aria-live="polite">
+<div class="status-line"><div><div class="kicker">PRODUCT WORKSPACE · RESEARCH CYCLE HISTORY</div><h2 style="font-size:24px;margin:8px 0">Research Command Center</h2></div><span class="status-mark" id="product-status">Awaiting first product cycle</span></div>
+<p id="product-mission">Run a controlled local research cycle to populate the product dashboard. No training or control commands run from this page.</p>
+<div class="metric-row">
+<div class="metric"><span>Last cycle result</span><strong id="product-result">—</strong></div>
+<div class="metric"><span>Thermal forecast gain</span><strong id="product-gain">—</strong></div>
+<div class="metric"><span>Heater signal coverage</span><strong id="product-heater">—</strong></div>
+</div>
+<div class="item"><strong>Experiment ledger</strong><div id="product-history" class="research-history"><div class="empty">No completed product cycles yet</div></div></div>
+<div class="meta">Historical experiments are exploratory. Production stays isolated; no fleet transport or model promotion.</div>
+</section>
+<section class="two" style="margin-top:16px"><div><div class="panel" style="margin-bottom:16px"><h2>Hypothesis Architect · Research mission</h2><div id="architect" class="empty">No Architect cycles recorded yet. Experiments run manually and remain isolated.</div></div><div class="panel"><h2>Research Lab · Highest-scoring candidates first</h2><div id="findings" class="empty">No local experiments recorded yet.</div></div></div>
 <div><div class="panel"><h2>Evolution Timeline</h2><div id="timeline" class="track"></div><p class="meta" id="timeline-note">Each bar represents one research cycle, not production accuracy.</p></div>
 <div class="panel" style="margin-top:16px"><h2>Hivemind Control Center</h2>
 <div class="item"><strong>Private models</strong><div class="meta">Remain on this installation</div></div>
@@ -47,6 +68,31 @@ const make=(tag,value,cls)=>{const x=document.createElement(tag);if(value!==unde
 try{
 const r=await fetch("/api/genesis/overview",{cache:"no-store",credentials:"same-origin"});if(!r.ok)throw Error("offline");
 const d=await r.json(),runs=d.runs||[],findings=d.findings||[];
+const product=d.product_runs||[],recent=product[0]?.report;
+el("product-history").replaceChildren();
+if(recent){
+el("product-status").textContent="Local / research only";
+el("product-status").className="status-mark"+(recent.status==="REJECTED"?" failed":"");
+el("product-result").textContent=String(recent.status||"Unknown").replaceAll("_"," ");
+const gain=recent.thermal_holdout?.improvement_pct;
+el("product-gain").textContent=Number.isFinite(gain)?String(gain)+"%":"Not scored";
+const q=recent.heater_quality||{};
+const tot=Number(q.verified_episodes||0)+Number(q.unverified_episodes||0);
+el("product-heater").textContent=tot?String(Math.round(100*Number(q.verified_episodes||0)/tot))+"%":"Unknown";
+el("product-mission").textContent="Next investigation: "+String(recent.next_action||"No follow-up selected");
+for(const x of product.slice(0,10)){
+const line=make("div",undefined,"history-line");
+const local=new Date(Number(x.created_at)*1000);
+line.append(make("span","Cycle #"+String(x.id)+" · "+String(x.state).replaceAll("_"," ")));
+line.append(make("span",Number.isFinite(local.getTime())?local.toLocaleString():"Unknown date","meta"));
+el("product-history").append(line);
+}
+}else{
+el("product-result").textContent="No runs";
+el("product-gain").textContent="—";
+el("product-heater").textContent="—";
+el("product-history").append(make("div","No recorded cycles. Use the GENESIS product-cycle command.","empty"));
+}
 el("runs").textContent=runs.length;
 el("tested").textContent=runs.reduce((n,x)=>n+Number(x.evaluated||0),0);
 el("shadows").textContent=runs.reduce((n,x)=>n+Number(x.shadows||0),0);
