@@ -115,6 +115,28 @@ class OwnerGatewayTests(unittest.TestCase):
                              "EXPLICIT_SINGLE_REPORTER_PUBLIC_CONSENT_REQUIRED")
             send.assert_called_once()
 
+    def test_monthly_publication_requires_new_owner_acknowledgement(self):
+        now=1800000000
+        path="/api/hive/control/monthly-publish"
+        body=json.dumps({"acknowledge_public_monthly_from_one":True}).encode()
+        with patch("ghost_tesla_ai.hive_owner_proof.time.time",return_value=now), \
+             patch("ghost_tesla_ai.hive_local._private_consent",
+                   return_value={"mode":"OPTED_IN","hourly_enabled":True}), \
+             patch("ghost_tesla_ai.hive_local._run_hive_action",
+                   return_value={"public_monthly":True}) as send:
+            signed=proof.sign("POST",path,ORIGIN,body,now=now)
+            answer=self.client.post(path,data=body,
+              headers={"Origin":ORIGIN,"Content-Type":"application/json",**signed})
+            self.assertEqual(answer.status_code,200,answer.get_json())
+            send.assert_called_once_with("monthly-publish",month=None,region_code=None)
+            missing=b"{}"
+            invalid=self.client.post(path,data=missing,
+              headers={"Origin":ORIGIN,"Content-Type":"application/json",
+                       **proof.sign("POST",path,ORIGIN,missing,now=now)})
+            self.assertEqual(invalid.status_code,400)
+            self.assertEqual(invalid.get_json()["error"],"EXPLICIT_PUBLIC_MONTHLY_CONSENT_REQUIRED")
+            send.assert_called_once()
+
     def test_proof_binds_body_origin_path_and_time(self):
         h=proof.sign("POST","/api/hive/control/disable",ORIGIN,b"{}",now=1800000000)
         with patch("ghost_tesla_ai.hive_owner_proof.time.time",return_value=1800000000):
