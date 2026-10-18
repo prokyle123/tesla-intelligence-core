@@ -81,7 +81,7 @@ import urllib.request
 with urllib.request.urlopen("http://127.0.0.1:8767/api/genesis/health",timeout=2) as r:
     response=json.load(r)
 assert response.get("ok") is True
-assert response.get("version") == "0.3.0-preview"
+assert response.get("version") == "0.4.0-preview"
 assert response.get("research_only") is True
 assert response.get("production_changes") is False
 PY

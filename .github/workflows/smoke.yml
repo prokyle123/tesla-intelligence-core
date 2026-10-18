@@ -84,12 +84,14 @@ jobs:
               def handle_data(self, data):
                   if self.collect:
                       self.parts.append(data)
-          parser = Script()
-          parser.feed(Path("genesis/web/genesis_dashboard.html").read_text())
-          assert len(parser.parts) == 1, "Expected one embedded dashboard script"
-          Path("/tmp/genesis-dashboard.js").write_text(parser.parts[0])
+          for name in ("genesis_dashboard.html", "hive_analytics.html"):
+              parser = Script()
+              parser.feed((Path("genesis/web") / name).read_text())
+              assert len(parser.parts) == 1, f"Expected one embedded script in {name}"
+              Path("/tmp/" + name + ".js").write_text(parser.parts[0])
           PY
-          node --check /tmp/genesis-dashboard.js
+          node --check /tmp/genesis_dashboard.html.js
+          node --check /tmp/hive_analytics.html.js
 
       - name: Check committed diff whitespace
         run: git diff --check HEAD~1 HEAD
