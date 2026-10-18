@@ -287,7 +287,7 @@ $("hive-revoke").addEventListener("click",()=>{
  }
  perform("revoke",{confirmation:"DELETE"});
 });
-$("review-sharing").addEventListener("click",()=>$("sharing-dialog").showModal());
+// Sharing controls live only in the top-right contribution card.
 $("consent-status").addEventListener("click",()=>$("sharing-dialog").showModal());
 $("close-dialog").addEventListener("click",()=>$("sharing-dialog").close());
 if(location.hostname!=="127.0.0.1"&&location.hostname!=="::1"){
