@@ -104,30 +104,30 @@ footer{border-top:1px solid var(--border);margin-top:35px;padding-top:18px;color
 </div>
 </section>
 <section class="tab-panel" data-panel="hive" hidden>
-<div class="heading"><div><div class="eyebrow">Fleet intelligence / Hive Network</div><h1>Hive Coordination</h1><p>Optional private aggregate contributions between enrolled nodes. The server exists separately from the Tesla dashboard; all transfers remain off until explicitly configured and triggered.</p></div></div>
+<div class="heading"><div><div class="eyebrow">Fleet intelligence / Hive Network</div><h1>Hive Coordination</h1><p>Approved monthly research summaries are managed by the separate Hive coordinator. This read-only research workspace observes status; participation is controlled from the private Hive dashboard.</p></div></div>
 <div class="panel" style="margin-bottom:18px">
 <div class="section-title"><h2>Transfer &amp; consent controls</h2><span class="pill dim" id="hive-mode">Checking local consent</span></div>
 <div class="hive-banner">
-<div class="hive-stat"><div class="eyebrow">Transfer authorization</div><div class="big-status" id="hive-auth">OFF</div><span class="note">No default uploads or scheduled transfers</span></div>
+<div class="hive-stat"><div class="eyebrow">Transfer authorization</div><div class="big-status" id="hive-auth">OFF</div><span class="note">Monthly aggregate updates only after informed owner consent</span></div>
 <div class="hive-stat"><div class="eyebrow">Permitted content</div><div class="big-status">Aggregates only</div><span class="note">No VIN, GPS, trips or raw telemetry</span></div>
-<div class="hive-stat"><div class="eyebrow">Fleet publishing gate</div><div class="big-status">25 nodes</div><span class="note">Distinct registered contributors per cohort</span></div>
+<div class="hive-stat"><div class="eyebrow">Fleet publishing gate</div><div class="big-status">10 nodes</div><span class="note">Minimum reporting installations per UTC month</span></div>
 </div>
-<div class="notice">This is a private transport prototype, not anonymous federated training. The Hive operator can see each node's submitted aggregate. Real telemetry uploads are deliberately blocked until a reviewed privacy protocol is ready.</div>
+<div class="notice" id="hive-status-detail">Explicitly consented six-field monthly count/error summaries may be accepted. The coordinator can associate each summary with an enrollment: this is pseudonymous, not anonymous, secure aggregation or federated training. No raw telemetry, routes or model weights are transmitted.</div>
 </div>
 <div class="grid2 grid-equal">
-<div class="panel"><div class="section-title"><h2>Hive Server</h2><span class="pill dim">Separate service</span></div><div class="item"><strong>Enrollment &amp; revocation</strong><div class="detail">Each node receives a private credential. Revocation disables future contributions and erases that node's stored aggregate rows.</div></div><div class="item"><strong>Cohort aggregation</strong><div class="detail">Cohort output is withheld before 25 distinct enrolled contributors. This does not guarantee anonymity.</div></div><div class="item"><strong>Deployment boundary</strong><div class="detail">The preview Hive server binds to localhost and requires a secure proxy and independent review before internet deployment.</div></div></div>
-<div class="panel"><div class="section-title"><h2>Transfer Service</h2><span class="pill dim">Opt-in only</span></div><div class="item"><strong>Default OFF</strong><div class="detail">No stored consent, no network calls, and no recurring transfers.</div></div><div class="item"><strong>Synthetic testing</strong><div class="detail">Explicit opt-in enables controlled synthetic uploads to the test coordinator. Dry-run remains the default.</div></div><div class="item"><strong>Real data requirements</strong><div class="detail">Independent prospective model validation, verified episode/privacy boundaries, trusted HTTPS and separate affirmative consent.</div></div></div>
+<div class="panel"><div class="section-title"><h2>Hive Server</h2><span class="pill dim">Separate service</span></div><div class="item"><strong>Enrollment &amp; revocation</strong><div class="detail">Each node receives a private credential. Revocation disables future contributions and erases that node's stored aggregate rows.</div></div><div class="item"><strong>Cohort aggregation</strong><div class="detail">Monthly cohort averages stay withheld before 10 reporting installations in that UTC month. Enrollments are not verified unique people.</div></div><div class="item"><strong>Deployment boundary</strong><div class="detail">The preview Hive server binds to localhost and requires a secure proxy and independent review before internet deployment.</div></div></div>
+<div class="panel"><div class="section-title"><h2>Transfer Service</h2><span class="pill dim">Opt-in only</span></div><div class="item"><strong>Default OFF</strong><div class="detail">Reporting remains OFF until the owner opts in through the private Hive contribution card.</div></div><div class="item"><strong>Approved real reporting</strong><div class="detail">Hourly checks submit an updated six-field monthly aggregate only after explicit consent. No raw traces are transmitted.</div></div><div class="item"><strong>Future research sharing</strong><div class="detail">Model-family metrics, collaborative trials and signed model artifacts require further validation and new affirmative consent.</div></div></div>
 </div>
 </section>
 <section class="tab-panel" data-panel="system" hidden>
 <div class="heading"><div><div class="eyebrow">Research workspace / System</div><h1>System & Research Safety</h1><p>This viewer reads local aggregate records. It does not poll the Tesla or control any production service.</p></div></div>
 <div class="grid2 grid-equal">
 <div class="panel"><div class="section-title"><h2>Local workspace health</h2><span id="health-badge" class="pill dim">Checking</span></div><div class="kv"><span>Viewer connectivity</span><strong id="sys-online">Checking</strong></div><div class="kv"><span>Research data available</span><strong id="sys-data">—</strong></div><div class="kv"><span>Viewer version</span><strong id="sys-version">—</strong></div><div class="kv"><span>Network mode</span><strong>LOCAL-ONLY</strong></div><div class="kv"><span>Vehicle actuation</span><strong class="positive">DISABLED</strong></div><div class="kv"><span>Automatic promotion</span><strong class="positive">DISABLED</strong></div></div>
-<div class="panel"><div class="section-title"><h2>Development boundaries</h2></div><div class="item"><b>Classic GHOST remains independent</b><div class="detail">No production model changes or service restarts from the research viewer.</div></div><div class="item"><b>Hivemind is not connected</b><div class="detail">The fleet-learning concept is a future privacy-reviewed feature, not a running network service.</div></div><div class="item"><b>Manual cycles only</b><div class="detail">A refresh reads saved research reports; it never runs an experiment or polls Tessie.</div></div><div class="item"><b>Access remains local</b><div class="detail">Preview is loopback-only. Use SSH forwarding; do not expose it publicly without authentication.</div></div></div>
+<div class="panel"><div class="section-title"><h2>Development boundaries</h2></div><div class="item"><b>Classic GHOST remains independent</b><div class="detail">No production model changes or service restarts from the research viewer.</div></div><div class="item"><b>Federated learning is not active</b><div class="detail">Real Hive summary contributions exist separately; shared neural training and remote model execution are not implemented.</div></div><div class="item"><b>Manual cycles only</b><div class="detail">A refresh reads saved research reports; it never runs an experiment or polls Tessie.</div></div><div class="item"><b>Access remains local</b><div class="detail">Preview is loopback-only. Use SSH forwarding; do not expose it publicly without authentication.</div></div></div>
 </div>
 <div class="panel"><div class="section-title"><h2>Research source provenance</h2></div><p class="note">This page is not a live vehicle telemetry dashboard. Scientific results are summaries of prior observational records; attribution, thermal-causality claims, true arrival-time confirmation, and direct comparisons with Classic GHOST remain separate engineering milestones.</p></div>
 </section>
-<footer><span>GHOST GENESIS · v0.4 Product UI · Local-first · Research only</span><span id="footer-state">No production modification · No fleet uploads</span></footer>
+<footer><span>GHOST GENESIS · v0.4 Product UI · Local-first · Research only</span><span id="footer-state">No model promotion · No research-model uploads</span></footer>
 </main></div>
 <script>
 "use strict";
@@ -314,13 +314,42 @@ async function readVehicle(){
  } catch(e){label("vehicle-state","Source unavailable");}
 }
 async function readHive(){
+ // GENESIS research UI is GET-only. Prefer the already-existing integrated
+ // GHOST Hive status if this workspace is mounted in the same GHOST server.
  try {
- const r=await fetch("/api/genesis/hive",{cache:"no-store"});
- if(!r.ok)throw Error("Hive status unavailable");
- const d=await r.json();
- label("hive-mode",d.mode==="OFF"?"Disabled":String(d.mode).replaceAll("_"," "));
- label("hive-auth",d.mode==="OFF"?"OFF":"TEST ONLY");
- } catch(e){label("hive-mode","Not available");label("hive-auth","UNKNOWN");}
+  const response=await fetch("/api/hive/local",{cache:"no-store",credentials:"same-origin"});
+  if(response.ok){
+   const d=await response.json();
+   if(d.scope==="LOCAL_GHOST_ONLY" && d.hive && d.fleet){
+    const active=d.hive.contribution==="OPTED_IN";
+    const online=d.fleet.coordinator_connected===true;
+    label("hive-mode",online?"Coordinator reachable":"Coordinator unavailable");
+    label("hive-auth",active?"OPTED IN":"OFF");
+    const total=d.fleet.participating_vehicles;
+    label("hive-status-detail",
+      (active?"Owner monthly aggregate consent active.":"Owner monthly aggregate consent is OFF.")+
+      " Coordinator "+(online?"reachable.":"unavailable.")+
+      " Reporting installations: "+(Number.isInteger(total)?total:"unknown")+
+      ". Accuracy stays private below 10 reporting installations per UTC month."+
+      " This is not federated model training.");
+    return;
+   }
+  }
+ } catch(e) { /* No integrated Hive route in isolated research preview. */ }
+ try {
+  const r=await fetch("/api/genesis/hive",{cache:"no-store",credentials:"same-origin"});
+  if(!r.ok)throw Error("No legacy preview");
+  const d=await r.json();
+  label("hive-mode","Isolated research preview");
+  label("hive-auth",d.mode==="SYNTHETIC_TEST"?"SYNTHETIC TEST":"NOT CONNECTED");
+  label("hive-status-detail",
+    "Only the legacy synthetic client is visible in this separate GENESIS workspace."+
+    " The private GHOST /hive page owns real contribution status.");
+ }catch(e){
+  label("hive-mode","Status unavailable");
+  label("hive-auth","UNKNOWN");
+  label("hive-status-detail","No confirmed Hive participation status available.");
+ }
 }
 async function readHealth(){
   try{
@@ -347,7 +376,7 @@ async function refresh(){
     loadOverview(runs);loadModels(latest);loadInvestigations(latest,data.architect||{});showHistory(runs,historySelected);
     label("connection","Research console online");el("connection").className="live";
     label("updated","Refreshed "+new Date().toLocaleTimeString());
-    label("footer-state","Local research · no production modifications or fleet uploads");
+    label("footer-state","Local GENESIS research · no model promotion or research-model uploads");
     await Promise.all([readHealth(),readVehicle(),readHive()]);
   }catch(e){failure("Could not load local research records. Check the preview process or SSH connection.");}
   finally{btn.disabled=false;btn.textContent="↻ Refresh data";}
