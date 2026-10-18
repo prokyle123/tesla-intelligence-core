@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>GHOST GENESIS</title>
+<style>
+:root{color-scheme:dark;--bg:#080d17;--panel:#101e2c;--line:#294257;--aqua:#59dfca;--muted:#9ab4c3}*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at 100% 0,#163946,transparent 50%),var(--bg);color:#e9faff;font:14px/1.5 system-ui,sans-serif}
+main{max-width:1200px;margin:auto;padding:28px clamp(15px,3vw,40px)}
+header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
+h1{font-size:clamp(36px,6vw,62px);letter-spacing:-.06em;margin:0}
+h2{font-size:17px;margin:0 0 12px}
+p,.note{color:var(--muted)}a{color:var(--aqua);text-decoration:none}
+.kicker{font-size:11px;color:var(--aqua);letter-spacing:.2em;font-weight:800}
+.hero{padding:26px;margin:20px 0;border-radius:18px;background:linear-gradient(115deg,#153243,#101c2d);border:1px solid var(--line)}
+.hero p{max-width:680px}.pill{border:1px solid #387567;border-radius:20px;color:var(--aqua);font-size:11px;padding:6px 10px}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px}
+.value{font-size:32px;font-weight:800;margin:5px 0}.name{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.07em}
+.two{display:grid;grid-template-columns:1.3fr 1fr;gap:16px}.item{padding:13px 0;border-top:1px solid var(--line)}
+.meta{font-size:12px;color:var(--muted)}.empty{border:1px dashed var(--line);padding:18px;border-radius:10px;color:var(--muted)}
+.warning{color:#f3cf91;font-size:12px;margin:18px 0}
+.track{height:80px;display:flex;align-items:end;gap:3px}.bar{min-height:4px;flex:1;background:linear-gradient(#5cebd3,#377b82);border-radius:3px 3px 0 0}
+footer{margin-top:26px;color:var(--muted);font-size:12px}@media(max-width:760px){.grid{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}}
+</style></head><body><main>
+<header><div><div class="kicker">TESLA INTELLIGENCE CORE · EXPERIMENTAL DIVISION</div><h1>GENESIS<span style="color:var(--aqua)">.</span></h1></div><a href="/">← GHOST Classic</a></header>
+<section class="hero"><div class="kicker">AUTONOMOUS RESEARCH LABORATORY</div><h2 style="font-size:26px;margin:10px 0">Discover. Test. Challenge. Evolve.</h2>
+<p>Experimental hypotheses are tested on later, unseen samples. Research stays isolated from your existing readiness forecasts and production neural models.</p><span class="pill" id="mode">Hivemind: off</span>
+</section><div class="warning">RESEARCH ONLY · No autonomous vehicle commands, no model promotion, no generated-code execution, no fleet uploads or user tracking.</div>
+<section class="grid">
+<div class="panel"><div class="name">Local research cycles</div><div class="value" id="runs">—</div><div class="meta">Independent history</div></div>
+<div class="panel"><div class="name">Hypotheses evaluated</div><div class="value" id="tested">—</div><div class="meta">Out-of-time validation</div></div>
+<div class="panel"><div class="name">Shadow candidates</div><div class="value" id="shadows">—</div><div class="meta">Not production</div></div>
+<div class="panel"><div class="name">Fleet network</div><div class="value" style="color:#6cbfa7">OFF</div><div class="meta">No outgoing traffic</div></div>
+</section>
+<section class="two"><div class="panel"><h2>Autonomous Research Lab</h2><div id="findings" class="empty">No local experiments recorded yet.</div></div>
+<div><div class="panel"><h2>Evolution Timeline</h2><div id="timeline" class="track"></div><p class="meta" id="timeline-note">Each bar represents one research cycle, not production accuracy.</p></div>
+<div class="panel" style="margin-top:16px"><h2>Hivemind Control Center</h2>
+<div class="item"><strong>Private models</strong><div class="meta">Remain on this installation</div></div>
+<div class="item"><strong>Collective missions</strong><div class="meta">Not connected; future opt-in protocol</div></div>
+<div class="item"><strong>Fleet Observatory</strong><div class="meta">Future privacy-reviewed aggregate performance website</div></div>
+<div class="item"><strong>Network status</strong><div class="meta" id="privacy">No federation transport installed</div></div>
+</div></div></section>
+<footer>GHOST GENESIS 0.1 · Local-first · Research database separate · <a href="/">Back to Classic</a></footer>
+</main><script>
+"use strict";
+const el=id=>document.getElementById(id);
+const make=(tag,value,cls)=>{const x=document.createElement(tag);if(value!==undefined)x.textContent=value;if(cls)x.className=cls;return x};
+(async()=>{
+try{
+const r=await fetch("/api/genesis/overview",{cache:"no-store",credentials:"same-origin"});if(!r.ok)throw Error("offline");
+const d=await r.json(),runs=d.runs||[],findings=d.findings||[];
+el("runs").textContent=runs.length;
+el("tested").textContent=runs.reduce((n,x)=>n+Number(x.evaluated||0),0);
+el("shadows").textContent=runs.reduce((n,x)=>n+Number(x.shadows||0),0);
+el("mode").textContent="Hivemind: "+String(d.network?.mode||"off")+" · disconnected";
+el("privacy").textContent=String(d.network?.reason||"No network transport");
+el("findings").className="";el("findings").replaceChildren();
+if(!findings.length)el("findings").append(make("div","No experiments yet. Run a local research cycle through the Genesis CLI.","empty"));
+for(const f of findings.slice(0,15)){
+const x=make("div",undefined,"item");
+x.append(make("strong",String(f.feature)+" → "+String(f.target)));
+x.append(make("div",String(f.status)+" • "+String(f.test_rows)+" holdout samples • "+String(f.improvement_pct)+"% improvement • "+String(f.reason),"meta"));
+el("findings").append(x);
+}
+el("timeline").replaceChildren();
+for(const x of runs.slice().reverse().slice(-20)){const bar=make("div",undefined,"bar");bar.style.height=Math.min(100,10+Number(x.shadows||0)*15)+"%";bar.title="Local cycle "+String(x.id);el("timeline").append(bar);}
+el("timeline-note").textContent=runs.length?"Bars show experimental shadow candidates, not production improvements.":"Awaiting first research cycle.";
+}catch(e){el("findings").replaceChildren(make("div","Research status unavailable. Check the local system.","empty"));}
+})();
+</script></body></html>
