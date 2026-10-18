@@ -100,6 +100,26 @@ body{background:radial-gradient(ellipse at 52% -20%,#14344952,transparent 58%),#
 <div class="privacy-grid"><div class="priv"><i>♙</i><span><b>No public identities</b><small>Contributor names are not shown</small></span></div><div class="priv"><i>▢</i><span><b>Opt-in only</b><small>Off by default</small></span></div><div class="priv"><i>▣</i><span><b>Monthly summaries</b><small>Opt-in hourly updates only</small></span></div><div class="priv"><i>▥</i><span><b>Research only</b><small>No vehicle commands</small></span></div></div>
 <div class="foot-banner"><b>Built by Tesla Owners, for Tesla Owners</b><small>Your local predictions and data stay on your own GHOST instance until a reviewed sharing feature is deliberately enabled.</small></div></div>
 </section>
+<section class="panel content" aria-labelledby="peer-title" style="margin-top:13px;min-height:220px">
+ <div class="panel-heading"><h3 id="peer-title">◇ Independent Fleet Intelligence</h3>
+ <span class="pill">SAME UTC MONTH · SELF EXCLUDED</span></div>
+ <p id="peer-status" class="metric-note" aria-live="polite">Checking authenticated monthly peer research…</p>
+ <div class="strip">
+  <div><b id="peer-self-mae">—</b><span>Your submitted monthly MAE · °F</span><small id="peer-self-samples">No monthly report yet</small></div>
+  <div><b id="peer-network-mae">—</b><span>Other installations' monthly MAE · °F</span><small id="peer-network-samples">Awaiting shareable independent reports</small></div>
+  <div><b id="peer-advantage">—</b><span>Other MAE − your MAE · °F</span><small id="peer-month">Not yet comparable</small></div>
+ </div>
+ <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;text-align:left;font-size:12px">
+ <thead><tr style="color:var(--muted);border-bottom:1px solid var(--edge)">
+  <th scope="col" style="padding:8px">UTC month</th>
+  <th scope="col" style="padding:8px">Your forecast MAE</th>
+  <th scope="col" style="padding:8px">Independent peer MAE</th>
+  <th scope="col" style="padding:8px">Peer group</th>
+  <th scope="col" style="padding:8px">Comparison</th>
+ </tr></thead><tbody id="peer-history"></tbody></table></div>
+ <p class="note">Independent comparison uses the same-month self-reported battery temperature MAE, not the within-2°F accuracy score.
+ Small peer groups include only contributors who separately approved public monthly research; larger original-consent cohorts must contain at least ten <strong>other</strong> reporting installations. No vehicle model, route, or climate normalization is claimed.</p>
+</section>
 <div class="bottom-note">GHOST HIVE · Local research preview · Consent-gated aggregate transfer only · No fabricated fleet statistics</div>
 </div>
 <dialog class="full-screen-modal" id="sharing-dialog" aria-labelledby="sharing-title">
@@ -348,17 +368,11 @@ function render(d){
  $("hive-7d-samples").textContent=number(q7.temp_predictions_scored)+" scored temperature forecasts";
  $("hive-30d-samples").textContent=number(q30.temp_predictions_scored)+" scored temperature forecasts";
  $("local-error").textContent=local.temp_mae_f===null?"—":fixed(local.temp_mae_f,2)+"°F";
- // The only current Hive reporter is this installation. A real network
- // comparison needs a separate reporting installation, not its own echo.
- const independent=Number.isInteger(fleet.participating_vehicles)&&fleet.participating_vehicles>=2;
- const fleetMaE=Number.isFinite(fleet.mean_error_f)?fleet.mean_error_f:null;
- $("hive-error").textContent=independent&&fleetMaE!==null?fixed(fleetMaE,2)+"°F":"—";
- $("hive-comparison-label").textContent=independent&&fleetMaE!==null?
-   "Hive aggregate available · includes local installation":
-   "No independent fleet baseline yet · "+number(fleet.participating_vehicles)+" reporter";
- $("hive-baseline-label").textContent=independent&&fleetMaE!==null?
-   "Network monthly aggregate · includes your vehicle":
-   "Independent comparison needs another reporting vehicle";
+ // Never call an aggregate that includes this car an independent comparator.
+ // renderPeer() fills the independent comparison only from its owner-bound API.
+ $("hive-error").textContent="—";
+ $("hive-comparison-label").textContent="Checking independent peer reports…";
+ $("hive-baseline-label").textContent="Other installations only · monthly MAE";
  $("local-total").textContent=number(local.predictions_scored);
  $("local-pending").textContent=number(local.pending_predictions);
  const activity=d.contribution_activity||[];$("local-week").textContent=number(activity.reduce((a,r)=>a+(r.local_predictions_scored||0),0));
@@ -378,11 +392,80 @@ function render(d){
  lineGraph($("thermal-chart"),d.monthly||[],"temp_mae_f",{suffix:"°F"});
  bars($("activity-chart"),activity,"local_predictions_scored");
 }
+function renderPeer(data){
+ const status=data&&typeof data.status==="string"?data.status:"PEER_SERVICE_UNAVAILABLE";
+ const rows=Array.isArray(data?.months)?data.months:[];
+ const latest=data?.latest&&data.latest.comparison_status==="COMPARABLE"?data.latest:null;
+ const lastSelf=[...rows].reverse().find(x=>Number.isFinite(x.self_mae_f));
+ const shown=latest||lastSelf;
+ const own=shown&&Number.isFinite(shown.self_mae_f)?shown.self_mae_f:null;
+ const other=latest&&Number.isFinite(latest.peer_mae_f)?latest.peer_mae_f:null;
+ $("peer-self-mae").textContent=own===null?"—":fixed(own,2)+"°F";
+ $("peer-network-mae").textContent=other===null?"—":fixed(other,2)+"°F";
+ $("peer-advantage").textContent=latest&&Number.isFinite(latest.self_advantage_f)?
+    (latest.self_advantage_f>0?"+":"")+fixed(latest.self_advantage_f,2)+"°F":"—";
+ $("peer-self-samples").textContent=shown&&Number.isInteger(shown.self_predictions)?
+    number(shown.self_predictions)+" self-reported scored predictions":"No accepted monthly report";
+ $("peer-network-samples").textContent=latest&&Number.isInteger(latest.peer_predictions)?
+    number(latest.peer_predictions)+" scores from "+number(latest.peer_installations)+" independent reporting installation(s)":
+    "No publishable independent peer scores";
+ $("peer-month").textContent=shown?shown.month+" · unadjusted forecast error":"No comparable UTC month";
+ $("hive-error").textContent=other===null?"—":fixed(other,2)+"°F";
+ $("hive-baseline-label").textContent=other===null?
+    "Independent fleet benchmark needs another consenting reporter":
+    "Other installations only · "+latest.month+" · monthly MAE";
+ $("hive-comparison-label").textContent=other===null?
+    "No independent benchmark yet · other installations only":
+    "Independent monthly peer aggregate · your installation excluded";
+ $("peer-status").textContent=latest?
+    "Independent benchmark available: "+number(latest.peer_installations)+
+      " other reporter(s), "+latest.peer_visibility.replaceAll("_"," ").toLowerCase()+
+      ". This is a descriptive comparison, not controlled model evaluation.":
+    status==="AWAITING_PUBLISHABLE_PEERS"?
+      "Your monthly evidence is recorded. Waiting for another contributor whose report may be used independently.":
+    status==="AWAITING_LOCAL_MONTHLY_REPORT"?
+      "No accepted monthly report from your installation in this window yet.":
+    status==="NOT_ENROLLED"?
+      "Opt-in contribution is off. No private peer comparison is requested.":
+      "Private peer comparison service not yet available. Other GHOST metrics continue working.";
+ const body=$("peer-history");body.replaceChildren();
+ const withData=rows.filter(x=>Number.isFinite(x.self_mae_f)||Number.isFinite(x.peer_mae_f)).slice(-8).reverse();
+ if(!withData.length){
+   const tr=document.createElement("tr"),cell=document.createElement("td");
+   cell.colSpan=5;cell.textContent="No monthly comparison history available yet.";
+   cell.style.padding="12px 8px";tr.append(cell);body.append(tr);return;
+ }
+ for(const month of withData){
+   const tr=document.createElement("tr");
+   tr.style.borderBottom="1px solid var(--edge)";
+   const values=[
+     month.month,
+     Number.isFinite(month.self_mae_f)?fixed(month.self_mae_f,2)+"°F":"—",
+     Number.isFinite(month.peer_mae_f)?fixed(month.peer_mae_f,2)+"°F":"—",
+     Number.isInteger(month.peer_installations)?
+       number(month.peer_installations)+" opt-in/qualified peer(s)":"Withheld / unavailable",
+     month.comparison_status==="COMPARABLE"?
+       (month.self_advantage_f>0?"Your MAE lower by ":month.self_advantage_f<0?"Peer MAE lower by ":"Same MAE · ")+
+       fixed(Math.abs(month.self_advantage_f),2)+"°F":"Not comparable"
+   ];
+   for(const value of values){
+      const td=document.createElement("td");
+      td.textContent=String(value);td.style.padding="9px 8px";
+      tr.append(td);
+   }
+   body.append(tr);
+ }
+}
 async function refresh(){
  try{const response=await fetch("/api/hive/local",{cache:"no-store"});
  if(!response.ok)throw Error("Hive local API not available");
  render(await response.json());}
  catch(e){$("updated").textContent="Could not read local evidence. Classic GHOST remains unchanged.";}
+ try{
+   const response=await fetch("/api/hive/peer-comparison",{cache:"no-store"});
+   if(!response.ok)throw Error("Hive peer comparison unavailable");
+   renderPeer(await response.json());
+ }catch(e){renderPeer({status:"PEER_SERVICE_UNAVAILABLE",months:[]});}
 }
 function consentMessage(text){$("hive-action-result").textContent=text;}
 async function control(action,payload){
