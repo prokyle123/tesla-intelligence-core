@@ -71,7 +71,7 @@ body{background:radial-gradient(ellipse at 52% -20%,#14344952,transparent 58%),#
 <header class="top">
 <div class="identity"><div class="hex" aria-hidden="true"><svg viewBox="0 0 70 70" fill="none" stroke="#26d7f5" stroke-width="2.5"><path d="M35 3 62 18v34L35 67 8 52V18Z"/><circle cx="35" cy="36" r="8"/><circle cx="20" cy="27" r="5"/><circle cx="49" cy="27" r="5"/><circle cx="20" cy="47" r="5"/><circle cx="50" cy="47" r="5"/><path d="M26 30 31 34 M44 31 40 34 M29 41 24 45 M41 41 47 45"/></svg></div>
 <div><h1>GHOST <span>HIVE</span></h1><p>Real driving data. Smarter predictions. A stronger community.</p></div></div>
-<div class="top-actions"><div class="network"><div><i class="dot" id="network-dot"></i><b id="network-status">Fleet connection not configured</b></div><small id="updated">Waiting for local measurements</small></div><div class="status" id="consent-status" aria-label="Read-only public network analytics"><span class="check">◎</span><span>GHOST HIVE<strong id="consent-text">Public Analytics</strong><small id="consent-sub">Group statistics only · Read-only</small></span></div></div>
+<div class="top-actions"><div class="network"><div><i class="dot" id="network-dot"></i><b id="network-status">Fleet connection not configured</b></div><small id="updated">Waiting for local measurements</small></div><div class="status" id="consent-status" aria-label="Read-only public network analytics"><span class="check">◎</span><span>GHOST HIVE<strong id="consent-text">Public Analytics</strong><small id="consent-sub">Public-consented or qualified aggregate results · Read-only</small></span></div></div>
 </header>
 <section class="grid-top">
 <div class="panel hero">
@@ -83,7 +83,7 @@ body{background:radial-gradient(ellipse at 52% -20%,#14344952,transparent 58%),#
 <div class="hero-stat"><div class="symbol">▥</div><div><b id="local-accuracy">—</b><span>Fleet Prediction Accuracy</span><small>Within ±2°F</small></div></div>
 <div class="hero-stat"><div class="symbol">◎</div><div><b id="fleet-regions">—</b><span>Contributing Regions</span><small>Opt-in broad regions only</small></div></div>
 </div></div>
-<div class="panel chart-panel"><div class="panel-heading"><h3><span class="cyan">♧</span> Contributing Vehicles</h3><div class="periods" role="group" aria-label="Contributing vehicles time range"><button type="button" data-window="7d" title="Day-level public contributor history is not available">7D</button><button type="button" data-window="30d" title="Day-level contributor history is not available">30D</button><button type="button" data-window="6m" class="chosen" aria-pressed="true">6M</button><button type="button" data-window="1y">1Y</button></div></div><div id="vehicles-chart" class="graph"><div class="empty">No published contributor cohorts yet.<br>The dashboard will populate from real opt-in Hive reports.</div></div><p class="subtle">Group monthly trends stay hidden for small cohorts. Only approved, real network results appear.</p></div>
+<div class="panel chart-panel"><div class="panel-heading"><h3><span class="cyan">♧</span> Contributing Vehicles</h3><div class="periods" role="group" aria-label="Contributing vehicles time range"><button type="button" data-window="7d" title="Day-level public contributor history is not available">7D</button><button type="button" data-window="30d" title="Day-level contributor history is not available">30D</button><button type="button" data-window="6m" class="chosen" aria-pressed="true">6M</button><button type="button" data-window="1y">1Y</button></div></div><div id="vehicles-chart" class="graph"><div class="empty">No published contributor cohorts yet.<br>The dashboard will populate from real opt-in Hive reports.</div></div><p class="subtle">Real monthly scores appear from the first explicitly PUBLIC-reporting installation, or when an existing cohort qualifies. No fabricated trends.</p></div>
 </section>
 <section class="grid-mid">
 <div class="panel content"><div class="panel-heading"><h3>◎ Prediction Accuracy <span class="muted">ⓘ</span></h3><span class="pill">Battery Temperature · °F</span></div><div class="metric"><strong id="accuracy-value">—</strong><span>within ±2°F · fleet cohort</span></div><div class="metric-note">Actual scored predictions, not model-training accuracy</div><div id="accuracy-chart" class="line-chart"><div class="empty">Waiting for actual prediction outcomes</div></div><div class="key"><span><i></i>Hive participants</span><span><i class="grey"></i>Hive comparison unavailable</span></div></div>
@@ -155,7 +155,7 @@ function vehicleBars(container,months){
   container.append(box);return;
  }
  data=vehicleWindow==="6m"?data.slice(-6):data.slice(-12);
- const available=data.filter(r=>r.status==="SHARED_GROUP"&&Number.isFinite(r.reporting_nodes));
+ const available=data.filter(r=>(r.status==="SHARED_GROUP"||r.status==="EXPLICIT_PUBLIC_OPT_IN")&&Number.isFinite(r.reporting_nodes));
  if(!available.length){
   const total=Number.isInteger(window.hiveReporting)?window.hiveReporting:null;
   const min=Number.isInteger(window.hiveReleaseThreshold)?window.hiveReleaseThreshold:10;
@@ -187,7 +187,7 @@ function vehicleBars(container,months){
  }
  data.forEach((r,i)=>{
   const x=56+i*spacing+(spacing-barWidth)/2;
-  const ok=r.status==="SHARED_GROUP"&&Number.isFinite(r.reporting_nodes);
+  const ok=(r.status==="SHARED_GROUP"||r.status==="EXPLICIT_PUBLIC_OPT_IN")&&Number.isFinite(r.reporting_nodes);
   const val=ok?r.reporting_nodes:null;
   const height=ok?Math.max(2,val/max*144):0;
   if(ok){
@@ -253,7 +253,7 @@ function render(d){
 
  const latest=months.map(x=>({label:x.label||x.month||"",
    within_2f_percent:null,
-   temp_mae_f:x.status==="SHARED_GROUP"?x.mean_error_f:null}));
+   temp_mae_f:(x.status==="SHARED_GROUP"||x.status==="EXPLICIT_PUBLIC_OPT_IN")?x.mean_error_f:null}));
  $("fleet-vehicles").textContent=number(d.reporting_nodes);
  $("local-predictions").textContent=number(d.predictions_checked);
  $("local-accuracy").textContent=d.fleet_accuracy_percent===null?"—":fixed(d.fleet_accuracy_percent,1)+"%";
@@ -263,7 +263,7 @@ function render(d){
  $("hive-error").textContent="—";
  $("local-total").textContent=number(d.predictions_checked);
  $("local-pending").textContent=number(d.private_group_threshold);
- $("local-week").textContent=number(months.filter(m=>m.status==="SHARED_GROUP").length);
+ $("local-week").textContent=number(months.filter(m=>m.status==="SHARED_GROUP"||m.status==="EXPLICIT_PUBLIC_OPT_IN").length);
  $("consent-text").textContent="Read only";
  $("consent-sub").textContent="Shared network totals · No login";
  $("network-status").textContent=d.network_status==="AWAITING_FIRST_PUBLIC_EXPORT"?"Waiting for first public export":Number.isFinite(d.reporting_nodes)?"Hive public analytics":"No network snapshot";
@@ -276,11 +276,11 @@ function render(d){
  }else{
   lineGraph($("accuracy-chart"),latest,"within_2f_percent",{suffix:"%",maxValue:100});
  }
- if(months.some(m=>m.status==="SHARED_GROUP")){
+ if(months.some(m=>m.status==="SHARED_GROUP"||m.status==="EXPLICIT_PUBLIC_OPT_IN")){
   lineGraph($("thermal-chart"),latest,"temp_mae_f",{suffix:"°F"});
  }else{
   const box=document.createElement("div");box.className="empty";
-  box.textContent="Temperature error is withheld until a monthly cohort meets the privacy threshold.";
+  box.textContent="Monthly error will appear as soon as one reporter explicitly consents to public small-cohort reporting, or a group qualifies under existing rules.";
   $("thermal-chart").replaceChildren(box);
  }
  $("activity-chart").replaceChildren();
