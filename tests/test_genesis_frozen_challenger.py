@@ -116,6 +116,14 @@ class FrozenChallengerTests(unittest.TestCase):
   self.challenger.write_text(raw.replace('"alpha":0.4','"alpha":0.8'))
   with self.assertRaises(ValueError):
    challenger_status(self.source,self.watch,self.challenger,now=NOW+DAY)
+ def test_horizon_without_trained_candidate_is_not_misreported_as_new_generation(self):
+  freeze_watch(self.source,self.watch,now=NOW)
+  freeze_challenger(self.source,self.watch,self.challenger,now=NOW)
+  self.put_future(num=1,gen=18,horizon=30,model="precondition_pack_30m")
+  report=challenger_status(self.source,self.watch,self.challenger,now=NOW+5*DAY)
+  self.assertEqual(report["unsupported_horizon_pairs"],1)
+  self.assertEqual(report["generation_excluded"],0)
+
  def test_future_missing_and_temporal_coverage(self):
   freeze_watch(self.source,self.watch,now=NOW)
   freeze_challenger(self.source,self.watch,self.challenger,now=NOW)
