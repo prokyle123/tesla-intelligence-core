@@ -13,6 +13,7 @@ from .cli import overview
 from .product_core import ProductLedger
 from .vehicle_snapshot import snapshot
 from .prediction_truth import prediction_truth
+from .thermal_context import thermal_context
 from .hive_transfer import status as hive_client_status
 
 blueprint = Blueprint("ghost_genesis", __name__, template_folder="web")
@@ -65,6 +66,13 @@ def genesis_prediction_quality():
     # Read-only on the production GHOST database. Never shares event rows.
     source=current_app.config.get("GENESIS_SOURCE_DB") or str(config.source_db())
     return _headers(jsonify(prediction_truth(Path(source))))
+
+
+@blueprint.get("/api/genesis/thermal-context")
+def genesis_thermal_context():
+    # Strictly read-only source telemetry context for model truth investigation.
+    source=current_app.config.get("GENESIS_SOURCE_DB") or str(config.source_db())
+    return _headers(jsonify(thermal_context(Path(source))))
 
 
 @blueprint.get("/api/genesis/hive")
