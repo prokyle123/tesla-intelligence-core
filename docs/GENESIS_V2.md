@@ -381,3 +381,64 @@ No new Tessie polling, SQLite writes, network access, vehicle controls,
 production model integration or autonomous timer. These same historical
 records have already been analyzed; the nominal final holdout is NOT
 genuinely new prospective validation, nor evidence of causality.
+
+
+## M3: manual post-freeze thermal shadow experiment
+
+Live Pi tournament: AFFINE_THERMAL gained 15.19% on its selection
+validation, then only 3.63% on the 62-episode later historical holdout
+(0.5329 C versus 0.5529 C episode-balanced MAE). Only 17 of 310
+eligible historical episodes had complete heater/preconditioning state.
+The historical challenger **FAILED** its prequalification criteria.
+GHOST Classic, its existing production models, and the persistence
+baseline must remain unchanged.
+
+GENESIS now supports a **manual**, explicitly authorized diagnostic
+freeze of this still-rejected AFFINE_THERMAL candidate. This records a
+frozen copy of the model's coefficients, version and SHA-256 fingerprint
+in a separate locally private SQLite state database. It uses only
+historical episodes available before a freeze watermark (the greater
+of the system UTC clock and current source telemetry high-water mark).
+Existing frozen experiments are never overwritten or retrained.
+
+From an isolated temporary checkout, use an explicit private ledger:
+
+    mkdir -p /home/ghost/genesis-lab
+    chmod 700 /home/ghost/genesis-lab
+    python3 -m genesis.cli --source-db /var/lib/ghost-tesla-ai/ghost_ai.sqlite3 --shadow-db /home/ghost/genesis-lab/prospective_shadow.sqlite3 shadow-freeze --max-scan 100000
+
+Later, manually check whether any **new completed** observed parking
+episodes have arrived:
+
+    python3 -m genesis.cli --source-db /var/lib/ghost-tesla-ai/ghost_ai.sqlite3 --shadow-db /home/ghost/genesis-lab/prospective_shadow.sqlite3 shadow-check --max-scan 100000
+
+    python3 -m genesis.cli --source-db /var/lib/ghost-tesla-ai/ghost_ai.sqlite3 --shadow-db /home/ghost/genesis-lab/prospective_shadow.sqlite3 shadow-status
+
+Only timestamped source records strictly later than the frozen high-water
+mark are included. Any parked session already in progress at the cutoff
+is excluded until a new, observable boundary; a session is scored only
+after a later observation confirms an activity transition. Current open
+tails and gapped/interrupted sessions are not scored. At least 10
+completed sessions and 20 one-hour input/outcome pairs must arrive
+before a result is calculated. Research results are aggregate,
+episode-balanced candidate/persistence errors only; no raw observations,
+VIN, GPS, route, ID or precise trip timestamp is stored or displayed.
+The ledger records only a new aggregate summary when more completed
+sessions are found.
+
+**Critical limits:** The original candidate failed its historical
+qualification; even a positive new-data signal cannot automatically
+promote it. Many heater signals are missing, and results are labeled
+as unverified when that is true. This is a *post-freeze timestamp*
+evaluation, not guaranteed arrival-time-verified prospective testing:
+late backfills or incorrect source timestamps could defeat its
+independence guarantee because the source has no verified ingestion
+timestamp. It also has no direct comparison with incumbent GHOST
+production predictions. No scheduled jobs, live-Tesla commands,
+remote/collective learning, new polling, or production changes occur.
+
+The first score is expected to return AWAITING_COMPLETE_POST_FREEZE_EPISODES,
+because only later complete observed parked sessions are eligible.
+The production web dashboard and services are not modified. A later
+release can add a separately approved recurring read-only scoring
+timer once this one-shot experiment is audited.
