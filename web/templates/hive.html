@@ -427,6 +427,8 @@ function renderPeer(data){
       "No accepted monthly report from your installation in this window yet.":
     status==="NOT_ENROLLED"?
       "Opt-in contribution is off. No private peer comparison is requested.":
+    status==="OWNER_SIGN_IN_REQUIRED"?
+      "Sign in through your PIN-protected HTTPS GHOST address to view your private independent peer comparison.":
       "Private peer comparison service not yet available. Other GHOST metrics continue working.";
  const body=$("peer-history");body.replaceChildren();
  const withData=rows.filter(x=>Number.isFinite(x.self_mae_f)||Number.isFinite(x.peer_mae_f)).slice(-8).reverse();
@@ -462,7 +464,12 @@ async function refresh(){
  render(await response.json());}
  catch(e){$("updated").textContent="Could not read local evidence. Classic GHOST remains unchanged.";}
  try{
-   const response=await fetch("/api/hive/peer-comparison",{cache:"no-store"});
+   const response=await fetch("/api/hive/control/peer-compare",{
+     method:"POST",credentials:"same-origin",cache:"no-store",
+     headers:{"Content-Type":"application/json"},body:"{}"});
+   if(response.status===403){
+     renderPeer({status:"OWNER_SIGN_IN_REQUIRED",months:[]});return;
+   }
    if(!response.ok)throw Error("Hive peer comparison unavailable");
    renderPeer(await response.json());
  }catch(e){renderPeer({status:"PEER_SERVICE_UNAVAILABLE",months:[]});}
