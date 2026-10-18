@@ -153,6 +153,7 @@ const PRIVATE_REGION_CENTERS={
  "ASIA":[570,87,"Asia"],
  "OCEANIA":[665,214,"Oceania"]
 };
+const GEO_MAP_PINS=Object.fromEntries(Object.entries(PRIVATE_REGION_CENTERS).map(([k,v])=>[k,[v[0],v[1]]]));
 function renderRegions(groups,localChoice=null){
  const list=$("regions-list");
  const pins=$("hive-region-pins");
@@ -181,7 +182,7 @@ function renderRegions(groups,localChoice=null){
  const safe=Array.isArray(groups)?groups.filter(r=>
    typeof r==="object" && r!==null && Number.isInteger(r.reporting_nodes) &&
    (r.reporting_nodes>=10 || (r.visibility==="EXPLICIT_PUBLIC_OPT_IN" && r.reporting_nodes>=1)) && Number.isInteger(r.x)&&Number.isInteger(r.y) &&
-   typeof r.label==="string" && r.x>=0&&r.x<=760&&r.y>=0&&r.y<=330):[];
+   typeof r.label==="string" && Object.prototype.hasOwnProperty.call(GEO_MAP_PINS,r.code) && r.x>=0&&r.x<=760&&r.y>=0&&r.y<=330):[];
  if(!safe.length){
   const empty=document.createElement("div");empty.className="empty";
   empty.textContent="No publishable regional groups yet. Public region dots appear from one expressly public-listed installation or a qualified ten-member cohort. Countries and actual drive routes are not collected.";
@@ -193,9 +194,11 @@ function renderRegions(groups,localChoice=null){
  }
  const max=Math.max(...safe.map(r=>r.reporting_nodes));
  safe.forEach((r,i)=>{
-   const halo=shape("circle",{cx:r.x,cy:r.y,r:9+Math.sqrt(r.reporting_nodes)*2,
+   // Ignore legacy coordinator marker pixels; map using the verified region code.
+   const [px,py]=GEO_MAP_PINS[r.code];
+   const halo=shape("circle",{cx:px,cy:py,r:9+Math.sqrt(r.reporting_nodes)*2,
                             class:"pin-halo"});
-   const core=shape("circle",{cx:r.x,cy:r.y,r:Math.min(7,3+Math.sqrt(r.reporting_nodes)/3),
+   const core=shape("circle",{cx:px,cy:py,r:Math.min(7,3+Math.sqrt(r.reporting_nodes)/3),
                             class:"pin-core"});
    const caption=shape("title",{},r.label+" — "+r.reporting_nodes+" "+(r.visibility==="EXPLICIT_PUBLIC_OPT_IN"?"explicit public listings":"reporting installations"));
    core.append(caption);pins.append(halo,core);
