@@ -93,6 +93,26 @@ jobs:
           PY
           node --check /tmp/genesis_dashboard.html.js
           node --check /tmp/hive_analytics.html.js
+          python3 - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          class Scripts(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.inside=False
+                  self.data=[]
+              def handle_starttag(self,tag,attrs):
+                  if tag=="script": self.inside=True
+              def handle_endtag(self,tag):
+                  if tag=="script": self.inside=False
+              def handle_data(self,data):
+                  if self.inside: self.data.append(data)
+          p=Scripts()
+          p.feed(Path("web/templates/hive.html").read_text())
+          assert len(p.data)==1, "One local embedded integration script required"
+          Path("/tmp/ghost-hive-integrated.js").write_text(p.data[0])
+          PY
+          node --check /tmp/ghost-hive-integrated.js
 
       - name: Check committed diff whitespace
         run: git diff --check HEAD~1 HEAD
