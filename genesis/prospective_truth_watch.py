@@ -21,6 +21,7 @@ VERSION="GENESIS_PROSPECTIVE_TRUTH_1"
 MAX_POST_FREEZE=200000
 MAX_MODELS=20
 MIN_SCORE=100
+MIN_EVIDENCE_DAYS=3  # Diversity check only; forecast rows remain correlated.
 _NAME=re.compile(r"^[A-Za-z0-9_.:-]{1,80}$")
 REQ_AUDIT={"id","predicted_at","target_ts","resolved_at","status",
            "target_field","model_name","generation","horizon_minutes",
@@ -32,6 +33,7 @@ CAVEATS=[
     "Post-freeze is defined using forecast record IDs and source timestamps, not verified ingestion times.",
     "Existing GHOST models are observed as a diagnostic: no challenger is trained or promoted here.",
     "Overlapping predictions can share the same outcome and are not independent sessions.",
+    "Assessment requires coverage across at least three different UTC resolution days; days do not guarantee independent episodes.",
     "Model name/horizon/generation is locked; artifact-byte immutability is not yet verified.",
 ]
 
@@ -135,6 +137,7 @@ def _load(source,state):
 def _empty(status):
     return {"status":status,"scope":"LOCAL_GHOST_ONLY","research":VERSION,
             "eligible_pairs":0,"incomplete_pairs":0,"new_generation_pairs":0,
+            "min_evidence_days":MIN_EVIDENCE_DAYS,
             "models":[],"limitations":CAVEATS,"production_changes":False,
             "network_uploads":False,"can_promote":False,
             "automatic_execution":False}
@@ -165,6 +168,9 @@ def check_watch(source_db: Path,state_file: Path, *,now: float|None=None):
         rows=con.execute(f"""
             SELECT a.model_name name,a.horizon_minutes horizon,
                    a.generation gen,COUNT(*) scored,
+                   COUNT(DISTINCT CASE WHEN t.battery_temp_c IS NOT NULL
+                        AND a.actual_value IS NOT NULL AND a.predicted_value IS NOT NULL
+                        THEN CAST(a.resolved_at / 86400 AS INTEGER) END) evidence_days,
                    SUM(CASE WHEN t.battery_temp_c IS NULL OR
                           a.actual_value IS NULL OR a.predicted_value IS NULL
                        THEN 0 ELSE 1 END) complete,
@@ -197,6 +203,7 @@ def check_watch(source_db: Path,state_file: Path, *,now: float|None=None):
         n=int(row["complete"] or 0)
         incomplete+=count-n
         completed+=n
+        days=int(row["evidence_days"] or 0)
         if n:
             a=float(row["model_mae_c"])*1.8
             b=float(row["persist_mae_c"])*1.8
@@ -208,10 +215,12 @@ def check_watch(source_db: Path,state_file: Path, *,now: float|None=None):
             advantage=round(b-a,2)
         else:a=b=advantage=None
         data[key]={"model":key[0],"horizon_minutes":key[1],"generation":key[2],
-                   "samples":n,"model_mae_f":a,"persistence_mae_f":b,
+                   "samples":n,"evidence_days":days,
+                   "model_mae_f":a,"persistence_mae_f":b,
                    "model_advantage_f":advantage,
                    "model_win_percent":round(100*int(row["wins"] or 0)/n,1) if n else None,
                    "assessment":("INSUFFICIENT_FUTURE_EVIDENCE" if n<MIN_SCORE else
+                     "INSUFFICIENT_TEMPORAL_COVERAGE" if days<MIN_EVIDENCE_DAYS else
                      "PERSISTENCE_BETTER_REVIEW" if advantage<=-.5 else
                      "MODEL_BETTER_ON_POST_FREEZE_SCORES" if advantage>=.5 else
                      "NO_CLEAR_ADVANTAGE")}
@@ -220,7 +229,7 @@ def check_watch(source_db: Path,state_file: Path, *,now: float|None=None):
     out["new_generation_pairs"]=unmatched
     out["models"]=[data[k] if k in data else
         {"model":k[0],"horizon_minutes":k[1],"generation":k[2],
-         "samples":0,"model_mae_f":None,"persistence_mae_f":None,
+         "samples":0,"evidence_days":0,"model_mae_f":None,"persistence_mae_f":None,
          "model_advantage_f":None,"model_win_percent":None,
          "assessment":"AWAITING_FUTURE_EVIDENCE"} for k in by]
     out["status"]="POST_FREEZE_EVIDENCE_AVAILABLE" if completed else "AWAITING_FUTURE_EVIDENCE"
