@@ -57,9 +57,6 @@ def check(d):
             if any(row[x] is not None for x in ("reporting_nodes","predictions_checked","mean_error_f")):
                 raise ValueError("Private monthly values leaked")
         else:raise ValueError("Bad monthly status")
-    if list(seen)!=sorted(seen) and rows:
-        # A set isn't ordered; use list directly for deterministic check.
-        pass
     if [r["month"] for r in rows]!=sorted(r["month"] for r in rows):
         raise ValueError("Monthly series not sorted")
     latest=qualified[-1] if qualified else None
