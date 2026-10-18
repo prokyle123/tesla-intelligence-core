@@ -21,6 +21,7 @@ from .conflict_mission import inspect_conflicts
 from .thermal_mission import thermal_episode_challenge
 from .episode_lab import parked_thermal_research
 from .thermal_tournament import run_tournament
+from .prospective_shadow import freeze_shadow, score_shadow, shadow_status
 
 def run_once(source_db: Path, research_db: Path, max_rows: int = 6000) -> dict:
     source_db = Path(source_db).expanduser().resolve()
@@ -158,6 +159,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--source-db", type=Path, default=config.source_db())
     p.add_argument("--research-db", type=Path, default=config.research_db())
     p.add_argument("--architect-db", type=Path, default=config.data_dir() / "architect.sqlite3")
+    p.add_argument("--shadow-db", type=Path,
+                   default=config.data_dir() / "prospective_shadow.sqlite3")
     commands = p.add_subparsers(dest="command", required=True)
     run = commands.add_parser("run-once", help="One explicit, read-only research cycle")
     run.add_argument("--max-rows", type=int, default=6000)
@@ -194,6 +197,14 @@ def main(argv: list[str] | None = None) -> int:
     tour=commands.add_parser("thermal-tournament",
                              help="Challenge fixed thermal models on independent parked episodes")
     tour.add_argument("--max-scan",type=int,default=100000)
+    frozen=commands.add_parser("shadow-freeze",
+                 help="Explicitly freeze rejected thermal challenger for future diagnostics")
+    frozen.add_argument("--max-scan",type=int,default=100000)
+    check=commands.add_parser("shadow-check",
+                 help="Score only completed post-freeze parked episodes")
+    check.add_argument("--max-scan",type=int,default=100000)
+    commands.add_parser("shadow-status",
+                 help="Read status and aggregate history of frozen shadow")
     demo = commands.add_parser("simulate-fleet", help="Run a synthetic offline global-model learning demo")
     demo.add_argument("--nodes", type=int, default=32)
     demo.add_argument("--rounds", type=int, default=30)
@@ -233,6 +244,14 @@ def main(argv: list[str] | None = None) -> int:
             result = parked_thermal_research(args.source_db,max_rows=args.max_scan)
         elif args.command == "thermal-tournament":
             result = run_tournament(args.source_db,max_scan=args.max_scan)
+        elif args.command == "shadow-freeze":
+            result = freeze_shadow(args.source_db,args.shadow_db,
+                                   max_scan=args.max_scan)
+        elif args.command == "shadow-check":
+            result = score_shadow(args.source_db,args.shadow_db,
+                                  max_scan=args.max_scan)
+        elif args.command == "shadow-status":
+            result = shadow_status(args.shadow_db,args.source_db)
         else:
             result = network_status()
     except (SourceUnavailable, ValueError) as exc:

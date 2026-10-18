@@ -249,12 +249,12 @@ def _new_completed_episodes(source_db: Path,cutoff: float,
             parked=ts is not None and regime=="PARKED_OR_OTHER" and not active
             gap=previous is not None and ts is not None and not 0<ts-previous<=MAX_GAP_S
             if gap:
-                if current: flush()
+                if current or overflow: flush()
                 # A gap is an observational boundary; a fresh parked session
                 # may start here, but is only scored after it later closes.
                 eligible_start=True
             if not parked:
-                if current: flush()
+                if current or overflow: flush()
                 eligible_start=True
                 previous=None
                 continue
