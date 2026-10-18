@@ -47,11 +47,18 @@ class HiveBroadRegionTests(unittest.TestCase):
         self.assertEqual(snapshot["reporting_nodes"],1)
         self.assertEqual(snapshot["regions"],[])
         self.assertIsNone(snapshot["countries"])
-        # Attempts to sneak exact location/coordinates into region protocol fail.
-        bad=self.submit(self.member_token,path="/v1/region",method="PUT",
+        # A short request containing unapproved fields is rejected by
+        # the JSON schema (400), independently of the HTTP size guard.
+        bad_schema=self.submit(self.member_token,path="/v1/region",method="PUT",
+          data={"schema":REGION_SCHEMA,"region_code":"EUROPE","gps":1})
+        self.assertEqual(bad_schema.status_code,400)
+
+        # An oversized exact-coordinate payload is rejected even earlier
+        # by the intentionally strict 96-byte request limit (413).
+        bad_size=self.submit(self.member_token,path="/v1/region",method="PUT",
           data={"schema":REGION_SCHEMA,"region_code":"NORTH_AMERICA_EAST",
                 "latitude":41.8,"longitude":-87.6})
-        self.assertEqual(bad.status_code,400)
+        self.assertEqual(bad_size.status_code,413)
         self.assertEqual(check(self.snapshot())["regions"],[])
 
     def test_ten_consented_members_publish_only_approved_centroid(self):
