@@ -101,8 +101,23 @@ if [[ "$OK" -ne 1 ]]; then
   fail "Use scripts/genesis_stage_preview.sh rollback to switch code to the previous stage."
 fi
 
+echo "[5/5] Confirming real research diagnostic endpoints..."
+"$PY" - <<'PY'
+import json, urllib.request
+for endpoint in ("prediction-quality","thermal-context","paired-baseline"):
+    url="http://127.0.0.1:8767/api/genesis/"+endpoint
+    with urllib.request.urlopen(url,timeout=30) as response:
+        doc=json.load(response)
+    assert doc.get("scope")=="LOCAL_GHOST_ONLY",endpoint
+    assert doc.get("production_changes") is False,endpoint
+    assert doc.get("network_uploads") is False,endpoint
+    assert doc.get("can_promote") is False,endpoint
+    assert isinstance(doc.get("status"),str),endpoint
+    print(endpoint,":",doc["status"])
+PY
+
 echo
-echo "GENESIS v0.4 PREVIEW UPGRADE PASS"
+echo "GENESIS v0.5 RESEARCH PREVIEW UPGRADE PASS"
 echo "Viewer PID: $NEW_PID"
 echo "Local URL: http://127.0.0.1:8767/genesis"
 echo "Existing product history preserved in: $STATE"
