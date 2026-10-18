@@ -125,6 +125,7 @@ footer{border-top:1px solid var(--border);margin-top:35px;padding-top:18px;color
 <p class="note">A frozen evaluation watches only new GHOST forecasts created after the research watermark. It scores their later real outcomes against persistence using the same event. Start it explicitly from the local GENESIS CLI; this dashboard never starts experiments.</p>
 <div id="prospective-overview" class="note">Awaiting an operator-initiated freeze.</div>
 <div id="prospective-models" class="chart-list"><div class="empty">No post-freeze evidence yet.</div></div>
+<div class="divider"></div><div class="section-title"><h2>Private evidence history</h2><small>Only manually recorded snapshots</small></div><div id="prospective-history" class="chart-list"><div class="empty">No evidence snapshots have been recorded yet.</div></div>
 <p class="note">No model training, no scheduled jobs, no model promotion or Hive uploads. Timestamp-based freezing does not verify ingestion chronology or artifact bytes.</p>
 </div>
 <div class="panel"><div class="section-title"><h2>Evidence-led next investigations</h2><span class="pill dim">Proposed · not executed</span></div><p class="note">Review scored prediction failures and propose repeatable investigations. No automatic training, model changes or commands.</p><div id="context-missions-investigations" class="chart-list"><div class="empty">Loading evidence-based plans when opened.</div></div></div>
@@ -540,6 +541,22 @@ async function readProspective(){
   const d=await r.json();
   label("prospective-status",d.status==="NOT_FROZEN"?"Not frozen":pretty(d.status));
   const n=el("prospective-models");n.replaceChildren();
+  const saved=el("prospective-history");saved.replaceChildren();
+  const history=d.history||{}, snapshots=Array.isArray(history.snapshots)?history.snapshots:[];
+  if(!snapshots.length)saved.append(make("div","No recorded evidence yet. After new scored forecasts arrive, use GENESIS CLI truth-watch-record.","empty"));
+  for(const item of snapshots.slice(0,10)){
+   const card=make("div",undefined,"item");
+   card.append(make("strong",String(item.day_utc)+" UTC"));
+   const qualified=(Array.isArray(item.models)?item.models:[]).filter(m=>m.samples>=100 && Number.isFinite(m.model_advantage_f));
+   card.append(make("div",String(item.eligible_pairs||0)+" matched forecasts · "+String(qualified.length)+" well-sampled model groups","detail"));
+   if(qualified.length){
+    qualified.sort((a,b)=>a.model_advantage_f-b.model_advantage_f);
+    const worst=qualified[0];
+    card.append(make("div",String(worst.model)+" "+String(worst.horizon_minutes)+"m · model advantage "+
+      number(worst.model_advantage_f,2)+"°F (negative favors persistence)","note"));
+   }
+   saved.append(card);
+  }
   if(d.status==="NOT_FROZEN"){
     label("prospective-overview","No frozen watch exists. Start a new research-only watch explicitly using GENESIS CLI truth-watch-freeze.");
     n.append(make("div","Only future forecasts created after a verified manual freeze can be evaluated.","empty"));
@@ -553,7 +570,7 @@ async function readProspective(){
   for(const m of rows){
     const group=make("div",undefined,"item");
     group.append(make("strong",String(m.model)+" · "+String(m.horizon_minutes)+"m · generation "+String(m.generation)));
-    group.append(make("div",pretty(m.assessment)+" · "+String(m.samples||0)+" matched future forecasts","detail"));
+    group.append(make("div",pretty(m.assessment)+" · "+String(m.samples||0)+" matched future forecasts across "+String(m.evidence_days||0)+" UTC days (minimum "+String(d.min_evidence_days||3)+" days to assess)","detail"));
     group.append(make("div","GHOST model "+(Number.isFinite(m.model_mae_f)?number(m.model_mae_f,2)+"°F":"—")+
       " · Persistence "+(Number.isFinite(m.persistence_mae_f)?number(m.persistence_mae_f,2)+"°F":"—")+
       " · Model advantage "+(Number.isFinite(m.model_advantage_f)?number(m.model_advantage_f,2)+"°F":"—"),"note"));
@@ -563,6 +580,7 @@ async function readProspective(){
   label("prospective-status","Evaluation unavailable");
   label("prospective-overview","The local prospective watch could not be evaluated.");
   el("prospective-models").replaceChildren();
+  el("prospective-history").replaceChildren(make("div","Could not read private evidence history.","empty"));
  }finally{prospectivePending=false;}
 }
 async function readHive(){
