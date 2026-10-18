@@ -137,6 +137,27 @@ class OwnerGatewayTests(unittest.TestCase):
             self.assertEqual(invalid.get_json()["error"],"EXPLICIT_PUBLIC_MONTHLY_CONSENT_REQUIRED")
             send.assert_called_once()
 
+    def test_personal_peer_benchmark_never_exposed_without_signed_owner_session(self):
+        url="/api/hive/control/peer-compare"
+        private={"schema":"ghost-hive-independent-comparison-v1",
+                 "status":"AWAITING_PUBLISHABLE_PEERS",
+                 "self_excluded_from_peers":True,"months":[]}
+        self.assertEqual(self.client.get("/api/hive/peer-comparison").status_code,404)
+        unsigned=self.client.post(url,data=b"{}",
+                                  headers={"Origin":ORIGIN,"Content-Type":"application/json"})
+        self.assertEqual(unsigned.status_code,403)
+        with patch("ghost_tesla_ai.hive_owner_proof.time.time",return_value=1800000000), \
+             patch("ghost_tesla_ai.hive_local._hive_peer_comparison",
+                   side_effect=lambda: __import__("flask").jsonify(private)) as compare:
+            headers={"Origin":ORIGIN,"Content-Type":"application/json",
+                     **proof.sign("POST",url,ORIGIN,b"{}",now=1800000000)}
+            permitted=self.client.post(url,data=b"{}",headers=headers)
+            self.assertEqual(permitted.status_code,200,permitted.get_json())
+            self.assertEqual(permitted.get_json()["status"],private["status"])
+            compare.assert_called_once()
+            replay=self.client.post(url,data=b"{}",headers=headers)
+            self.assertEqual(replay.status_code,403)
+
     def test_proof_binds_body_origin_path_and_time(self):
         h=proof.sign("POST","/api/hive/control/disable",ORIGIN,b"{}",now=1800000000)
         with patch("ghost_tesla_ai.hive_owner_proof.time.time",return_value=1800000000):
