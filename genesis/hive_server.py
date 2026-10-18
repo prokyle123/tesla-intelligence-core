@@ -33,7 +33,8 @@ from .hive_protocol import validate,ProtocolError,MIN_COHORT,MAX_BODY,METRIC
 SQL="""
 CREATE TABLE IF NOT EXISTS participants (
   id INTEGER PRIMARY KEY, secret_hash TEXT NOT NULL UNIQUE,
-  created_at INTEGER NOT NULL, enabled INTEGER NOT NULL DEFAULT 1
+  created_at INTEGER NOT NULL, enabled INTEGER NOT NULL DEFAULT 1,
+  public_monthly INTEGER NOT NULL DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS contributions (
   participant INTEGER NOT NULL, period TEXT NOT NULL, metric TEXT NOT NULL,
@@ -82,6 +83,10 @@ def initialize(path: Path):
     with closing(sqlite3.connect(p)) as con:
         con.execute("PRAGMA foreign_keys=ON")
         con.executescript(SQL)
+        members={r[1] for r in con.execute("PRAGMA table_info(participants)")}
+        if "public_monthly" not in members:
+            # Older aggregate consent was for hidden small cohorts. Default PRIVATE.
+            con.execute("ALTER TABLE participants ADD COLUMN public_monthly INTEGER NOT NULL DEFAULT 0")
         columns={r[1] for r in con.execute("PRAGMA table_info(region_consents)")}
         if "public_listing" not in columns:
             # Existing broad-region choices remain nonpublic until reconsented.
@@ -249,6 +254,35 @@ def create_app(path: Path) -> Flask:
         return jsonify({"accepted":True,"regional_sharing":"OPTED_IN",
                         "region_code":selected["region_code"],
                         "exact_location_collected":False}),202
+
+    @app.put("/v1/monthly-publication")
+    def publish_small_monthly_cohorts():
+        """Separately opt in to publication of one's aggregate MAE from 1 member."""
+        user=authenticate()
+        if request.mimetype!="application/json":abort(415)
+        if request.content_length is None or request.content_length>160:abort(413)
+        body=request.get_json(silent=True)
+        if (not isinstance(body,dict)
+            or set(body)!={"schema","acknowledge_public_from_one"}
+            or body.get("schema")!="ghost-hive-monthly-public-v1"
+            or body.get("acknowledge_public_from_one") is not True):
+            return jsonify({"error":"SMALL_MONTHLY_PUBLIC_CONSENT_REQUIRED"}),400
+        with closing(sqlite3.connect(db,timeout=4)) as con:
+            changed=con.execute("UPDATE participants SET public_monthly=1 WHERE id=? AND enabled=1",(user,))
+            if changed.rowcount!=1:
+                return jsonify({"error":"ACTIVE_HIVE_ENROLLMENT_REQUIRED"}),409
+            con.commit()
+        return jsonify({"accepted":True,"public_monthly":True,
+                        "data_scope":"MONTHLY_AGGREGATE_ONLY",
+                        "one_reporter_visibility":True}),202
+
+    @app.delete("/v1/monthly-publication")
+    def hide_small_monthly_cohorts():
+        user=authenticate()
+        with closing(sqlite3.connect(db,timeout=4)) as con:
+            con.execute("UPDATE participants SET public_monthly=0 WHERE id=?",(user,))
+            con.commit()
+        return jsonify({"public_monthly":False,"deleted":True}),200
 
     @app.put("/v1/region-publication")
     def publish_region_one_member():
