@@ -82,9 +82,9 @@ body{background:radial-gradient(ellipse at 52% -20%,#14344952,transparent 58%),#
 <div class="hero-stat"><div class="symbol">♟</div><div><b id="fleet-vehicles">—</b><span>Contributing Vehicles</span><small>Opt-in reporting installations</small></div></div>
 <div class="hero-stat"><div class="symbol">▤</div><div><b id="local-predictions">—</b><span>Local Predictions Scored</span><small>Actual outcomes</small></div></div>
 <div class="hero-stat"><div class="symbol">▥</div><div><b id="local-accuracy">—</b><span>Local Temperature Accuracy</span><small>Within ±2°F</small></div></div>
-<div class="hero-stat"><div class="symbol">◎</div><div><b id="fleet-regions">—</b><span>Contributing Regions</span><small>Opt-in broad regions only</small></div></div>
+<div class="hero-stat"><div class="symbol">◎</div><div><b id="fleet-regions">—</b><span>Contributing Regions</span><small>Qualified public broad-region groups (10+)</small></div></div>
 </div></div>
-<div class="panel chart-panel"><div class="panel-heading"><h3><span class="cyan">♧</span> Contributing Vehicles</h3><div class="periods" role="group" aria-label="Contributing vehicles time range"><button type="button" data-window="7d" title="Day-level public contributor history is not available">7D</button><button type="button" data-window="30d" title="Day-level contributor history is not available">30D</button><button type="button" data-window="6m" class="chosen" aria-pressed="true">6M</button><button type="button" data-window="1y">1Y</button></div></div><div id="vehicles-chart" class="graph"><div class="empty">No verified fleet contributors yet.<br>New installations can join when private transfer is enabled.</div></div><p class="subtle">Real Hive participants only. No sample numbers are used.</p></div>
+<div class="panel chart-panel"><div class="panel-heading"><h3><span class="cyan">♧</span> Contributing Vehicles</h3><div class="periods" role="group" aria-label="Contributing vehicles time range"><button type="button" data-window="7d" title="Day-level public contributor history is not available">7D</button><button type="button" data-window="30d" title="Day-level contributor history is not available">30D</button><button type="button" data-window="6m" class="chosen" aria-pressed="true">6M</button><button type="button" data-window="1y">1Y</button></div></div><div id="vehicles-chart" class="graph"><div class="empty">No verified fleet contributors yet.<br>New installations can join when private transfer is enabled.</div></div><p class="subtle">Only coordinator-confirmed reporting installations; no fabricated monthly contributor history.</p></div>
 </section>
 <section class="grid-mid">
 <div class="panel content"><div class="panel-heading"><h3>◎ Prediction Accuracy <span class="muted">ⓘ</span></h3><span class="pill">Battery Temperature · °F</span></div><div class="metric"><strong id="accuracy-value">—</strong><span>within ±2°F · local GHOST</span></div><div class="metric-note">Actual scored predictions, not model-training accuracy</div><div id="accuracy-chart" class="line-chart"><div class="empty">Waiting for actual prediction outcomes</div></div><div class="strip" style="margin-top:13px" aria-label="Private rolling evidence quality"><div><b id="hive-7d-quality">—</b><span>Accuracy · 7 days</span><small id="hive-7d-samples">No recent scored forecasts</small></div><div><b id="hive-30d-quality">—</b><span>Accuracy · 30 days</span><small id="hive-30d-samples">No recent scored forecasts</small></div><div><b id="hive-30d-error">—</b><span>Mean miss · 30 days</span><small>Local only · °F</small></div></div><div class="key"><span><i></i>Local GHOST</span><span><i class="grey"></i>Hive comparison unavailable</span></div></div>
@@ -188,17 +188,48 @@ let vehicleWindow="6m";
 function vehicleBars(container,months){
  container.replaceChildren();
  let data=Array.isArray(months)?months:[];
- if(vehicleWindow==="7d"||vehicleWindow==="30d"){
+ const total=Number.isInteger(window.hiveReporting)&&window.hiveReporting>=0?
+  window.hiveReporting:null;
+ const threshold=Number.isInteger(window.hiveReleaseThreshold)&&window.hiveReleaseThreshold>=10?
+  window.hiveReleaseThreshold:10;
+ function overallOnly(message){
   const box=document.createElement("div");box.className="empty";
-  box.textContent="Daily participant history is not published. Choose 6M or 1Y for monthly cohort trends.";
-  container.append(box);return;
+  box.textContent=(total===null?"Coordinator contributor count unavailable.":
+    number(total)+" enrolled reporting installation"+(total===1?"":"s")+" overall.")+
+    " "+message;
+  container.append(box);
+  if(total!==null){
+   const metric=document.createElement("div");metric.className="metric";
+   metric.style.justifyContent="center";metric.style.marginTop="10px";
+   const value=document.createElement("strong");value.textContent=String(total);
+   const suffix=document.createElement("span");
+   suffix.textContent="Overall enrollment · not a monthly count";
+   metric.append(value,suffix);container.append(metric);
+   const bar=document.createElement("div");bar.className="progress";
+   bar.style.width="min(84%,360px)";bar.style.margin="12px auto 7px";
+   bar.setAttribute("role","progressbar");
+   bar.setAttribute("aria-label","Overall reporting enrollment only; not a monthly qualified cohort");
+   bar.setAttribute("aria-valuemin","0");
+   bar.setAttribute("aria-valuemax",String(threshold));
+   bar.setAttribute("aria-valuenow",String(Math.min(total,threshold)));
+   const fill=document.createElement("span");
+   fill.style.width=String(100*Math.min(total,threshold)/threshold)+"%";
+   bar.append(fill);container.append(bar);
+   const caveat=document.createElement("small");caveat.className="subtle";
+   caveat.textContent="Overall enrollment only · monthly group release requires "+
+     String(threshold)+" reporters within the SAME UTC month";
+   container.append(caveat);
+  }
+ }
+ if(vehicleWindow==="7d"||vehicleWindow==="30d"){
+  overallOnly("Daily contributor history is not published. Select 6M or 1Y for approved monthly trends.");
+  return;
  }
  data=vehicleWindow==="6m"?data.slice(-6):data.slice(-12);
- const available=data.filter(r=>r.status==="SHARED_GROUP"&&Number.isFinite(r.reporting_nodes));
+ const available=data.filter(r=>r.status==="SHARED_GROUP"&&Number.isInteger(r.reporting_nodes)&&r.reporting_nodes>=threshold);
  if(!available.length){
-  const box=document.createElement("div");box.className="empty";
-  box.textContent="No reportable monthly cohorts yet. Contributor totals can begin at one, but month-by-month groups remain private until the release threshold.";
-  container.append(box);return;
+  overallOnly("No monthly cohort is large enough to publish a trend yet.");
+  return;
  }
  const max=Math.max(1,...available.map(r=>r.reporting_nodes));
  const svg=shape("svg",{viewBox:"0 0 600 218",role:"img","aria-label":"Real monthly participating GHOST Hive installations"});
@@ -270,6 +301,8 @@ function render(d){
  const local=d.local||{}, fleet=d.fleet||{}, hive=d.hive||{};
  renderRegions(fleet.regions||[],hive.contribution==="OPTED_IN"?(hive.region_code||null):null);
  window.hiveMonths=Array.isArray(fleet.monthly)?fleet.monthly:[];
+ window.hiveReporting=Number.isInteger(fleet.participating_vehicles)?fleet.participating_vehicles:null;
+ window.hiveReleaseThreshold=Number.isInteger(fleet.private_group_threshold)&&fleet.private_group_threshold>=10?fleet.private_group_threshold:10;
  vehicleBars($("vehicles-chart"),window.hiveMonths);
 
  $("fleet-vehicles").textContent=number(fleet.participating_vehicles);
