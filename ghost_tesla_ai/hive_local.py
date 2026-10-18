@@ -420,6 +420,37 @@ def _run_hive_action(action:str,*,month:str|None=None,region_code:str|None=None)
     return data
 
 
+@bp.get("/api/hive/peer-comparison")
+def hive_peer_comparison():
+    """Read-only, no credential in browser; request is bound to enrolled client."""
+    not_ready={"schema":"ghost-hive-independent-comparison-v1",
+               "scope":"LOCAL_GHOST_ONLY","status":"PEER_SERVICE_UNAVAILABLE",
+               "months":[],"self_excluded_from_peers":True}
+    if _private_consent().get("mode")!="OPTED_IN":
+        return jsonify({**not_ready,"status":"NOT_ENROLLED"})
+    app=Path(os.environ.get("GHOST_HIVE_CODE_DIR",
+        str(Path.home()/"genesis-product/current"))).expanduser().absolute()
+    if not (app/"genesis/hive_peer_client.py").is_file():
+        return jsonify(not_ready)
+    cmd=[_sys.executable,"-m","genesis.hive_peer_client",
+         "--state-dir",str(_client_root())]
+    try:
+        reply=_subprocess.run(cmd,cwd=app,capture_output=True,text=True,
+            timeout=4.5,check=True,env={
+                "HOME":str(Path.home()),"PATH":"/usr/bin:/bin",
+                "PYTHONPATH":str(app)})
+        if len(reply.stdout)>25000:
+            return jsonify(not_ready)
+        data=json.loads(reply.stdout)
+        if (not isinstance(data,dict) or
+            data.get("schema")!="ghost-hive-independent-comparison-v1" or
+            data.get("self_excluded_from_peers") is not True):
+            return jsonify(not_ready)
+        return jsonify(data)
+    except (OSError,ValueError,TypeError,_subprocess.SubprocessError):
+        return jsonify(not_ready)
+
+
 def _approved_month(payload:dict)->str|None:
     month=payload.get("month")
     if not isinstance(month,str) or len(month)!=7:
