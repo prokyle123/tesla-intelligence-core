@@ -53,6 +53,18 @@ class PublicDashboardReleaseTests(unittest.TestCase):
         q=copy.deepcopy(d);q["mean_error_f"]=0.0
         with self.assertRaises(ValueError):check(q)
 
+    def test_only_large_selected_regions_can_be_public(self):
+        d=self.template()
+        d["reporting_nodes"]=12
+        d["regions"]=[{"code":"NORTH_AMERICA_EAST","label":"Eastern North America",
+                       "x":180,"y":110,"reporting_nodes":10}]
+        self.assertEqual(check(d)["regions"][0]["reporting_nodes"],10)
+        for field,value in (("reporting_nodes",9),("x",181),("label","Exact Home"),
+                            ("latitude",41.6)):
+            altered=copy.deepcopy(d)
+            altered["regions"][0][field]=value
+            with self.subTest(field=field),self.assertRaises(ValueError):check(altered)
+
     def test_private_and_public_are_same_hive_dashboard_grid(self):
         private=(ROOT/"web/templates/hive.html").read_text()
         public=(ROOT/"docs/hive/index.html").read_text()
@@ -66,7 +78,7 @@ class PublicDashboardReleaseTests(unittest.TestCase):
             self.assertEqual(s.count('id="consent-status"'),1)
             self.assertNotIn('id="review-sharing"',s)
             self.assertNotIn('href=',s)
-            self.assertIn("No location data collected",s.replace("Contribution locations are not collected","No location data collected"))
+            self.assertIn("No GPS",s) if "No GPS" in s else self.assertIn("region-map-note",s)
         self.assertIn('id="hive-join"',private)
         self.assertIn("/api/hive/local",private)
         self.assertNotIn("/api/hive/control/",public)

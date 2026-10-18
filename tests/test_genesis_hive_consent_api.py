@@ -48,6 +48,12 @@ class HiveConsentApiTests(unittest.TestCase):
             return {"eligible":True,"payload":self.sample,"month":"2026-10"}
         if action=="send":
             return {"sent":True,"month":month,"received":"ACCEPTED_BY_COORDINATOR"}
+        if action=="sync-now":
+            return {"state":"ACCEPTED","month":"2026-10","network_request":True}
+        if action=="region-set":
+            return {"regional_sharing":"OPTED_IN"}
+        if action=="region-clear":
+            return {"regional_sharing":"OFF"}
         if action=="consent":
             return {"mode":"OPTED_IN","automatic_uploads":False}
         if action=="join":
@@ -128,7 +134,7 @@ class HiveConsentApiTests(unittest.TestCase):
             environ_overrides={"REMOTE_ADDR":"127.0.0.1"})
         self.assertEqual(ok.status_code,200)
         self.assertTrue(ok.get_json()["automatic_uploads"])
-        self.assertEqual(self.operations,[("join",None)])
+        self.assertEqual(self.operations,[("join",None),("sync-now",None)])
         self.operations.clear()
         denied=self.client.post("/api/hive/control/join",json=req,
             headers={"Origin":local},base_url=local,
@@ -139,6 +145,30 @@ class HiveConsentApiTests(unittest.TestCase):
             base_url=local,environ_overrides={"REMOTE_ADDR":"127.0.0.1"})
         self.assertEqual(spoofed.status_code,403)
         self.assertEqual(self.operations,[])
+
+    def test_opt_in_performs_one_immediate_send_and_region_requires_choice(self):
+        req={"acknowledge_pseudonymous_sharing":True,
+             "allow_hourly_aggregates":True}
+        accepted=self.submit("join",req)
+        self.assertEqual(accepted.status_code,200)
+        self.assertEqual(accepted.get_json()["first_upload"]["state"],"ACCEPTED")
+        self.assertEqual(self.operations[-2:],[("join",None),("sync-now",None)])
+        self.operations.clear()
+        denied=self.submit("join",{**req,"region_code":"EXACT_GPS_LATLON"})
+        self.assertEqual(denied.status_code,400)
+        self.assertEqual(self.operations,[])
+
+    def test_failed_immediate_upload_leaves_hourly_opted_in(self):
+        def fails_worker(action,*,month=None,region_code=None):
+            if action=="join":return {"mode":"OPTED_IN","automatic_uploads":True}
+            if action=="sync-now":raise RuntimeError("network unavailable")
+            raise AssertionError(action)
+        with patch.object(hive_local,"_run_hive_action",side_effect=fails_worker):
+            answer=self.submit("join",{"acknowledge_pseudonymous_sharing":True,
+                                      "allow_hourly_aggregates":True}).get_json()
+        self.assertEqual(answer["mode"],"OPTED_IN")
+        self.assertTrue(answer["automatic_uploads"])
+        self.assertEqual(answer["first_upload"]["state"],"RETRY_SCHEDULED")
 
     def test_ui_has_real_controls_without_automatically_sending(self):
         html=(Path(__file__).resolve().parents[1]/"web/templates/hive.html").read_text()
