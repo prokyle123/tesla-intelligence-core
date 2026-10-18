@@ -58,6 +58,15 @@ body{background:radial-gradient(ellipse at 52% -20%,#14344952,transparent 58%),#
 @media(max-width:1150px){.grid-top{grid-template-columns:1fr}.hero-copy{max-width:68%}.globe-visual{width:54%}}
 @media(max-width:800px){.grid-mid,.grid-bottom{grid-template-columns:1fr}.grid-mid .map-card,.grid-bottom .privacy-card{grid-column:auto}.globe-photo{top:-30%;height:170%}.hero-sats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:490px){.hero-copy{max-width:92%}.globe-visual{opacity:.34;width:90%;right:-36%}.hero-sats{grid-template-columns:repeat(2,minmax(0,1fr))}.top-actions{width:100%}.status{flex:1;min-width:0}.periods button{padding:5px}}
+
+/* Overlay only data-backed, threshold-qualified macro-region dots. */
+.hive-region-pins{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
+.hive-region-pins .pin-halo{fill:#10bfe4;opacity:.13;filter:blur(4px)}
+.hive-region-pins .pin-core{fill:#48f5ff;stroke:#7befff;stroke-width:1;filter:drop-shadow(0 0 4px #04d5ff)}
+.world-fallback,.world-map-photo{pointer-events:none}
+.consent-region{margin:12px 0;padding:12px;border:1px solid #235064;border-radius:10px;background:#082332}
+.consent-region select{display:block;width:100%;background:#0b2130;color:#d7f3f6;padding:10px;border:1px solid #38637a;border-radius:8px;margin-top:6px}
+.consent-region small{display:block;color:#a4c4d2;margin-top:7px}
 </style></head>
 <body><div class="shell">
 <header class="top">
@@ -80,7 +89,7 @@ body{background:radial-gradient(ellipse at 52% -20%,#14344952,transparent 58%),#
 <section class="grid-mid">
 <div class="panel content"><div class="panel-heading"><h3>◎ Prediction Accuracy <span class="muted">ⓘ</span></h3><span class="pill">Battery Temperature · °F</span></div><div class="metric"><strong id="accuracy-value">—</strong><span>within ±2°F · local GHOST</span></div><div class="metric-note">Actual scored predictions, not model-training accuracy</div><div id="accuracy-chart" class="line-chart"><div class="empty">Waiting for actual prediction outcomes</div></div><div class="key"><span><i></i>Local GHOST</span><span><i class="grey"></i>Hive comparison unavailable</span></div></div>
 <div class="panel content"><div class="panel-heading"><h3>♧ Battery Temperature Error <span class="muted">ⓘ</span></h3></div><div class="split"><div><div class="metric"><strong id="local-error" class="cyan">—</strong></div><div class="metric-note">Local mean prediction miss</div></div><div><div class="metric"><strong id="hive-error" style="color:var(--grey)">—</strong></div><div class="metric-note">Hive network baseline · pending</div></div></div><div id="thermal-chart" class="line-chart"><div class="empty">Temperature validation history will appear after scored results accumulate.</div></div><p class="note">Lower error means better temperature predictions. No fleet improvement is claimed yet.</p></div>
-<div class="panel content map-card"><div class="panel-heading"><h3>◎ Where Our Contributors Drive <span class="muted">ⓘ</span></h3><span class="pill">Opt-in only</span></div><div class="map-wrap"><img class="world-map-photo" alt="" aria-hidden="true" loading="lazy" src="https://commons.wikimedia.org/wiki/Special:Redirect/file/Blank_world_map_with_rivers_Equal_Earth_projection.svg?width=960"><div class="world-fallback" aria-hidden="true"><svg viewBox="0 0 760 330" role="img" aria-label="Decorative world map showing no contributor positions"><defs><linearGradient id="land"><stop stop-color="#14384b"/><stop offset="1" stop-color="#0e2c3c"/></linearGradient></defs><g fill="url(#land)" stroke="#265069" stroke-width="1.2"><path d="M37 93 75 53 145 30 211 41 241 84 211 110 183 115 167 148 126 180 96 159 61 153 28 115Z M133 175 167 185 204 225 187 269 154 323 130 300 120 249 107 207Z M310 62 362 44 410 57 446 72 489 43 565 65 632 92 699 121 716 157 672 169 618 152 587 184 541 179 520 137 477 136 450 162 404 151 391 125 351 134 304 111Z M374 162 428 160 462 192 444 259 408 307 384 290 359 227Z M625 238 688 232 720 272 687 308 627 294Z M302 31 318 20 332 30 328 49Z M258 90 277 73 289 92 282 116Z"/></g><g stroke="#1b4152" opacity=".5"><path d="M0 85H760 M0 165H760 M0 245H760 M152 0V330 M304 0V330 M456 0V330 M608 0V330"/></g></svg></div><div class="map-label">Contribution locations are not collected. Optional broad regional summaries will appear here only with consent.</div></div></div>
+<div class="panel content map-card"><div class="panel-heading"><h3>◎ Where Our Contributors Drive <span class="muted">ⓘ</span></h3><span class="pill">Opt-in only</span></div><div class="map-wrap"><img class="world-map-photo" alt="" aria-hidden="true" loading="lazy" src="https://commons.wikimedia.org/wiki/Special:Redirect/file/Blank_world_map_with_rivers_Equal_Earth_projection.svg?width=960"><div class="world-fallback" aria-hidden="true"><svg viewBox="0 0 760 330" role="img" aria-label="Decorative world map showing no contributor positions"><defs><linearGradient id="land"><stop stop-color="#14384b"/><stop offset="1" stop-color="#0e2c3c"/></linearGradient></defs><g fill="url(#land)" stroke="#265069" stroke-width="1.2"><path d="M37 93 75 53 145 30 211 41 241 84 211 110 183 115 167 148 126 180 96 159 61 153 28 115Z M133 175 167 185 204 225 187 269 154 323 130 300 120 249 107 207Z M310 62 362 44 410 57 446 72 489 43 565 65 632 92 699 121 716 157 672 169 618 152 587 184 541 179 520 137 477 136 450 162 404 151 391 125 351 134 304 111Z M374 162 428 160 462 192 444 259 408 307 384 290 359 227Z M625 238 688 232 720 272 687 308 627 294Z M302 31 318 20 332 30 328 49Z M258 90 277 73 289 92 282 116Z"/></g><g stroke="#1b4152" opacity=".5"><path d="M0 85H760 M0 165H760 M0 245H760 M152 0V330 M304 0V330 M456 0V330 M608 0V330"/></g></svg></div><svg id="hive-region-pins" class="hive-region-pins" viewBox="0 0 760 330" aria-label="Broad consenting region cohorts only"></svg><div id="region-map-note" class="map-label">Only opt-in broad regional summaries can appear here. No GPS is collected.</div></div></div>
 </section>
 <section class="grid-bottom">
 <div class="panel content"><div class="panel-heading"><h3><span class="cyan">⌁</span> Research Activity</h3><span class="pill">LOCAL GHOST</span></div>
@@ -101,7 +110,7 @@ body{background:radial-gradient(ellipse at 52% -20%,#14344952,transparent 58%),#
 <div><b>What stays private</b><small>No VIN, GPS, exact trip times, addresses, route history, raw telemetry, or trained model weights. Hive can associate a summary with this enrolled installation: the data is pseudonymous, not fully anonymous.</small></div>
 <div><b>Always your choice</b><small>Off by default. Turn it off at any time to stop future updates; request deletion separately. The coordinator stores one replaceable report per installation per month.</small></div>
 </div>
-<p class="note" id="hive-access-note">Owner-only actions use your authenticated SSH tunnel, not a token pasted into the browser.</p>
+<div class="consent-region"><label class="consent-check"><input id="hive-region-optin" type="checkbox" /><span>Optional: also share my broad world region (never GPS or exact trips)</span></label><select id="hive-region-choice" disabled><option value="">Choose a broad world region</option><option value="NORTH_AMERICA_WEST">Western North America</option><option value="NORTH_AMERICA_EAST">Eastern North America</option><option value="SOUTH_AMERICA">South America</option><option value="EUROPE">Europe</option><option value="AFRICA">Africa</option><option value="ASIA">Asia</option><option value="OCEANIA">Oceania</option></select><small>Region sharing is separate, OFF by default, and never guessed from your IP, GPS or vehicle history. A public map dot needs at least 10 reporting installations in your chosen broad region.</small></div><p class="note" id="hive-access-note">Owner-only actions use your authenticated SSH tunnel, not a token pasted into the browser.</p>
 <button class="action" id="hive-join" type="button">Yes, contribute automatically every hour</button>
 <button class="action secondary" id="hive-disable" type="button">Turn off contribution</button>
 <div class="consent-divide"></div>
@@ -121,6 +130,42 @@ const fixed=(n,p=1)=>typeof n==="number"&&Number.isFinite(n)?n.toFixed(p):"—";
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const ns="http://www.w3.org/2000/svg";
 const shape=(tag,a,text)=>{const e=document.createElementNS(ns,tag);for(const [k,v] of Object.entries(a))e.setAttribute(k,String(v));if(text!==undefined)e.textContent=String(text);return e;};
+function renderRegions(groups){
+ const list=$("regions-list");
+ const pins=$("hive-region-pins");
+ if(!list||!pins)return;
+ list.replaceChildren();pins.replaceChildren();
+ const safe=Array.isArray(groups)?groups.filter(r=>
+   typeof r==="object" && r!==null && Number.isInteger(r.reporting_nodes) &&
+   r.reporting_nodes>=10 && Number.isInteger(r.x)&&Number.isInteger(r.y) &&
+   typeof r.label==="string" && r.x>=0&&r.x<=760&&r.y>=0&&r.y<=330):[];
+ if(!safe.length){
+  const empty=document.createElement("div");empty.className="empty";
+  empty.textContent="No publishable regional groups yet. A dot appears only with 10 or more opted-in, reporting installations in a broad region.";
+  list.append(empty);
+  $("region-map-note").textContent="No qualified region dots yet. Never exact vehicle positions.";
+  return;
+ }
+ const max=Math.max(...safe.map(r=>r.reporting_nodes));
+ safe.forEach((r,i)=>{
+   const halo=shape("circle",{cx:r.x,cy:r.y,r:9+Math.sqrt(r.reporting_nodes)*2,
+                            class:"pin-halo"});
+   const core=shape("circle",{cx:r.x,cy:r.y,r:Math.min(7,3+Math.sqrt(r.reporting_nodes)/3),
+                            class:"pin-core"});
+   const caption=shape("title",{},r.label+" — "+r.reporting_nodes+" enrolled reporting installations");
+   core.append(caption);pins.append(halo,core);
+   const item=document.createElement("div");item.className="region-result";
+   const text=document.createElement("div");text.className="region-line";
+   const label=document.createElement("span");label.textContent=(i+1)+". "+r.label;
+   const value=document.createElement("strong");value.textContent=String(r.reporting_nodes)+" nodes";
+   text.append(label,value);
+   const bar=document.createElement("div");bar.className="progress";
+   const fill=document.createElement("span");fill.style.width=String(100*r.reporting_nodes/max)+"%";
+   bar.append(fill);item.append(text,bar);list.append(item);
+ });
+ $("region-map-note").textContent="Cyan lights show consenting broad-region cohorts (10+); locations are approximate category centers, not vehicle positions.";
+}
+
 let vehicleWindow="6m";
 function vehicleBars(container,months){
  container.replaceChildren();
@@ -205,6 +250,7 @@ function bars(container,rows,key){
 }
 function render(d){
  const local=d.local||{}, fleet=d.fleet||{}, hive=d.hive||{};
+ renderRegions(fleet.regions||[]);
  window.hiveMonths=Array.isArray(fleet.monthly)?fleet.monthly:[];
  vehicleBars($("vehicles-chart"),window.hiveMonths);
 
@@ -223,7 +269,8 @@ function render(d){
  $("consent-status").querySelector(".check").textContent=hive.contribution==="OPTED_IN"?"✓":"×";
  $("consent-status").setAttribute("aria-label",hive.contribution==="OPTED_IN"?"Manage Hive contribution settings":"Join Hive");
  $("consent-sub").textContent=hive.contribution==="OPTED_IN"?
-   (hive.hourly_enabled?"Automatic hourly summaries enabled":"Manual sharing enabled"):
+   (hive.last_success_at_utc?"Last accepted "+new Date(hive.last_success_at_utc).toLocaleString():
+     "Hourly enabled · Awaiting accepted upload"):
    "Sharing off · Your data stays local";
  $("network-status").textContent=fleet.coordinator_connected?
    "Hive coordinator reachable":"Fleet network not connected";
@@ -267,19 +314,32 @@ async function perform(action,payload){
    if(action==="revoke" && result.remote_deleted!==true)
       throw Error("Local sharing stopped, but coordinator deletion could not be confirmed.");
    const messages={
-      join:"You're contributing! New approved monthly research results will sync automatically, at most once per hour.",
+      join:result.first_upload && result.first_upload.state==="ACCEPTED"?
+           "You're contributing. Your first verified research summary was accepted immediately; hourly updates are active.":
+           "Hourly contribution enabled. First upload "+(result.first_upload?.state||"pending")+"; automatic retry remains active.",
       disable:"Contribution turned off. No new research summaries will be sent.",
       revoke:"Remote deletion confirmed and enrollment revoked."
    };
-   consentMessage(messages[action]);
+   consentMessage(messages[action]+(result.region_update?.regional_sharing==="NOT_CONFIRMED"?
+     " Optional regional sharing could not be confirmed.":"")+
+     (result.region_update?.regional_sharing==="REMOTE_REMOVAL_NOT_CONFIRMED"?
+     " Regional removal is pending: check network connectivity.":""));
    if(action==="revoke")$("hive-delete-confirm").value="";
    await refresh();
  }catch(error){consentMessage("Change not completed: "+error.message);}
  finally{for(const id of ["hive-join","hive-disable","hive-revoke"])$(id).disabled=false;}
 }
-$("hive-join").addEventListener("click",()=>perform("join",{
- acknowledge_pseudonymous_sharing:true,allow_hourly_aggregates:true
-}));
+$("hive-region-optin").addEventListener("change",()=>{
+ $("hive-region-choice").disabled=!$("hive-region-optin").checked;
+});
+$("hive-join").addEventListener("click",()=>{
+ const code=$("hive-region-optin").checked?$("hive-region-choice").value:null;
+ if($("hive-region-optin").checked&&!code){
+   consentMessage("Select a broad region or uncheck optional regional sharing.");return;
+ }
+ perform("join",{acknowledge_pseudonymous_sharing:true,allow_hourly_aggregates:true,
+                region_code:code});
+});
 $("hive-disable").addEventListener("click",()=>perform("disable",{}));
 $("hive-revoke").addEventListener("click",()=>{
  if($("hive-delete-confirm").value!=="DELETE"){
