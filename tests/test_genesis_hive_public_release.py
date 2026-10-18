@@ -57,7 +57,7 @@ class PublicDashboardReleaseTests(unittest.TestCase):
         d=self.template()
         d["reporting_nodes"]=12
         d["regions"]=[{"code":"NORTH_AMERICA_EAST","label":"Eastern North America",
-                       "x":180,"y":110,"reporting_nodes":10}]
+                       "x":201,"y":82,"reporting_nodes":10}]
         self.assertEqual(check(d)["regions"][0]["reporting_nodes"],10)
         for field,value in (("reporting_nodes",9),("x",181),("label","Exact Home"),
                             ("latitude",41.6)):
