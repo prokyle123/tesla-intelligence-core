@@ -47,6 +47,7 @@ jobs:
           bash -n scripts/hive_v13_fleet_deploy.sh
           bash -n scripts/hive_owner_gateway_deploy.sh
           bash -n scripts/hive_owner_private_https_setup.sh
+          bash -n scripts/hive_m12_deploy.sh
 
       - name: Verify public installer repository
         run: |
