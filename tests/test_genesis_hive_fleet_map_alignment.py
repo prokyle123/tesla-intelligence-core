@@ -18,8 +18,8 @@ class FleetFirstMemberPresentationTests(unittest.TestCase):
             self.assertIn('r.visibility==="EXPLICIT_PUBLIC_OPT_IN"',html)
         # Fixed coarse markers lie in their intended schematic landmasses,
         # not in another world-projection raster/remote asset.
-        self.assertEqual(REGIONS["NORTH_AMERICA_WEST"][1:3],(128,111))
-        self.assertEqual(REGIONS["NORTH_AMERICA_EAST"][1:3],(180,110))
+        self.assertEqual(REGIONS["NORTH_AMERICA_WEST"][1:3],(137,78))
+        self.assertEqual(REGIONS["NORTH_AMERICA_EAST"][1:3],(201,82))
 
     def test_west_vs_midwest_region_is_not_confused(self):
         self.assertIn("Western North America (Pacific/Rocky Mountain)",PRIVATE)
