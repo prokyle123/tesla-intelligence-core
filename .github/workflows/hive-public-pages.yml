@@ -1,0 +1,51 @@
+name: Hive Public Analytics
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['docs/hive/**', 'scripts/hive_public_snapshot_guard.py', '.github/workflows/hive-public-pages.yml']
+  schedule:
+    - cron: '22 * * * *'
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: hive-public-pages
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Prepare only approved public data
+        shell: bash
+        env:
+          PUBLIC_FEED_URL: ${{ vars.HIVE_PUBLIC_FEED_URL }}
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/hive-pages
+          cp docs/hive/index.html /tmp/hive-pages/index.html
+          if [[ -n "$PUBLIC_FEED_URL" ]]; then
+            [[ "$PUBLIC_FEED_URL" == https://* ]] || exit 1
+            curl --fail --silent --show-error --location \
+              --max-time 15 --max-filesize 65536 "$PUBLIC_FEED_URL" \
+              -o /tmp/hive-candidate.json
+          else
+            cp docs/hive/network.json /tmp/hive-candidate.json
+          fi
+          python3 scripts/hive_public_snapshot_guard.py \
+            --input /tmp/hive-candidate.json --output /tmp/hive-pages/network.json
+          test "$(find /tmp/hive-pages -maxdepth 1 -type f | wc -l)" -eq 2
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: /tmp/hive-pages
+      - id: deploy
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,18 @@
+{
+  "schema": "ghost-hive-public-v1",
+  "published_at_utc": null,
+  "source": "NO_EXPORT_YET",
+  "network_status": "AWAITING_FIRST_PUBLIC_EXPORT",
+  "reporting_nodes": 0,
+  "verified_unique_people": false,
+  "fleet_accuracy_percent": null,
+  "predictions_checked": null,
+  "mean_error_f": null,
+  "regions": [],
+  "countries": null,
+  "monthly": [],
+  "private_group_threshold": 10,
+  "model_weights_shared": false,
+  "federated_models_enabled": false,
+  "privacy_note": "No public network data exported yet. Individual-node statistics are never published."
+}
