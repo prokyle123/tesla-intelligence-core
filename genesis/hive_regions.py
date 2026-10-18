@@ -37,9 +37,13 @@ def public_regions(con,threshold:int=MIN_REGION_MEMBERS,*,month:str)->list[dict]
     existing={r[0] for r in con.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     if "region_consents" not in existing:
         return []
-    rows=con.execute("""
+    columns={row[1] for row in con.execute("PRAGMA table_info(region_consents)")}
+    # Mixed-version rollout: reading an old coordinator database must still
+    # work and must never interpret old region selections as PUBLIC consent.
+    visible="SUM(CASE WHEN r.public_listing=1 THEN 1 ELSE 0 END)" if "public_listing" in columns else "0"
+    rows=con.execute(f"""
       SELECT r.region_code,COUNT(DISTINCT r.participant) AS contributors,
-        SUM(CASE WHEN r.public_listing=1 THEN 1 ELSE 0 END) AS explicit_public
+        {visible} AS explicit_public
       FROM region_consents r JOIN participants p ON p.id=r.participant
       WHERE p.enabled=1 AND r.enabled=1
         AND EXISTS (
