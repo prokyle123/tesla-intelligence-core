@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer"><meta name="theme-color" content="#030c15">
+<title>GHOST HIVE · Fleet Intelligence</title>
+<style>
+:root{color-scheme:dark;--bg:#030d16;--panel:#091824;--edge:#1b4051;--fg:#f2f8fc;--muted:#9bb7c9;--cyan:#19d8ef;--blue:#28b2f3;--green:#18df9b;--warn:#e8b86b;--grey:#7a90a6}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:linear-gradient(#040e18,#020910);color:var(--fg);font:14px/1.5 Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif}button{font:inherit;color:inherit;cursor:pointer}button:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+.shell{width:min(100%,1810px);margin:0 auto;padding:16px 23px 25px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:22px;min-height:66px;margin-bottom:14px}.identity{display:flex;align-items:center;gap:14px}.hex{width:65px;height:65px;flex:0 0 65px;display:grid;place-items:center;position:relative;color:var(--cyan)}.hex svg{width:100%;height:100%}.identity h1{font-size:clamp(23px,2.5vw,33px);margin:0;letter-spacing:1px;line-height:1.12;font-weight:850}.identity h1 span{color:var(--cyan)}.identity p{font-size:11px;color:#abc5d6;text-transform:uppercase;letter-spacing:.8px;margin:2px 0 0}.top-actions{display:flex;align-items:center;gap:19px}.network{font-size:11px;color:#c9dce4;min-width:159px}.network b{display:block;font-weight:600;color:var(--warn)}.network small{display:block;color:var(--muted);margin-top:5px}.dot{display:inline-block;width:9px;height:9px;background:var(--warn);border-radius:50%;margin-right:7px;vertical-align:middle}.status{min-width:239px;text-align:left;padding:12px 16px;border:1px solid #23665b;border-radius:18px;background:linear-gradient(120deg,#0b382c,#082a2a);display:flex;gap:11px;align-items:center}.check{border:2px solid var(--warn);border-radius:50%;width:33px;height:33px;display:grid;place-items:center;font-size:18px;color:var(--warn)}.status strong{display:block;color:var(--warn)}.status small{display:block;color:#acc7ce;font-size:11px}
+.grid-top{display:grid;grid-template-columns:1.53fr 1fr;gap:12px}.panel{min-width:0;overflow:hidden;border:1px solid var(--edge);border-radius:17px;background:linear-gradient(155deg,#0a1c28,#06121d 65%);box-shadow:0 10px 30px #0004}.hero{min-height:308px;position:relative;overflow:hidden;background:radial-gradient(circle at 75% 17%,#0c4261 0%,#071d32 35%,#03101b 75%)}.globe{position:absolute;width:62%;height:125%;top:-18%;right:-6%;pointer-events:none;opacity:.96;filter:drop-shadow(0 0 30px #007dff75)}.hero-copy{position:relative;z-index:2;padding:22px 26px 16px;min-height:209px;max-width:61%;text-shadow:0 1px 12px #00101c}.hero h2{margin:0;font-size:clamp(23px,2.2vw,35px);letter-spacing:-1.2px;line-height:1.15}.hero h2 em{color:var(--cyan);font-style:normal}.hero p{max-width:460px;color:#c3d8e6;font-size:13px;margin:14px 0 0}.hero-sats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));position:relative;z-index:2;background:#03111ddc;border-top:1px solid #103448}.hero-stat{padding:13px 14px;display:flex;gap:10px;align-items:center;border-right:1px solid var(--edge);min-width:0}.hero-stat:last-child{border:0}.hero-stat .symbol{color:var(--cyan);font-size:27px}.hero-stat b{display:block;font-size:clamp(17px,2vw,27px);line-height:1.1;letter-spacing:-.6px;white-space:nowrap}.hero-stat span{display:block;font-size:10px;color:#bfd4e0}.hero-stat small{display:block;font-size:9px;color:#71a3bd;margin-top:2px}
+.chart-panel{padding:17px 18px 14px;min-height:308px}.panel-heading{display:flex;align-items:center;justify-content:space-between;gap:11px;margin-bottom:15px}.panel-heading h3{font-size:16px;margin:0;font-weight:720}.cyan{color:var(--cyan)}.select{background:#132534;border:1px solid #345064;border-radius:8px;color:#d3e6f0;font-size:11px;padding:7px}.muted{color:var(--muted)}.subtle{font-size:11px;color:var(--muted)}.graph{height:200px;position:relative;display:grid;place-items:center}.graph svg{width:100%;height:100%;overflow:visible}.empty{border:1px dashed #305165;border-radius:12px;padding:18px;color:#a5c3d1;text-align:center;font-size:12px;max-width:380px;margin:auto}.grid-mid{display:grid;grid-template-columns:1.07fr .90fr 1.07fr;gap:12px;margin-top:12px}.grid-bottom{display:grid;grid-template-columns:1.16fr .75fr 1fr;gap:12px;margin-top:12px}.content{padding:16px 19px;min-height:260px}.metric{display:flex;align-items:baseline;gap:9px}.metric strong{font-size:33px;line-height:1.1;letter-spacing:-1px}.metric span{font-size:11px;color:var(--muted)}.metric-note{font-size:11px;color:#b1c7d3;margin-bottom:12px}.split{display:grid;grid-template-columns:1fr 1fr;gap:15px}.split>div+div{border-left:1px solid var(--edge);padding-left:18px}.key{display:flex;gap:15px;color:#a5bfd0;font-size:10px;flex-wrap:wrap;justify-content:flex-end}.key i{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--cyan);margin-right:5px}.key i.grey{background:#617689}.line-chart{height:155px;margin-top:9px;position:relative}.line-chart svg{width:100%;height:100%}.map-wrap{height:205px;display:grid;place-items:center;position:relative;overflow:hidden}.map-wrap svg{width:100%;height:100%;opacity:.78}.map-label{position:absolute;bottom:7px;left:8px;right:8px;text-align:center;font-size:11px;background:#051420d9;border:1px solid #315368;border-radius:7px;padding:7px;color:#b5cedc}.strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-bottom:12px}.strip>div{border-right:1px solid var(--edge);padding-right:6px}.strip>div:last-child{border:0}.strip b{display:block;font-size:20px;line-height:1.2}.strip span{font-size:10px;color:#b2ccda}.strip small{display:block;font-size:9px;color:#69bcd3}.regions{display:grid;gap:12px}.region-line{display:flex;justify-content:space-between;gap:9px;font-size:12px}.progress{height:7px;background:#253d4a;border-radius:7px;overflow:hidden}.progress>span{display:block;height:100%;background:linear-gradient(90deg,#13a1ba,var(--cyan));width:0}.privacy-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}.priv{display:flex;gap:10px;align-items:center}.priv i{font-style:normal;color:var(--cyan);font-size:23px;min-width:25px}.priv b{display:block;font-size:11px}.priv small{display:block;color:var(--muted);font-size:10px}.foot-banner{margin-top:17px;border:1px solid #185c55;background:linear-gradient(100deg,#06392d,#082c29);border-radius:11px;padding:13px 15px;color:#c8f4e9}.foot-banner b{display:block;font-size:12px}.foot-banner small{display:block;color:#a4cccb;font-size:11px}.note{font-size:11px;color:var(--muted);margin:8px 0 0}.action{border:1px solid #1e9e88;background:linear-gradient(90deg,#064536,#066262);padding:10px 15px;border-radius:9px;font-weight:780;white-space:nowrap}.action:hover{filter:brightness(1.13)}.optin{display:flex;justify-content:space-between;align-items:center;gap:18px;margin:14px 0;border:1px solid #1b8474;border-radius:14px;padding:14px 22px;background:linear-gradient(95deg,#08382f,#092632 70%,#061c26)}.optin h3{font-size:16px;margin:0 0 4px}.optin p{color:#b5d8d4;font-size:12px;margin:0}.pill{display:inline-block;background:#082b35;color:#5bdddc;border:1px solid #206b71;padding:5px 9px;border-radius:22px;font-size:10px}.bottom-note{color:#6d91a5;font-size:10px;padding:14px 0 0;text-align:right}.full-screen-modal{border:1px solid #2c7883;background:#061824;color:var(--fg);border-radius:16px;max-width:480px;width:calc(100% - 30px);padding:24px;box-shadow:0 25px 90px #000b}.full-screen-modal::backdrop{background:#000b}.full-screen-modal h3{margin:0 0 12px}.full-screen-modal p,.full-screen-modal li{color:#afcad8;font-size:13px}.full-screen-modal button{float:right;margin-top:12px}
+@media(max-width:1250px){.grid-top{grid-template-columns:1.2fr 1fr}.grid-mid{grid-template-columns:1fr 1fr}.grid-mid .map-card{grid-column:span 2}.grid-bottom{grid-template-columns:1fr 1fr}.grid-bottom .privacy-card{grid-column:span 2}.hero-stat{padding:12px 8px;gap:5px}.hero-stat .symbol{font-size:18px}}
+@media(max-width:800px){.shell{padding:12px}.top{flex-wrap:wrap}.top-actions{width:100%;justify-content:space-between}.identity h1{font-size:25px}.identity p{font-size:9px}.grid-top,.grid-mid,.grid-bottom{grid-template-columns:1fr}.grid-mid .map-card,.grid-bottom .privacy-card{grid-column:auto}.hero{min-height:300px}.hero-copy{max-width:75%}.globe{right:-34%;width:85%}.hero-sats{grid-template-columns:repeat(2,1fr)}.hero-stat:nth-child(2){border-right:0}.hero-stat:nth-child(-n+2){border-bottom:1px solid var(--edge)}.optin{flex-wrap:wrap}.graph{height:160px}}
+@media(max-width:470px){.identity .hex{width:48px;height:48px;flex-basis:48px}.top-actions{align-items:stretch}.status{min-width:0}.network{min-width:0}.hero-copy{max-width:95%;min-height:210px}.hero h2{font-size:26px}.globe{opacity:.38;right:-53%;width:115%}.hero-sats{gap:0}.hero-stat b{font-size:19px}.content{padding:15px}.panel-heading h3{font-size:14px}.metric strong{font-size:27px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style></head>
+<body><div class="shell">
+<header class="top">
+<div class="identity"><div class="hex" aria-hidden="true"><svg viewBox="0 0 70 70" fill="none" stroke="#26d7f5" stroke-width="2.5"><path d="M35 3 62 18v34L35 67 8 52V18Z"/><circle cx="35" cy="36" r="8"/><circle cx="20" cy="27" r="5"/><circle cx="49" cy="27" r="5"/><circle cx="20" cy="47" r="5"/><circle cx="50" cy="47" r="5"/><path d="M26 30 31 34 M44 31 40 34 M29 41 24 45 M41 41 47 45"/></svg></div>
+<div><h1>GHOST <span>HIVE</span></h1><p>Real driving data. Smarter predictions. A stronger community.</p></div></div>
+<div class="top-actions"><div class="network"><div><i class="dot" id="network-dot"></i><b id="network-status">Fleet connection not configured</b></div><small id="updated">Waiting for local measurements</small></div><button class="status" id="consent-status" type="button" aria-label="Review contribution status"><span class="check">×</span><span>Your Contribution<strong id="consent-text">Inactive</strong><small id="consent-sub">Sharing off · Your data stays local</small></span></button></div>
+</header>
+<section class="grid-top">
+<div class="panel hero">
+<svg class="globe" viewBox="0 0 580 390" role="img" aria-label="Decorative digital globe illustration, not contributor locations"><defs><radialGradient id="ocean"><stop stop-color="#065b93"/><stop offset=".65" stop-color="#082c56"/><stop offset="1" stop-color="#010e1d"/></radialGradient><radialGradient id="shine" cx=".2" cy=".3"><stop stop-color="#0fa5c5" stop-opacity=".6"/><stop offset="1" stop-color="#0c2b4d" stop-opacity="0"/></radialGradient><clipPath id="earth"><circle cx="332" cy="203" r="185"/></clipPath></defs><circle cx="332" cy="203" r="188" fill="url(#ocean)" stroke="#3aabf3" stroke-width="2"/><g clip-path="url(#earth)" opacity=".75"><path fill="#124867" stroke="#28b2ca" stroke-width="1.3" d="M185 111 222 75 281 80 305 110 283 135 257 140 244 174 225 181 235 218 215 241 184 212 170 178 149 160Z M249 239 274 220 286 241 282 293 258 342 233 324 240 279Z M321 110 349 78 380 95 387 119 421 127 449 160 429 194 386 187 363 209 345 182 310 158Z M366 206 412 205 426 250 393 286 381 334 351 299 348 249Z M444 280 472 266 489 291 479 319 453 317Z"/><g stroke="#2475a9" opacity=".62"><path d="M160 203H517 M173 145H500 M212 89H457 M209 263H465 M266 330H414 M332 18V387"/><ellipse cx="332" cy="203" rx="80" ry="185" fill="none"/><ellipse cx="332" cy="203" rx="155" ry="185" fill="none"/></g></g><circle cx="332" cy="203" r="185" fill="url(#shine)"/><ellipse cx="332" cy="203" rx="193" ry="185" fill="none" stroke="#12d5e8" opacity=".35"/><g fill="#3cbeff" opacity=".7"><circle cx="143" cy="117" r="1.2"/><circle cx="514" cy="47" r="1.5"/><circle cx="125" cy="274" r="1"/><circle cx="540" cy="312" r="1.5"/></g></svg>
+<div class="hero-copy"><h2>A Global Network<br>for <em>Real-World Intelligence</em></h2><p>Help GHOST learn from real-world battery behavior. Each owner controls participation; fleet-wide results appear only when the research network can verify them.</p></div>
+<div class="hero-sats">
+<div class="hero-stat"><div class="symbol">♧</div><div><b id="fleet-vehicles">—</b><span>Contributing Vehicles</span><small>Verified Hive nodes</small></div></div>
+<div class="hero-stat"><div class="symbol">▤</div><div><b id="local-predictions">—</b><span>Local Predictions Scored</span><small>Actual outcomes</small></div></div>
+<div class="hero-stat"><div class="symbol">▥</div><div><b id="local-accuracy">—</b><span>Local Temperature Accuracy</span><small>Within ±2°F</small></div></div>
+<div class="hero-stat"><div class="symbol">◎</div><div><b id="fleet-regions">—</b><span>Contributing Regions</span><small>Opt-in broad regions only</small></div></div>
+</div></div>
+<div class="panel chart-panel"><div class="panel-heading"><h3><span class="cyan">♧</span> Contributing Vehicles</h3><span class="pill">6 MONTHS</span></div><div id="vehicles-chart" class="graph"><div class="empty">No verified fleet contributors yet.<br>New installations can join when private transfer is enabled.</div></div><p class="subtle">Real Hive participants only. No sample numbers are used.</p></div>
+</section>
+<section class="optin"><div><h3>Help improve GHOST for everyone</h3><p>Join the Hive research effort when private sharing is available. Review precisely what could be shared, and keep control of your participation.</p></div><button class="action" id="review-sharing" type="button">Review Hive Participation →</button></section>
+<section class="grid-mid">
+<div class="panel content"><div class="panel-heading"><h3>◎ Prediction Accuracy <span class="muted">ⓘ</span></h3><span class="pill">Battery Temperature · °F</span></div><div class="metric"><strong id="accuracy-value">—</strong><span>within ±2°F · local GHOST</span></div><div class="metric-note">Actual scored predictions, not model-training accuracy</div><div id="accuracy-chart" class="line-chart"><div class="empty">Waiting for actual prediction outcomes</div></div><div class="key"><span><i></i>Local GHOST</span><span><i class="grey"></i>Hive comparison unavailable</span></div></div>
+<div class="panel content"><div class="panel-heading"><h3>♧ Battery Temperature Error <span class="muted">ⓘ</span></h3></div><div class="split"><div><div class="metric"><strong id="local-error" class="cyan">—</strong></div><div class="metric-note">Local mean prediction miss</div></div><div><div class="metric"><strong id="hive-error" style="color:var(--grey)">—</strong></div><div class="metric-note">Hive network baseline · pending</div></div></div><div id="thermal-chart" class="line-chart"><div class="empty">Temperature validation history will appear after scored results accumulate.</div></div><p class="note">Lower error means better temperature predictions. No fleet improvement is claimed yet.</p></div>
+<div class="panel content map-card"><div class="panel-heading"><h3>◎ Where Contributors Participate <span class="muted">ⓘ</span></h3><span class="pill">Opt-in only</span></div><div class="map-wrap"><svg viewBox="0 0 760 330" role="img" aria-label="Decorative world map showing no contributor positions"><defs><linearGradient id="land"><stop stop-color="#14384b"/><stop offset="1" stop-color="#0e2c3c"/></linearGradient></defs><g fill="url(#land)" stroke="#265069" stroke-width="1.2"><path d="M37 93 75 53 145 30 211 41 241 84 211 110 183 115 167 148 126 180 96 159 61 153 28 115Z M133 175 167 185 204 225 187 269 154 323 130 300 120 249 107 207Z M310 62 362 44 410 57 446 72 489 43 565 65 632 92 699 121 716 157 672 169 618 152 587 184 541 179 520 137 477 136 450 162 404 151 391 125 351 134 304 111Z M374 162 428 160 462 192 444 259 408 307 384 290 359 227Z M625 238 688 232 720 272 687 308 627 294Z M302 31 318 20 332 30 328 49Z M258 90 277 73 289 92 282 116Z"/></g><g stroke="#1b4152" opacity=".5"><path d="M0 85H760 M0 165H760 M0 245H760 M152 0V330 M304 0V330 M456 0V330 M608 0V330"/></g></svg><div class="map-label">No location data collected or shared. Broad region reporting will be optional.</div></div></div>
+</section>
+<section class="grid-bottom">
+<div class="panel content"><div class="panel-heading"><h3><span class="cyan">⌁</span> Research Activity</h3><span class="pill">LOCAL GHOST</span></div>
+<div class="strip"><div><b id="local-week">—</b><span>Predictions Scored · 7 Days</span><small>Local outcomes only</small></div><div><b id="local-total">—</b><span>Total Resolved Predictions</span></div><div><b id="local-pending">—</b><span>Pending Predictions</span></div></div>
+<div id="activity-chart" class="graph" style="height:115px"><div class="empty">Waiting for research outcomes</div></div><p class="note">These are local verified results, not uploads or shared fleet activity.</p></div>
+<div class="panel content"><div class="panel-heading"><h3><span class="cyan">✧</span> Top Contributing Regions</h3></div><div id="regions-list" class="regions"><div class="empty">No contributor regions have been shared. Opt-in region summaries can appear here later.</div></div></div>
+<div class="panel content"><div class="panel-heading"><h3><span class="cyan">◇</span> Data Privacy & Security</h3></div>
+<div class="privacy-grid"><div class="priv"><i>♙</i><span><b>No public identities</b><small>Contributor names are not shown</small></span></div><div class="priv"><i>▢</i><span><b>Opt-in only</b><small>Off by default</small></span></div><div class="priv"><i>▣</i><span><b>Transfer disabled</b><small>Real data sharing not enabled yet</small></span></div><div class="priv"><i>▥</i><span><b>Research only</b><small>No vehicle commands</small></span></div></div>
+<div class="foot-banner"><b>Built by Tesla Owners, for Tesla Owners</b><small>Your local predictions and data stay on your own GHOST instance until a reviewed sharing feature is deliberately enabled.</small></div></div>
+</section>
+<div class="bottom-note">GHOST HIVE · Local integration preview · No real-data transfer enabled · No fabricated fleet statistics</div>
+</div>
+<dialog class="full-screen-modal" id="sharing-dialog" aria-labelledby="sharing-title">
+<h3 id="sharing-title">Review Hive participation</h3>
+<p>Hive sharing is currently <strong>OFF</strong> in this integration preview. Your existing driving and prediction data stays local.</p>
+<p>Future participation will require a separate informed opt-in, authenticated encrypted transfer, explicit review of approved aggregate fields, and a way to revoke consent.</p>
+<ul><li>No raw GPS trails, VIN, or trip histories in the proposed shared analytics.</li><li>Optional coarse region would require separate consent.</li><li>Contributions cannot honestly be called fully anonymous until the privacy design is verified.</li></ul>
+<p>There is no enable button yet because real-data transfer has not completed its security and consent testing.</p>
+<button class="action" id="close-dialog" type="button">Close</button>
+</dialog>
+<script>
+"use strict";
+const $=x=>document.getElementById(x);
+const number=n=>typeof n==="number"&&Number.isFinite(n)?n.toLocaleString():"—";
+const fixed=(n,p=1)=>typeof n==="number"&&Number.isFinite(n)?n.toFixed(p):"—";
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const ns="http://www.w3.org/2000/svg";
+const shape=(tag,a,text)=>{const e=document.createElementNS(ns,tag);for(const [k,v] of Object.entries(a))e.setAttribute(k,String(v));if(text!==undefined)e.textContent=String(text);return e;};
+function lineGraph(container,rows,key,{suffix="",maxValue=null}={}){
+ container.replaceChildren();
+ const pts=rows.map((r,i)=>({i,label:r.label||r.period||"",v:Number.isFinite(r[key])?r[key]:null}));
+ const valid=pts.filter(p=>p.v!==null);
+ if(!valid.length){const box=document.createElement("div");box.className="empty";box.textContent="No scored results for this period yet.";container.append(box);return;}
+ const svg=shape("svg",{viewBox:"0 0 600 170",role:"img","aria-label":"Historic local prediction results"});
+ const max=Math.max(maxValue||0,...valid.map(p=>p.v),1)*1.1;
+ for(let i=0;i<4;i++){let y=18+36*i;svg.append(shape("line",{x1:40,y1:y,x2:583,y2:y,stroke:"#234354","stroke-dasharray":"4 5"}));svg.append(shape("text",{x:35,y:y+4,fill:"#91aec0","font-size":"10","text-anchor":"end"},fixed(max*(1-i/3),0)+suffix));}
+ const series=[],coords=[];
+ for(const p of pts){const x=42+(p.i/(pts.length>1?pts.length-1:1))*525;
+   if(p.v!==null){const y=135-110*p.v/max;series.push(x+","+y);coords.push({x,y});}
+   svg.append(shape("text",{x,y:163,fill:"#8aabba","font-size":"10","text-anchor":"middle"},p.label.slice(0,3)));
+ }
+ if(series.length>1)svg.append(shape("polyline",{points:series.join(" "),fill:"none",stroke:"#1cddf0","stroke-width":"3","stroke-linejoin":"round","stroke-linecap":"round"}));
+ coords.forEach(pt=>svg.append(shape("circle",{cx:pt.x,cy:pt.y,r:4,fill:"#2cdeef"})));
+ container.append(svg);
+}
+function bars(container,rows,key){
+ container.replaceChildren();
+ const v=rows.filter(x=>typeof x[key]==="number"&&x[key]>0);
+ if(!v.length){const n=document.createElement("div");n.className="empty";n.textContent="No scored predictions during the last seven days.";container.append(n);return;}
+ const max=Math.max(...v.map(x=>x[key]),1);
+ const svg=shape("svg",{viewBox:"0 0 620 125",role:"img","aria-label":"Recent local prediction activity"});
+ rows.forEach((r,i)=>{const x=30+i*(560/Math.max(1,rows.length)),h=(r[key]||0)/max*94;
+ svg.append(shape("rect",{x,y:102-h,width:Math.max(5,400/rows.length),height:h,rx:2,fill:"#21c7e1"}));
+ svg.append(shape("text",{x,y:119,fill:"#90acbb","font-size":"10"},(r.day||"").slice(5)));});
+ container.append(svg);
+}
+function render(d){
+ const local=d.local||{}, fleet=d.fleet||{}, hive=d.hive||{};
+ $("fleet-vehicles").textContent=number(fleet.participating_vehicles);
+ $("local-predictions").textContent=number(local.predictions_scored);
+ $("local-accuracy").textContent=local.within_2f_percent===null?"—":fixed(local.within_2f_percent)+"%";
+ $("fleet-regions").textContent=number(fleet.countries);
+ $("accuracy-value").textContent=local.within_2f_percent===null?"—":fixed(local.within_2f_percent)+"%";
+ $("local-error").textContent=local.temp_mae_f===null?"—":fixed(local.temp_mae_f,2)+"°F";
+ $("hive-error").textContent="—";
+ $("local-total").textContent=number(local.predictions_scored);
+ $("local-pending").textContent=number(local.pending_predictions);
+ const activity=d.contribution_activity||[];$("local-week").textContent=number(activity.reduce((a,r)=>a+(r.local_predictions_scored||0),0));
+ $("consent-text").textContent=hive.contribution==="OFF"?"Inactive":"Review required";
+ $("consent-sub").textContent="Sharing off · Your data stays local";
+ $("network-status").textContent="Fleet network not connected";
+ $("network-dot").style.background="#e8b86b";
+ $("updated").textContent="Local data checked "+new Date().toLocaleTimeString();
+ lineGraph($("accuracy-chart"),d.monthly||[],"within_2f_percent",{suffix:"%",maxValue:100});
+ lineGraph($("thermal-chart"),d.monthly||[],"temp_mae_f",{suffix:"°F"});
+ bars($("activity-chart"),activity,"local_predictions_scored");
+}
+async function refresh(){
+ try{const response=await fetch("/api/hive/local",{cache:"no-store"});
+ if(!response.ok)throw Error("Hive local API not available");
+ render(await response.json());}
+ catch(e){$("updated").textContent="Could not read local evidence. Classic GHOST remains unchanged.";}
+}
+$("review-sharing").addEventListener("click",()=>$("sharing-dialog").showModal());
+$("consent-status").addEventListener("click",()=>$("sharing-dialog").showModal());
+$("close-dialog").addEventListener("click",()=>$("sharing-dialog").close());
+refresh();
+setInterval(()=>{if(!document.hidden)refresh();},60000);
+</script>
+</body></html>
