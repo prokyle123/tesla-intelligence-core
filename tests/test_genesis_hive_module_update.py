@@ -49,6 +49,21 @@ class HiveModuleUpdateTests(unittest.TestCase):
                 self.assertEqual((self.live/file).read_bytes(),self.old[file])
             self.assertEqual(self.home.read_text(),"ORIGINAL CUSTOM HOME")
 
+    def test_one_already_updated_file_still_allows_scoped_webpage_change(self):
+        with patch.dict(mod.BASE_HASH_PREFIX,self.patches,clear=True):
+            # Simulate updated Hive Python module and an older HTML page.
+            python_file=self.live/"ghost_tesla_ai/hive_local.py"
+            python_file.write_bytes((ROOT/"ghost_tesla_ai/hive_local.py").read_bytes())
+            before=python_file.read_bytes()
+            mod.apply(self.live,ROOT,self.backup,dry_run=False)
+            self.assertEqual(python_file.read_bytes(),before)
+            self.assertEqual((self.live/"web/templates/hive.html").read_bytes(),
+                             (ROOT/"web/templates/hive.html").read_bytes())
+            mod.rollback(self.live,self.backup)
+            self.assertEqual(python_file.read_bytes(),before)
+            self.assertEqual((self.live/"web/templates/hive.html").read_bytes(),
+                             self.old["web/templates/hive.html"])
+
     def test_postinstall_user_edits_block_rollback(self):
         with patch.dict(mod.BASE_HASH_PREFIX,self.patches,clear=True):
             mod.apply(self.live,ROOT,self.backup,dry_run=False)

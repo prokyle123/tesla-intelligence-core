@@ -56,18 +56,18 @@ def check(live:Path,source:Path,backup:Path):
         wanted=new.read_bytes()
         prefixes=BASE_HASH_PREFIX[name]
         if isinstance(prefixes,str): prefixes=(prefixes,)  # test fixture
-        if not any(sha(existing).startswith(prefix) for prefix in prefixes):
+        if existing!=wanted and not any(sha(existing).startswith(prefix) for prefix in prefixes):
             raise ValueError("Existing Hive module was already edited: "+name)
-        if existing==wanted:
-            raise ValueError("Hive code already matches target, no update needed")
         changes[name]=(existing,wanted)
+    if all(before==after for before,after in changes.values()):
+        raise ValueError("Hive code already matches target, no update needed")
     return changes
 
 
 def apply(live:Path,source:Path,backup:Path,*,dry_run:bool):
     data=check(live,source,backup)
     for name,(before,after) in data.items():
-        print("Scoped update:",name,sha(before)[:12],"->",sha(after)[:12])
+        print("Scoped update:" if before!=after else "Unchanged:",name,sha(before)[:12],"->",sha(after)[:12])
     if dry_run:
         print("CHECK PASS — no files modified")
         return
