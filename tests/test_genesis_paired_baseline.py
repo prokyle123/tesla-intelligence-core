@@ -74,6 +74,22 @@ class PairedBaselineTests(unittest.TestCase):
         for flag in ("production_changes","can_promote","network_uploads","automatic_execution"):
             self.assertFalse(d[flag])
 
+    def test_missing_week_has_complete_nullable_metric_contract(self):
+        report=paired_baseline(self.db,now=NOW)
+        row=next(x for x in report["groups"] if x["model"]=="good_forecast")
+        empty=row["previous"]
+        self.assertEqual(empty["samples"],0)
+        for key in ("model_mae_f","persistence_mae_f",
+                    "model_advantage_f","model_win_percent"):
+            self.assertIn(key,empty)
+            self.assertIsNone(empty[key])
+        for row in report["groups"]:
+            for period in ("recent","previous"):
+                self.assertEqual(set(row[period]),
+                                 {"samples","model_mae_f","persistence_mae_f",
+                                  "model_advantage_f","model_win_percent"})
+                _=row[period]["model_advantage_f"]
+
     def test_fails_closed_when_source_missing_or_multi_vehicle(self):
         missing=self.root/"missing.sqlite3"
         self.assertEqual(paired_baseline(missing,now=NOW)["status"],"SOURCE_UNAVAILABLE")
