@@ -50,7 +50,7 @@ Preview server is deliberately restricted to localhost. In a **separate
 Windows PowerShell session** on a trusted PC, open an SSH port forward:
 
 ~~~powershell
-ssh -N -L 8767:127.0.0.1:8767 ghost@100.117.230.72
+ssh -N -L 8767:127.0.0.1:8767 ghost@YOUR_GHOST_TAILSCALE_IP
 ~~~
 
 Then navigate locally to http://127.0.0.1:8767/genesis on the PC.
