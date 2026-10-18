@@ -249,3 +249,133 @@ def hive_local():
     response.headers["X-Content-Type-Options"]="nosniff"
     response.headers["Referrer-Policy"]="no-referrer"
     return response
+
+
+# Owner-authorized actions are isolated to this Hive blueprint. The existing
+# Home dashboard and all of its other routes remain unchanged.
+import hashlib as _hashlib
+import hmac as _hmac
+import subprocess as _subprocess
+import sys as _sys
+import threading as _threading
+from flask import request as _request
+
+_CONTROL_LOCK=_threading.Lock()
+_ALLOWED_ACTIONS=frozenset(("preview","consent","send","disable","revoke"))
+
+
+def _client_root() -> Path:
+    return Path(os.environ.get(
+        "GHOST_HIVE_CLIENT_STATE_DIR",
+        str(Path.home()/"genesis-product/state/hive-client"))).expanduser().absolute()
+
+
+def _operator_permitted() -> bool:
+    # Strict same-origin JSON POST plus out-of-band local per-install key.
+    # No cookie session, wildcard CORS or browser-persisted credential.
+    if _request.mimetype!="application/json" or _request.content_length is None or _request.content_length>1024:
+        return False
+    origin=_request.headers.get("Origin","")
+    if not origin or origin!=_request.host_url.rstrip("/"):
+        return False
+    key=_client_root()/"dashboard-admin.token"
+    if not key.is_file() or key.is_symlink() or key.stat().st_mode & 0o077:
+        return False
+    expected=key.read_text().strip()
+    provided=_request.headers.get("X-Ghost-Hive-Owner","")
+    return bool(40<=len(provided)<=256 and len(expected)>=40 and
+                _hmac.compare_digest(provided,expected))
+
+
+def _run_hive_action(action:str,*,month:str|None=None) -> dict:
+    """Execute reviewed standalone monthly-aggregate module, not a shell."""
+    if action not in _ALLOWED_ACTIONS:
+        raise ValueError("Unsupported action")
+    app=Path(os.environ.get("GHOST_HIVE_CODE_DIR",
+        str(Path.home()/"genesis-product/current"))).expanduser().absolute()
+    if not (app/"genesis/hive_member.py").is_file():
+        raise RuntimeError("Hive research client is not installed")
+    args=[_sys.executable,"-m","genesis.hive_member",
+          "--state-dir",str(_client_root()),
+          "--source-db",str(config.DB_PATH)]
+    if action=="consent":
+        args.extend(["consent","--i-understand-pseudonymous-aggregate-sharing"])
+    elif action=="revoke":
+        args.extend(["revoke-remote","--confirm-delete"])
+    elif action=="send":
+        args.extend(["send","--month",month or "","--confirm-upload"])
+    elif action=="preview":
+        args.extend(["preview","--month",month or ""])
+    else:
+        args.append("disable")
+    worker=_subprocess.run(args,cwd=app,timeout=25,capture_output=True,text=True,
+        env={"HOME":str(Path.home()),"PATH":"/usr/bin:/bin","PYTHONPATH":str(app)},
+        check=True)
+    data=json.loads(worker.stdout)
+    if not isinstance(data,dict):
+        raise ValueError("Unexpected Hive reply")
+    return data
+
+
+def _approved_month(payload:dict)->str|None:
+    month=payload.get("month")
+    if not isinstance(month,str) or len(month)!=7:
+        return None
+    from datetime import datetime as _datetime
+    try:
+        when=_datetime.strptime(month,"%Y-%m")
+        if when.strftime("%Y-%m")!=month:
+            return None
+        return month
+    except ValueError:
+        return None
+
+
+def _payload_fingerprint(payload:dict)->str:
+    # A changed monthly report cannot be uploaded behind an outdated preview.
+    content=json.dumps(payload,sort_keys=True,separators=(",",":")).encode()
+    return _hashlib.sha256(content).hexdigest()
+
+
+@bp.post("/api/hive/control/<action>")
+def hive_control(action:str):
+    if action not in _ALLOWED_ACTIONS:
+        return jsonify({"error":"UNKNOWN_ACTION"}),404
+    if not _operator_permitted():
+        return jsonify({"error":"OWNER_AUTHORIZATION_REQUIRED"}),403
+    payload=_request.get_json(silent=True)
+    if not isinstance(payload,dict):
+        return jsonify({"error":"INVALID_REQUEST"}),400
+    if not _CONTROL_LOCK.acquire(blocking=False):
+        return jsonify({"error":"HIVE_OPERATION_IN_PROGRESS"}),409
+    try:
+        month=None
+        if action in ("preview","send"):
+            month=_approved_month(payload)
+            if not month:
+                return jsonify({"error":"SELECT_A_VALID_UTC_MONTH"}),400
+        if action=="consent" and payload.get("acknowledge_pseudonymous_sharing") is not True:
+            return jsonify({"error":"INFORMED_CONSENT_REQUIRED"}),400
+        if action=="send":
+            if payload.get("confirm_this_exact_report") is not True:
+                return jsonify({"error":"EXPLICIT_SEND_CONFIRMATION_REQUIRED"}),400
+            fingerprint=payload.get("preview_sha256")
+            if not isinstance(fingerprint,str) or len(fingerprint)!=64:
+                return jsonify({"error":"PREVIEW_REQUIRED"}),400
+            current=_run_hive_action("preview",month=month)
+            if (not current.get("eligible") or not current.get("payload") or
+                not _hmac.compare_digest(fingerprint,_payload_fingerprint(current["payload"]))):
+                return jsonify({"error":"REPORT_CHANGED_REFRESH_PREVIEW"}),409
+        if action=="revoke" and payload.get("confirmation")!="DELETE":
+            return jsonify({"error":"TYPE_DELETE_TO_CONFIRM"}),400
+        result=_run_hive_action(action,month=month)
+        if action=="preview" and result.get("eligible") and result.get("payload"):
+            result["preview_sha256"]=_payload_fingerprint(result["payload"])
+        response=jsonify(result)
+        response.headers["Cache-Control"]="no-store"
+        response.headers["X-Content-Type-Options"]="nosniff"
+        return response
+    except (_subprocess.SubprocessError,ValueError,RuntimeError,OSError,json.JSONDecodeError):
+        return jsonify({"error":"HIVE_ACTION_FAILED_CHECK_LOCAL_CONFIGURATION"}),503
+    finally:
+        _CONTROL_LOCK.release()
