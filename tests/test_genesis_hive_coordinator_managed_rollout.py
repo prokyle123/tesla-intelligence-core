@@ -50,7 +50,7 @@ class HiveCoordinatorManagedRolloutTests(unittest.TestCase):
         self.assertEqual(rollout._db_counts(self.original)["monthly"],1)
 
     def test_unit_uses_loopback_fixed_port_and_private_db(self):
-        release=rollout.STAGED/"0123456789abcdef"*1
+        release=rollout.STAGED/"0123456789abcdef"
         unit=rollout.unit_text(release,"ghost")
         self.assertIn("User=ghost",unit)
         self.assertIn("--port 8778 serve",unit)
