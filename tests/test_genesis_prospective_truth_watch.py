@@ -58,7 +58,8 @@ class ProspectiveTruthWatchTests(unittest.TestCase):
   self.assertEqual(row["model_mae_f"],7.2)
   self.assertEqual(row["persistence_mae_f"],0)
   self.assertEqual(row["model_advantage_f"],-7.2)
-  self.assertEqual(row["assessment"],"PERSISTENCE_BETTER_REVIEW")
+  self.assertEqual(row["evidence_days"],1)
+  self.assertEqual(row["assessment"],"INSUFFICIENT_TEMPORAL_COVERAGE")
   after_inserts=hashlib.sha256(self.db.read_bytes()).hexdigest()
   check_watch(self.db,self.state,now=NOW+10800)
   self.assertEqual(after_inserts,hashlib.sha256(self.db.read_bytes()).hexdigest())
@@ -67,11 +68,25 @@ class ProspectiveTruthWatchTests(unittest.TestCase):
    self.assertNotIn(bad,dump)
   for key in ("network_uploads","production_changes","can_promote","automatic_execution"):
    self.assertFalse(report[key])
+ def test_three_distinct_future_days_allow_comparison(self):
+  freeze_watch(self.db,self.state,now=NOW)
+  for i in range(120):
+   offset=(i%3)*DAY
+   self.put(i+2,NOW+30+offset,NOW+7200+offset,pred=24.,actual=20.)
+  result=check_watch(self.db,self.state,now=NOW+4*DAY)
+  self.assertEqual(result["eligible_pairs"],120)
+  self.assertEqual(result["min_evidence_days"],3)
+  row=result["models"][0]
+  self.assertEqual(row["evidence_days"],3)
+  self.assertEqual(row["assessment"],"PERSISTENCE_BETTER_REVIEW")
+  self.assertEqual(row["model_advantage_f"],-7.2)
+
  def test_zero_future_scores_are_complete_and_private(self):
   freeze_watch(self.db,self.state,now=NOW)
   report=check_watch(self.db,self.state,now=NOW+2)
   self.assertEqual(report["status"],"AWAITING_FUTURE_EVIDENCE")
   self.assertEqual(report["models"][0]["samples"],0)
+  self.assertEqual(report["models"][0]["evidence_days"],0)
   self.assertIsNone(report["models"][0]["model_advantage_f"])
  def test_same_source_and_multicar_isolation(self):
   freeze_watch(self.db,self.state,now=NOW)
