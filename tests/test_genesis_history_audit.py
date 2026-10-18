@@ -17,7 +17,7 @@ def generate_db(path: Path, second_car: bool = False):
             battery_temp_c REAL, battery_level REAL)""")
         rows = []
         for i in range(2000):
-            if i < 400 or i >= 1300:
+            if i < 400 or i >= 1400:
                 speed, charge = 35.0, 0.0
             elif i < 900:
                 speed, charge = 0.0, 0.0
