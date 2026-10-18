@@ -156,6 +156,19 @@ def create_app(path: Path) -> Flask:
             abort(401)
         return row[0]
 
+    @app.delete("/v1/enrollment")
+    def delete_enrollment():
+        # A member can revoke its OWN token without admin intervention.
+        # No client IP, VIN, GPS or other identifier enters the database.
+        user=authenticate()
+        with closing(sqlite3.connect(db,timeout=4)) as con:
+            con.execute("PRAGMA foreign_keys=ON")
+            con.execute("DELETE FROM contributions WHERE participant=?",(user,))
+            con.execute("DELETE FROM monthly_research WHERE participant=?",(user,))
+            con.execute("UPDATE participants SET enabled=0 WHERE id=?",(user,))
+            con.commit()
+        return jsonify({"revoked":True,"contributions_erased":True}),200
+
     @app.post("/v1/contributions")
     def contribute():
         user=authenticate()
