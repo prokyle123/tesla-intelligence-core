@@ -13,6 +13,7 @@ import json
 from pathlib import Path
 import sqlite3
 from urllib.parse import quote
+from .hive_regions import public_regions, MIN_REGION_MEMBERS
 
 K=10
 MONTHS=12
@@ -40,6 +41,7 @@ def summary(db:Path, *,now:datetime|None=None)->dict:
             ON m.participant=p.id WHERE p.enabled=1
             AND m.month>=? AND m.month<=?
             GROUP BY m.month""",(months[0],months[-1])).fetchall()
+        approved_regions=public_regions(con,threshold=MIN_REGION_MEMBERS)
     saved={r[0]:r for r in rows}
     timeline=[]
     for month in months:
@@ -65,10 +67,10 @@ def summary(db:Path, *,now:datetime|None=None)->dict:
         "predictions_checked":latest["predictions_checked"] if latest else None,
         "mean_error_f":latest["mean_error_f"] if latest else None,
         "monthly":timeline,
-        "regions":[],"countries":None,
+        "regions":approved_regions,"countries":None,
         "private_group_threshold":K,
         "model_weights_shared":False,
-        "privacy_note":"Member totals are registrations with submitted reports, not verified unique humans. Model-error averages are withheld until 10 enrolled nodes report in the same month.",
+        "privacy_note":"Member totals count reporting enrollments, not verified humans. Monthly model averages and opted-in broad-region points require at least 10 reporting enrollments in the same cohort. No exact location is collected.",
         "federated_models_enabled":False,
     }
 
