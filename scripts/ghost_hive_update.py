@@ -18,8 +18,8 @@ import tempfile
 
 FILES=("ghost_tesla_ai/hive_local.py","web/templates/hive.html")
 BASE_HASH_PREFIX={
-    "ghost_tesla_ai/hive_local.py":"60240a5ac8d2d4a6",
-    "web/templates/hive.html":"0a8fc4def776a3c0",
+    "ghost_tesla_ai/hive_local.py":"be260bf1c765",
+    "web/templates/hive.html":"964730ca8ed7",
 }
 
 
