@@ -42,6 +42,13 @@ app.register_blueprint(ghost_forecast_quality_v2_bp)
 from .trip_quality_v3_api import bp as ghost_trip_quality_v3_bp
 app.register_blueprint(ghost_trip_quality_v3_bp)
 
+# Separate opt-in research UI. With the flag absent/false, GHOST Classic
+# remains unchanged; no Genesis storage is opened and no work is scheduled.
+from genesis import config as genesis_config
+if genesis_config.enabled():
+    from genesis.api import blueprint as genesis_bp
+    app.register_blueprint(genesis_bp)
+
 MAE_GOALS = {
     "soc_60m": 2.0,
     "soc_180m": 3.0,

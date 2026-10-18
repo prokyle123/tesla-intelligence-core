@@ -149,8 +149,11 @@ if [[ -d "$INSTALL_DIR" ]]; then
   echo "Code backup: $BACKUP"
 fi
 $SUDO mkdir -p "$INSTALL_DIR" "$DATA_DIR/models" "$CONF_DIR"
-$SUDO rm -rf "$INSTALL_DIR/ghost_tesla_ai" "$INSTALL_DIR/web" "$INSTALL_DIR/systemd" "$INSTALL_DIR/release-sidecars"
+# Genesis is code-only and uses a separate private research database.
+# Existing runtime history and model artifacts are never removed here.
+$SUDO rm -rf "$INSTALL_DIR/ghost_tesla_ai" "$INSTALL_DIR/web" "$INSTALL_DIR/systemd" "$INSTALL_DIR/release-sidecars" "$INSTALL_DIR/genesis"
 $SUDO cp -a "$ROOT/ghost_tesla_ai" "$INSTALL_DIR/"
+$SUDO cp -a "$ROOT/genesis" "$INSTALL_DIR/"
 $SUDO cp -a "$ROOT/web" "$INSTALL_DIR/"
 $SUDO cp -a "$ROOT/systemd" "$INSTALL_DIR/"
 $SUDO cp -a "$ROOT/release-sidecars" "$INSTALL_DIR/"
