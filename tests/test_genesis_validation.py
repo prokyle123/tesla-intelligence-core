@@ -24,7 +24,8 @@ class GenesisValidationTests(unittest.TestCase):
         self.assertFalse(finding["eligible_for_production"])
         self.assertFalse(finding["prospective_confirmation"])
         self.assertFalse(finding["publishable_fleet_finding"])
-        self.assertNotIn("ts",json.dumps(finding))
+        self.assertNotIn("ts",finding)
+        self.assertNotIn("car_id",finding)
 
     def test_temperature_soc_warning(self):
         finding=audit_pair(fixture(),"outside_temp_c","battery_level")
