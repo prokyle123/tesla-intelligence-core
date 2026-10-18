@@ -236,7 +236,7 @@ function vehicleBars(container,months){
    fill.style.width=String(100*Math.min(total,threshold)/threshold)+"%";
    bar.append(fill);container.append(bar);
    const caveat=document.createElement("small");caveat.className="subtle";
-   caveat.textContent="Overall enrollment only · monthly group release requires "+
+   caveat.textContent="Overall enrollment only · small-group months require separate permission; original group threshold "+
      String(threshold)+" reporters within the SAME UTC month";
    container.append(caveat);
   }
@@ -246,9 +246,9 @@ function vehicleBars(container,months){
   return;
  }
  data=vehicleWindow==="6m"?data.slice(-6):data.slice(-12);
- const available=data.filter(r=>r.status==="SHARED_GROUP"&&Number.isInteger(r.reporting_nodes)&&r.reporting_nodes>=threshold);
+ const available=data.filter(r=>Number.isInteger(r.reporting_nodes)&&(r.status==="SHARED_GROUP"&&r.reporting_nodes>=threshold || r.status==="EXPLICIT_PUBLIC_OPT_IN"&&r.reporting_nodes>=1));
  if(!available.length){
-  overallOnly("No monthly cohort is large enough to publish a trend yet.");
+  overallOnly("Public monthly history appears once a reporter separately opts into small-cohort publication, or a group qualifies.");
   return;
  }
  const max=Math.max(1,...available.map(r=>r.reporting_nodes));
@@ -261,7 +261,7 @@ function vehicleBars(container,months){
  }
  data.forEach((r,i)=>{
   const x=56+i*spacing+(spacing-barWidth)/2;
-  const ok=r.status==="SHARED_GROUP"&&Number.isFinite(r.reporting_nodes);
+  const ok=(r.status==="SHARED_GROUP"||r.status==="EXPLICIT_PUBLIC_OPT_IN")&&Number.isFinite(r.reporting_nodes);
   const val=ok?r.reporting_nodes:null;
   const height=ok?Math.max(2,val/max*144):0;
   if(ok){
