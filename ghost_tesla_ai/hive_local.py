@@ -261,7 +261,7 @@ import threading as _threading
 from flask import request as _request
 
 _CONTROL_LOCK=_threading.Lock()
-_ALLOWED_ACTIONS=frozenset(("preview","consent","send","disable","revoke"))
+_ALLOWED_ACTIONS=frozenset(("preview","consent","join","send","disable","revoke"))
 
 
 def _client_root() -> Path:
@@ -278,6 +278,15 @@ def _operator_permitted() -> bool:
     origin=_request.headers.get("Origin","")
     if not origin or origin!=_request.host_url.rstrip("/"):
         return False
+    # For this local developer preview, an authenticated SSH-forwarded
+    # 127.0.0.1 connection is the owner authentication boundary. Never
+    # trust arbitrary tailnet/LAN/browser clients or proxy headers.
+    if (_request.remote_addr in ("127.0.0.1","::1")
+        and _request.host in ("127.0.0.1:8766","[::1]:8766")
+        and origin in ("http://127.0.0.1:8766","http://[::1]:8766")
+        and not any(h in _request.headers for h in
+            ("Forwarded","X-Forwarded-For","X-Forwarded-Host","X-Real-IP"))):
+        return True
     key=_client_root()/"dashboard-admin.token"
     if not key.is_file() or key.is_symlink() or key.stat().st_mode & 0o077:
         return False
@@ -298,8 +307,10 @@ def _run_hive_action(action:str,*,month:str|None=None) -> dict:
     args=[_sys.executable,"-m","genesis.hive_member",
           "--state-dir",str(_client_root()),
           "--source-db",str(config.DB_PATH)]
-    if action=="consent":
+    if action in ("consent","join"):
         args.extend(["consent","--i-understand-pseudonymous-aggregate-sharing"])
+        if action=="join":
+            args.append("--hourly")
     elif action=="revoke":
         args.extend(["revoke-remote","--confirm-delete"])
     elif action=="send":
@@ -354,8 +365,10 @@ def hive_control(action:str):
             month=_approved_month(payload)
             if not month:
                 return jsonify({"error":"SELECT_A_VALID_UTC_MONTH"}),400
-        if action=="consent" and payload.get("acknowledge_pseudonymous_sharing") is not True:
+        if action in ("consent","join") and payload.get("acknowledge_pseudonymous_sharing") is not True:
             return jsonify({"error":"INFORMED_CONSENT_REQUIRED"}),400
+        if action=="join" and payload.get("allow_hourly_aggregates") is not True:
+            return jsonify({"error":"HOURLY_TRANSFER_CONSENT_REQUIRED"}),400
         if action=="send":
             if payload.get("confirm_this_exact_report") is not True:
                 return jsonify({"error":"EXPLICIT_SEND_CONFIRMATION_REQUIRED"}),400
