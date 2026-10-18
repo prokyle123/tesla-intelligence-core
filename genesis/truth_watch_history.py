@@ -100,6 +100,14 @@ def record_history(source_db: Path, watch_file: Path, history_db: Path, *, now=N
     payload=_summary(report)
     fingerprint=hashlib.sha256(payload.encode("utf-8")).hexdigest()
     history=_history_path(history_db,source_db,watch_file,write=True)
+    # Create the database inode privately *before* sqlite opens it; never
+    # expose aggregate evidence to other Unix accounts even momentarily.
+    try:
+        fd=os.open(history,os.O_CREAT|os.O_EXCL|os.O_RDWR,0o600)
+    except FileExistsError:
+        pass
+    else:
+        os.close(fd)
     day=datetime.fromtimestamp(clock,timezone.utc).strftime("%Y-%m-%d")
     with closing(sqlite3.connect(history,timeout=5)) as con:
         con.executescript(SCHEMA)
