@@ -32,7 +32,9 @@ OLD_GIT_BLOBS={
     "web/templates/hive.html":{
         "36b19972e11eda8341fcc82146ce9f157a635bf1",
         "4226f7c4ceeb1e8d6c7231e97455b218708a795a",
-        "bdb2512538da8e112a0eddea85623bd131c73b8f"},
+        "bdb2512538da8e112a0eddea85623bd131c73b8f",
+        # Exact previous installed map/UI release at 133c93e, not arbitrary edits.
+        "a7d458777775607f2db464791a4c1476ed986cd3"},
 }
 NEW_FILE="ghost_tesla_ai/hive_owner_proof.py"
 
