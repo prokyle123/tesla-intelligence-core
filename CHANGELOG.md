@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — GHOST Intelligence V2 integration staging (2026-10-20)
+
+- Began reconciling the developer-only V6.6 guarded Qwen3.5 4B narration setup with the public v1 installer. **Not a released new-install feature.**
+- Documented verified memory, independent numerical learning, claim-aware evidence gates, scheduled 4B narration, fast verified voice/alerts, and watchdog/rollback requirements.
+- Added a source-and-service inventory helper that does not collect telemetry, credentials, routes or model binaries.
+- Recorded known blockers: missing portable sidecar sources/current live dashboard, developer-specific paths, an initial watchdog path mistake, and unverified clean install/upgrades.
+- Retained the ambient thermal model in research status after its exploratory day-heldout score was worse than simple baselines.
+- No change to the current public installer, deployed Pi, VERSION file, stable GitHub release tag or model weights.
+
+
 ## v1.0.0 — Major winter & whole-vehicle intelligence release (2026-10-16)
 
 ### Delivered features (new-install hardware test deferred)
