@@ -90,15 +90,19 @@ class ExportTests(unittest.TestCase):
             self.assertNotIn('some-secret-private-value',str(d))
 
     def test_review_copies_redact_private_addresses_without_editing_live_files(self):
+        # Construct synthetic private addresses from pieces to avoid committing
+        # a usable Tailnet device address to the public repository.
+        tail_ip='.'.join(('100','64','0','9'))
+        lan_ip='.'.join(('192','168','42','9'))
         with tempfile.TemporaryDirectory() as td:
             p=Path(td)
             file=p/'dashboard.html'
-            original=b'<script>const host = "100.117.230.72";</script>'
+            original=f'<script>const host = "{tail_ip}";</script>'.encode()
             file.write_bytes(original)
+            unit=f'ExecStart=/bin/tool --host {lan_ip}\n'.encode()
             with patch.object(mod,'sources',return_value=(('core',p),)), \
                  patch.object(mod,'installed_service_sources',
-                              return_value=[('systemd-live/intelligence.service.txt',
-                                             b'ExecStart=/bin/tool --host 192.168.1.5\n')]):
+                              return_value=[('systemd-live/intelligence.service.txt',unit)]):
                 r=mod.build(p,p/'redacted.zip',redact_private_network=True)
             self.assertTrue(r['created'])
             self.assertEqual(set(r['network_addresses_redacted_in_review_copies']),
@@ -107,17 +111,19 @@ class ExportTests(unittest.TestCase):
             import zipfile
             with zipfile.ZipFile(p/'redacted.zip') as z:
                 dashboard=z.read('sources/core/dashboard.html')
-                unit=z.read('sources/systemd-live/intelligence.service.txt')
-                self.assertNotIn(b'100.117.230.72',dashboard)
-                self.assertNotIn(b'192.168.1.5',unit)
+                saved_unit=z.read('sources/systemd-live/intelligence.service.txt')
+                self.assertNotIn(tail_ip.encode(),dashboard)
+                self.assertNotIn(lan_ip.encode(),saved_unit)
                 self.assertIn(b'REDACTED_PRIVATE_NETWORK_ADDRESS',dashboard)
-                self.assertIn(b'REDACTED_PRIVATE_NETWORK_ADDRESS',unit)
-                self.assertNotIn(b'100.117.230.72',z.read('manifest.json'))
+                self.assertIn(b'REDACTED_PRIVATE_NETWORK_ADDRESS',saved_unit)
+                self.assertNotIn(tail_ip.encode(),z.read('manifest.json'))
 
     def test_redaction_cannot_override_credential_rejection(self):
+        lan_ip='.'.join(('192','168','42','9'))
         with tempfile.TemporaryDirectory() as td:
             p=Path(td)
-            (p/'unsafe.py').write_text('access_token = "highly_private_fake_value_123"\nhost="192.168.1.5"\n')
+            (p/'unsafe.py').write_text(
+                f'access_token = "highly_private_fake_value_123"\nhost="{lan_ip}"\n')
             (p/'safe.py').write_text("print(1)\n")
             with patch.object(mod,'sources',return_value=(('core',p),)), \
                  patch.object(mod,'installed_service_sources',return_value=[]):
@@ -127,7 +133,8 @@ class ExportTests(unittest.TestCase):
             self.assertEqual(r['blocked'][0]['path'],'core/unsafe.py')
 
     def test_review_copy_rejects_inline_systemd_secret_even_with_ip(self):
-        v=b'Environment=MY_API_KEY="examplevalue12345" --host 192.168.1.10'
+        lan_ip='.'.join(('192','168','42','10'))
+        v=(f'Environment=MY_API_KEY="examplevalue12345" --host {lan_ip}').encode()
         self.assertIsNone(mod.sanitized_private_network_only(v,unit=True))
 
     def test_no_output_overwrite(self):
