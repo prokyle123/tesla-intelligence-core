@@ -1,0 +1,44 @@
+name: Publish documented GHOST V2 preview
+
+# One-time, explicitly scoped pre-release. The only push trigger is creation of
+# this workflow on main; unrelated pushes cannot republish or retag anything.
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/publish-v2-preview.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish-preview:
+    if: github.repository == 'prokyle123/tesla-intelligence-core' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify preview-only release notes and assets
+        run: |
+          set -euo pipefail
+          test -f docs/V2_PREVIEW_RELEASE.md
+          test -f docs/images/ghost-v2-dashboard-live.webp
+          grep -q 'NOT A COMPLETE INSTALLABLE V2 BUILD' docs/V2_PREVIEW_RELEASE.md
+          grep -q 'does not yet' docs/V2_PREVIEW_RELEASE.md
+          test -f CHANGELOG.md
+          python3 scripts/check_public_exposure.py
+      - name: Create V2 development pre-release (idempotent)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="v2.0.0-preview.1"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Preview release already exists; no tag movement or changes."
+            exit 0
+          fi
+          gh release create "$tag" \
+            --target "$GITHUB_SHA" \
+            --title 'Tesla Intelligence Core v2.0.0-preview.1 — GHOST V6.6 AI & Voice Preview' \
+            --notes-file docs/V2_PREVIEW_RELEASE.md \
+            --prerelease
