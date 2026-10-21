@@ -46,7 +46,7 @@
 ![Android companion](https://img.shields.io/badge/Android-companion%20v0.9.5-3DDC84?logo=android&logoColor=white)
 ![Tesla browser](https://img.shields.io/badge/in--car%20browser-PIN%20Funnel-43D8FF)
 
-**[Current dashboard](docs/images/ghost-v2-dashboard-live.webp) · [New AI + voice](#new-v66-intelligence-and-voice-features) · [Full feature matrix](docs/FEATURE_MATRIX.md) · [V2 release notes](docs/V2_RELEASE_NOTES_DRAFT.md) · [Changelog](CHANGELOG.md) · [Releases](https://github.com/prokyle123/tesla-intelligence-core/releases) · [Install v1](#quick-start) · [Docs](#documentation)**
+**[V2 preview release](https://github.com/prokyle123/tesla-intelligence-core/releases/tag/v2.0.0-preview.1) · [Latest dashboard](docs/images/ghost-v2-dashboard-live.webp) · [New AI + voice](#new-v66-intelligence-and-voice-features) · [Full features](docs/FEATURE_MATRIX.md) · [Changelog](CHANGELOG.md) · [Install v1](#quick-start) · [Docs](#documentation)**
 
 ⭐ **If this project is useful to you, star the repository.** It is the simplest way to help other Tesla / EV tinkerers discover it.
 
@@ -344,6 +344,15 @@ Winter Readiness + human-readable limiters
 
 ## Highlights
 
+### 🧠 Guarded local AI + voice (V6.6 development Pi)
+- Qwen3.5 4B local model through llama.cpp; generation is asynchronous and cached
+- Verified readings and selected historical context separate from generated prose
+- Numerical and relational evidence guards plus trusted text fallback
+- Browser voice reads verified status and optional AI explanations
+- Top-of-hour announcements and independent rule-based anomaly alerts
+- Hourly V6.2 memory journal and optional Qwen server watchdog
+- **Not yet supplied by the public v1 installer** — [V2 pre-release](https://github.com/prokyle123/tesla-intelligence-core/releases/tag/v2.0.0-preview.1)
+
 ### ❄️ Winter Readiness
 - 0–100 readiness score
 - Human-readable **Winter Readiness Limiters**
@@ -370,7 +379,7 @@ Winter Readiness + human-readable limiters
 - Projected departure SOC and **arrival reserve**
 - Thermal margin and pack trend
 - Battery-heater / HVAC / preconditioning observation
-- Wall-input vs pack / non-pack power context where available
+- Tesla-reported charging input vs derived pack / non-pack power (not independent wall-meter data)
 
 ### 📈 Prediction stack
 - Scikit-learn baseline models
@@ -650,7 +659,9 @@ The uninstaller asks before removing learned data, models and configuration.
 
 # Project status
 
-**Version 1.0.0 — Major winter and whole-vehicle intelligence release.**
+**Stable installable release: v1.0.0. New development preview: [v2.0.0-preview.1](https://github.com/prokyle123/tesla-intelligence-core/releases/tag/v2.0.0-preview.1) — GHOST V6.6 local Qwen3.5, voice alerts, verified memory and AI insight.**
+
+The V2 pre-release is a **feature showcase, not yet a complete V2 installer**. A working Pi deployment has those features; a portable new-install/upgrade path is being reconciled and tested separately.
 
 This is an experimental enthusiast project, not a Tesla product and not a safety system.
 
@@ -673,6 +684,10 @@ If you run it on another Tesla, a compatibility report is genuinely useful.
 |---|---|
 | **[Use cases](docs/USE_CASES.md)** | Winter commuting, Level 1 charging, cold soak and other real-world scenarios |
 | **[Feature matrix](docs/FEATURE_MATRIX.md)** | What each feature uses and what question it answers |
+| **[V2 preview release](https://github.com/prokyle123/tesla-intelligence-core/releases/tag/v2.0.0-preview.1)** | New guarded 4B intelligence, voice alerts, verified memory and current screenshot |
+| **[V2 full change notes](docs/V2_RELEASE_NOTES_DRAFT.md)** | Feature-by-feature development history and pending installer migration |
+| **[AI architecture](docs/GHOST_INTELLIGENCE_V2.md)** | Separate numerical learning, memory, local-language-model narration and fallbacks |
+| **[Changelog](CHANGELOG.md)** | v2 preview changes and earlier releases |
 | **[Install](docs/INSTALL.md)** | Full fresh-install walkthrough and validation |
 | **[Configuration](docs/CONFIGURATION.md)** | Environment settings and data paths |
 | **[Architecture](docs/ARCHITECTURE.md)** | Collector → learning → models → readiness |
