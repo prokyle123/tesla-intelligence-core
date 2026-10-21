@@ -13,6 +13,7 @@ import re
 import sys
 import zipfile
 from pathlib import Path
+import subprocess
 
 # Strict file extensions; never include .env, .json data, logs, SQL, tokens,
 # binaries, GGUF model weights, credentials or training artifacts.
@@ -28,6 +29,39 @@ SENSITIVE = (
 )
 MAX_FILE_BYTES = 1_500_000
 MAX_ARCHIVE_BYTES = 20_000_000
+
+# Read unit *source definitions*, not private /etc/ghost-tesla-ai config.
+# systemctl cat includes drop-in overrides required to replicate the service.
+SAFE_UNIT_NAMES = (
+    'ghost-tesla-ai-web.service',
+    'ghost-tesla-ai-collector.service',
+    'ghost-intelligence-web.service',
+    'ghost-intelligence-collector.service',
+    'ghost-intelligence-collector.timer',
+    'ghost-intelligence-llm.service',
+    'ghost-intelligence-v3-briefing.service',
+    'ghost-intelligence-v3-briefing.timer',
+    'ghost-v62-memory.service',
+    'ghost-v62-memory.timer',
+    'ghost-v66-watchdog.service',
+    'ghost-v66-watchdog.timer',
+    'ghost-thermal-range-recorder.service',
+    'ghost-thermal-range-recorder.timer',
+)
+INLINE_SECRET = re.compile(
+    r'(?im)^\s*Environment\s*=\s*.*(?:PASSWORD|TOKEN|API_KEY|SECRET)\s*=')
+
+def installed_service_sources():
+    for unit in SAFE_UNIT_NAMES:
+        try:
+            proc = subprocess.run(
+                ['systemctl', 'cat', unit], capture_output=True,
+                text=True, timeout=5, check=False)
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+        if proc.returncode == 0 and proc.stdout:
+            yield 'systemd-live/' + unit + '.txt', proc.stdout.encode('utf-8')
+
 
 def sources(home: Path):
     # Both app paths are intentionally *source only* and can be absent.
@@ -83,6 +117,20 @@ def build(home: Path, output: Path):
         contents, reason = check_source(name, path)
         if reason:
             blocked.append({'path': name, 'reason': reason})
+        else:
+            accepted.append((name, contents))
+            total_bytes += len(contents)
+            if total_bytes > MAX_ARCHIVE_BYTES:
+                raise ValueError('Source bundle exceeds size limit; aborting')
+    # Exact installed unit definitions, with the same private-secret veto as
+    # application source. Never inspect the EnvironmentFile target itself.
+    for name, contents in installed_service_sources():
+        if len(contents) > MAX_FILE_BYTES:
+            blocked.append({'path': name, 'reason': 'unit_exceeds_size_limit'})
+            continue
+        data = contents.decode('utf-8')
+        if INLINE_SECRET.search(data) or any(p.search(data) for p in SENSITIVE):
+            blocked.append({'path': name, 'reason': 'unit_sensitive_pattern_for_review'})
         else:
             accepted.append((name, contents))
             total_bytes += len(contents)
