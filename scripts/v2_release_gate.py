@@ -24,6 +24,7 @@ REQUIRED_FILES=(
     'optional-intelligence/app/v2_watchdog.py',
     'scripts/install_optional_intelligence.py',
     'tests/test_v2_package.py',
+    'docs/V2_RELEASE_NOTES.md',
 )
 MUST_VERIFY=(
     'clean_pi_fresh_install',

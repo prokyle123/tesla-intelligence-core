@@ -129,6 +129,8 @@ GHOST's separate trained predictors learn numerical behavior from qualifying tel
 
 For a technical breakdown of the independent systems, see [GHOST Intelligence V2 architecture](docs/GHOST_INTELLIGENCE_V2.md) and the [feature matrix](docs/FEATURE_MATRIX.md).
 
+**V2 source release status (October 21):** the current running Pi source was privately reviewed and assembled into a portable source candidate; offline source/voice-dashboard syntax, historical-evidence, memory, and trip-shadow tests passed. However, **the updated source is not yet merged into GitHub's installer and no fresh Pi installation, upgrade or reboot recovery has been accepted**. See the [source audit and blocking checks](docs/V2_SOURCE_AUDIT_20261021.md). The [draft integration PR](https://github.com/prokyle123/tesla-intelligence-core/pull/4) remains separate from the production installer.
+
 ---
 
 ## Public v1.0 baseline (currently installable)
