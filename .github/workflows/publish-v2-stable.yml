@@ -1,0 +1,43 @@
+name: Publish GHOST V2 stable (gated)
+
+# Manual only. Never publish v2.0.0 until actual integrated source and an
+# independently tested Raspberry Pi installation/upgrade acceptance exist.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  stable-gates:
+    if: github.repository == 'prokyle123/tesla-intelligence-core' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Block incomplete V2 source or unverified hardware
+        run: python3 scripts/v2_release_gate.py
+      - name: Compile core and optional local intelligence
+        run: python -m compileall -q ghost_tesla_ai optional-intelligence
+      - name: Core regression and integration tests
+        run: |
+          python3 -m unittest discover -s tests -p 'test_release_contract.py' -v
+          python3 -m unittest discover -s tests -p 'test_v2_package.py' -v
+      - name: Review tracked code for exposed identifiers and credentials
+        run: python3 scripts/check_public_exposure.py
+      - name: Publish stable version only after gates pass
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag=v2.0.0
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Stable tag exists; refusing to move/update it."
+            exit 1
+          fi
+          gh release create "$tag" --target "$GITHUB_SHA" \
+            --title 'Tesla Intelligence Core v2.0.0 — GHOST Verified Local Intelligence' \
+            --notes-file docs/V2_RELEASE_NOTES.md \
+            --latest

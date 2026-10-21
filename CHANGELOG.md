@@ -1,15 +1,30 @@
 # Changelog
 
-## Unreleased — GHOST Intelligence V2 integration staging (2026-10-20)
+## v2.0.0-preview.1 — V6.6 local intelligence showcase (2026-10-20/21)
 
-Full version-by-version capability breakdown: [V2 release notes (draft)](docs/V2_RELEASE_NOTES_DRAFT.md). The new screenshot and feature matrix are committed on the integration branch, while current Pi-only source and service migration remain pending.
+**Release type: development pre-release / feature preview.** The current developer Pi runs Qwen3.5 4B production commentary, but the public GitHub installer does **not yet reproduce the full V6.6 deployment**. This pre-release publishes the verified feature overview, screenshot, technology documentation and upgrade plan—not a tested V2 migration or bundled multi-GB model.
 
-- Began reconciling the developer-only V6.6 guarded Qwen3.5 4B narration setup with the public v1 installer. **Not a released new-install feature.**
-- Documented verified memory, independent numerical learning, claim-aware evidence gates, scheduled 4B narration, fast verified voice/alerts, and watchdog/rollback requirements.
-- Added a source-and-service inventory helper that does not collect telemetry, credentials, routes or model binaries.
-- Recorded known blockers: missing portable sidecar sources/current live dashboard, developer-specific paths, an initial watchdog path mistake, and unverified clean install/upgrades.
-- Retained the ambient thermal model in research status after its exploratory day-heldout score was worse than simple baselines.
-- No change to the current public installer, deployed Pi, VERSION file, stable GitHub release tag or model weights.
+### Added or changed since v1.0.0
+
+- **Local Qwen3.5 4B explanations (V6.6):** cached asynchronous model commentary based on verified Tesla evidence; separate 0.6B fallback configuration and model health watchdog.
+- **AI Insight + Voice Alerts:** compact in-dashboard assistant, readable verified status, optional AI analysis speech, hourly voice updates, and independent rule-based anomaly notifications.
+- **V5 Tessie signal interpretation:** charging, pack/module thermal, direct heater, HVAC and status evidence distinguished from derived quantities.
+- **V6.2 verified memory:** scheduled timestamped observations used for historical comparisons. Language-model retrieval is not automatic Qwen fine-tuning.
+- **V6.3–V6.4.4a claim validation:** separate charging and module-spread baselines, two-snapshot pack changes, derived pack-to-outside differences, supported/unsupported trend statements, arithmetic and numerical claim checks, verified fallback.
+- **Safe 4B handoff (V6.4.3):** wait for active 0.6B briefing to finish before stopping its server.
+- **Resilient narration (V6.6):** rejected text does not replace verified data or block core readiness; watchdog and recovery are independent. A deployment-path error was repaired on the developer Pi; automated full failure recovery is not yet proven.
+- **Ambient-context research (V6.5/V6.5.1):** qualified passive thermal window selection, multi-day coverage gates and chronological holdout. The ambient predictor was **not promoted** because its exploratory error exceeded the simpler baseline.
+- **Current dashboard preview:** actual new V6.6 screenshot showing AI Insight, voice, battery, charging, readiness and forecast information.
+- **Documentation and technology overview:** revised project homepage, Qwen/llama.cpp/C++ and browser speech labels, detailed feature matrix and integration/release acceptance notes.
+
+### Not included in this preview
+
+- No publicly verified one-command V2 installation or upgrade; the current script still installs the v1 baseline.
+- No redistribution of GGUF model files, runtime credentials, local car telemetry or personal history.
+- No evidence that the 4B model changes its own weights; no autonomous car commands.
+- No deployment of the experimental ambient thermal predictor or unqualified thermal prediction ranges.
+
+Read [complete V2 notes](docs/V2_RELEASE_NOTES_DRAFT.md), [architecture](docs/GHOST_INTELLIGENCE_V2.md), [feature matrix](docs/FEATURE_MATRIX.md), and [release gates](docs/V2_RELEASE_GATES.md).
 
 
 ## v1.0.0 — Major winter & whole-vehicle intelligence release (2026-10-16)
@@ -38,7 +53,7 @@ Notable changes to **Tesla Intelligence Core (GHOST)**, grouped by development s
 [Project overview](README.md) · [October 2026 detailed update](docs/OCTOBER_2026_UPDATES.md) · [Releases](https://github.com/prokyle123/tesla-intelligence-core/releases)
 
 > [!NOTE]
-> **October 2026 is a live-source development snapshot, not a new published release or version tag.** The previous public release remains **v0.8.27.6**. Runtime service configuration, private telemetry and trained model artifacts are not part of the October GitHub sync.
+> **October 2026 historical section below describes the earlier source snapshot.** The stable public installer release is **v1.0.0**; the **V2 preview** documents the newer developer system but is not a full V2 installer. Runtime service configuration, private telemetry and trained model artifacts are not part of the October GitHub sync.
 
 ---
 
