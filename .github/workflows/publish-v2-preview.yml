@@ -24,7 +24,7 @@ jobs:
           test -f docs/V2_PREVIEW_RELEASE.md
           test -f docs/images/ghost-v2-dashboard-live.webp
           grep -q 'NOT A COMPLETE INSTALLABLE V2 BUILD' docs/V2_PREVIEW_RELEASE.md
-          grep -q 'does not yet' docs/V2_PREVIEW_RELEASE.md
+          grep -q 'still uses the public' docs/V2_PREVIEW_RELEASE.md
           test -f CHANGELOG.md
           python3 scripts/check_public_exposure.py
       - name: Create V2 development pre-release (idempotent)
