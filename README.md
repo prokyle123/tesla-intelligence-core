@@ -2,9 +2,9 @@
 
 # Tesla Intelligence Core
 
-### Winter readiness, overnight charging intelligence, and a continuously learning view of your Tesla.
+### Local AI explanations, verified winter readiness, neural forecasts, and Level 1 charging intelligence.
 
-**Telemetry → local history → learned behavior → neural forecasting → truth validation → readiness**
+**Tesla telemetry → local history → learned forecasts → verified evidence → optional Qwen3.5 4B insight → voice alerts**
 
 **Built for cold-soaked batteries, slow home charging, everyday vehicle use, and people who want evidence instead of guesses.**
 
@@ -25,6 +25,16 @@
 ![Bash](https://img.shields.io/badge/Bash-installer%20%2B%20ops-4EAA25?logo=gnubash&logoColor=white)
 ![systemd](https://img.shields.io/badge/systemd-services%20%2B%20timers-5B5B5B)
 
+**New in the October V6.6 development system · V2 release integration**
+
+![Local LLM](https://img.shields.io/badge/local%20LLM-Qwen3.5%204B-4f46e5)
+![llama.cpp](https://img.shields.io/badge/inference-llama.cpp-555555)
+![C++](https://img.shields.io/badge/C%2B%2B-llama.cpp%20runtime-00599C?logo=cplusplus&logoColor=white)
+![Voice alerts](https://img.shields.io/badge/voice-Browser%20Speech%20API-14b8a6)
+![Guarded AI](https://img.shields.io/badge/narration-evidence%20guarded-22c55e)
+![Historical memory](https://img.shields.io/badge/memory-local%20snapshots-0ea5e9)
+![Watchdog](https://img.shields.io/badge/model-watchdog%20%2B%20fallback-f97316)
+
 **Built around real EV constraints**
 
 ![Winter](https://img.shields.io/badge/cold--weather-ready-1f6feb)
@@ -36,7 +46,7 @@
 ![Android companion](https://img.shields.io/badge/Android-companion%20v0.9.5-3DDC84?logo=android&logoColor=white)
 ![Tesla browser](https://img.shields.io/badge/in--car%20browser-PIN%20Funnel-43D8FF)
 
-**[Quick install](#quick-start) · [Visual tour](#visual-tour) · [Use cases](docs/USE_CASES.md) · [How it works](#how-it-works) · [Documentation](#documentation) · [Latest release](https://github.com/prokyle123/tesla-intelligence-core/releases/latest)**
+**[Current dashboard](docs/images/ghost-v2-dashboard-live.webp) · [New AI + voice](#new-v66-intelligence-and-voice-features) · [Full feature matrix](docs/FEATURE_MATRIX.md) · [V2 release notes](docs/V2_RELEASE_NOTES_DRAFT.md) · [Changelog](CHANGELOG.md) · [Releases](https://github.com/prokyle123/tesla-intelligence-core/releases) · [Install v1](#quick-start) · [Docs](#documentation)**
 
 ⭐ **If this project is useful to you, star the repository.** It is the simplest way to help other Tesla / EV tinkerers discover it.
 
@@ -50,7 +60,7 @@ Because **80% SOC is not the whole answer**.
 
 A car sitting at 80% on a mild afternoon is not the same situation as a car sitting at 80% after hours of cold soak before a long winter commute. If home charging is slow, every hour of available charging matters. If the drive is long, departure SOC is only half the story — the reserve expected at the other end matters too.
 
-Tesla Intelligence Core watches live telemetry, builds a local history, learns recurring behavior, extracts trips/charging/thermal events, trains predictive models, and turns all of that into a dashboard that explains **what it expects, how confident it is, and why**.
+Tesla Intelligence Core watches live telemetry, builds a local history, learns recurring behavior, extracts trips/charging/thermal events, and trains numerical and neural prediction models. On the current development Pi, a separate **local Qwen3.5 4B model** explains selected verified readings, historical comparisons and readiness results in natural language, while voice alerts and rule-based warnings stay independent of slower model inference.
 
 It started as a winter-readiness project and grew into a broader local vehicle-intelligence platform.
 
@@ -64,7 +74,7 @@ Tesla Intelligence Core is especially useful when **time, temperature and chargi
 | Situation | What the system adds |
 |---|---|
 | **❄️ Long winter commute** | Learns typical trip behavior, projects departure conditions and estimates **arrival SOC reserve** instead of stopping at the current battery percentage. |
-| **🔌 Level 1 / slow home charging** | Learns the car's real charging behavior, tracks wall input and estimates whether the battery is on pace for the next departure. |
+| **🔌 Level 1 / slow home charging** | Learns the car's charging behavior, tracks Tesla-reported input power (not an independent wall meter) and estimates whether charge is on pace for the next departure. |
 | **🥶 Outdoor / cold-soaked car** | Tracks pack and module temperatures, cold-soak evidence, thermal retention, governed 1h / 3h / 6h pack forecasts, and learned preconditioning duration. |
 | **🕒 Departure time changes** | Learns recurring drive starts from history and keeps **schedule confidence** separate from **next-trip confidence**, so a random trip does not have to redefine the routine. |
 | **⚡ Charging + thermal load together** | Shows charging power alongside derived pack / non-pack power so it is easier to understand where limited input power is going. |
@@ -93,12 +103,40 @@ Tesla Intelligence Core is especially useful when **time, temperature and chargi
 
 ---
 
-## What's inside v1.0
+## New V6.6 intelligence and voice features
+
+The current development Raspberry Pi now runs a **guarded Qwen3.5 4B local-language-model explanation engine** alongside GHOST's existing independently trained numerical and PyTorch neural predictors. The 4B model adds commentary—not vehicle control, autonomous model-weight training, or replacements for verified measurements.
+
+| New area | What is running on the development Pi |
+| --- | --- |
+| **Local 4B AI Insight** | Cached, asynchronous briefings in natural language about charging, pack temperature, readiness and qualified historical patterns |
+| **Verified-data grounding** | Numerical and relationship checks reject invented measurements, unsupported trends, false module-spread comparisons and unverified fault-free assertions |
+| **Trusted fallback** | A rejected or unavailable 4B explanation is replaced by deterministic verified text; the readiness and rule-alert engines remain independent |
+| **V5 Tessie deep signals** | Separate battery heater, HVAC, Tesla conditioning, vehicle-reported charge input, module spread and historical baselines |
+| **V6.2 learning memory** | Hourly local verified observations and retrieved context—not language-model self-training or automatic weight updates |
+| **Voice and alerts** | Read verified status aloud, optional AI analysis, scheduled top-of-hour speech and rule-based anomaly announcements in compatible browsers |
+| **Winter readiness** | Distinct **RIGHT NOW** versus **NEXT DEPARTURE** scores, recorded trend and evidence-based limiter descriptions |
+| **Weather and battery outlook** | Open-Meteo context, future pack estimates, cabin thermal and power-flow panels; unvalidated forecast uncertainty bands remain blank |
+| **Reliability** | 4B watchdog health check, cached commentary and retained 0.6B recovery path; unattended failure/reboot testing is still needed |
+| **Thermal research** | V6.5/V6.5.1 day-separated passive thermal studies remain experimental; the ambient model was **not promoted** after a weaker holdout score |
+
+> [!CAUTION]
+> **GitHub installation status:** These V6.6 features are verified on the developer Pi, but the public **v1.0 installer does not yet install the entire V6.6 system**. The V2 packaging, portable model setup, migration/rollback and clean-install validation are still in progress. [Read the full development-to-release notes](docs/V2_RELEASE_NOTES_DRAFT.md) and [V2 release gates](docs/V2_RELEASE_GATES.md). Do not overwrite an existing updated installation with the old v1 installer.
+
+### What the AI actually learns
+
+GHOST's separate trained predictors learn numerical behavior from qualifying telemetry and outcomes. The local language model **retrieves verified evidence and memory snapshots to explain them**; that retrieval does not continuously fine-tune its Qwen weights. Both systems can be useful without confusing a conversational explanation with a measured forecast or diagnostic proof.
+
+For a technical breakdown of the independent systems, see [GHOST Intelligence V2 architecture](docs/GHOST_INTELLIGENCE_V2.md) and the [feature matrix](docs/FEATURE_MATRIX.md).
+
+---
+
+## Public v1.0 baseline (currently installable)
 
 | Core intelligence | What it actually measures and learns |
 | --- | --- |
 | ❄️ **Winter readiness** | Overnight cold-soak, pack heating, module temperature, readiness for the next departure and thermal forecast ranges |
-| 🔌 **Charging intelligence** | Wall input versus derived pack electrical power, slow Level 1 charging performance, charging transitions and optional home-power context |
+| 🔌 **Charging intelligence** | Tesla-reported charging input versus derived pack electrical power, slow Level 1 charging behavior, charging transitions and optional home-power context |
 | 🌦️ **Outdoor weather** | Hourly Open-Meteo conditions and 3 / 6 / 12-hour weather forecasts alongside pack-temperature projections |
 | 🚗 **Every-trip learning** | All observed drives, multi-leg journeys, short errands, weekends, charging stops and repeat routes—not just work commutes |
 | 📉 **Forecast and journey quality** | Frozen forecasts compared against later observations; separate error, confidence, missing-data and invalid-comparison states |
@@ -376,6 +414,10 @@ Winter Readiness + human-readable limiters
 A Pi 4 or other 64-bit Debian-class machine may work, but the project is developed with Pi 5-class hardware in mind and neural training is the most CPU-intensive workload.
 
 ## One-command interactive install
+
+> [!IMPORTANT]
+> This command installs the public v1 baseline, **not** the current V6.6 guarded 4B system. Existing development installations should not be overwritten; the V2 installer is under integration testing. See [V2 release notes](docs/V2_RELEASE_NOTES_DRAFT.md).
+
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/prokyle123/tesla-intelligence-core/main/install.sh)
