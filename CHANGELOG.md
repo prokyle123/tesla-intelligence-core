@@ -2,6 +2,8 @@
 
 ## Unreleased — GHOST Intelligence V2 integration staging (2026-10-20)
 
+Full version-by-version capability breakdown: [V2 release notes (draft)](docs/V2_RELEASE_NOTES_DRAFT.md). The new screenshot and feature matrix are committed on the integration branch, while current Pi-only source and service migration remain pending.
+
 - Began reconciling the developer-only V6.6 guarded Qwen3.5 4B narration setup with the public v1 installer. **Not a released new-install feature.**
 - Documented verified memory, independent numerical learning, claim-aware evidence gates, scheduled 4B narration, fast verified voice/alerts, and watchdog/rollback requirements.
 - Added a source-and-service inventory helper that does not collect telemetry, credentials, routes or model binaries.
