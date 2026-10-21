@@ -1,5 +1,25 @@
 # Feature matrix
 
+## Current GHOST V6.6 development installation
+
+The following capabilities are verified on the running development Pi, **but are not all deployed by the current public v1.0 installer**. See [V2 architecture](GHOST_INTELLIGENCE_V2.md) and [major release gates](V2_RELEASE_GATES.md).
+
+| Capability | Evidence / component | Development status | GitHub fresh-install status |
+| --- | --- | --- | --- |
+| Guarded local AI insights | Qwen3.5 4B Q4, V6.4.4a claim engine | Running; successful guarded briefing | Portable source/units still needed |
+| Voice & alert panel | Browser speech for verified readings; independent rule engine | Running, speech depends on browser permissions | New live HTML and JS not yet reconciled |
+| Hourly verified memory | V6.2 snapshot journal | Timer active | Not yet installed by public script |
+| Historical charging/thermal comparisons | V5 Tessie context | Running | Optional sidecar package pending |
+| Right Now and Next Departure | Separate readiness histories and evidence | Running | Core already present, new UI still needs merge |
+| Fast fault/anomaly alerts | Deterministic telemetry evidence gates | Running | Live dashboard source reconciliation needed |
+| Watchdog and 0.6B rollback | V6.6 local model service | Endpoint health check passed; full recovery unproven | Portable watchdog installer required |
+| Ambient-adjusted thermal learning | V6.5.1 day-heldout experiment | Research only; did not beat simple comparator | Not promoted to production |
+
+**Source terminology:** Tesla-reported charge input isn't an independently measured wall-meter reading. Module-spread medians don't establish a stable cell-temperature distribution. Readiness scores aren't model accuracy. LLM memory retrieval isn't automatic Qwen weight training.
+
+---
+
+
 This page maps the main Tesla Intelligence Core features to the data or learning layer behind them.
 
 | Area | Feature | What it uses | What it answers |
