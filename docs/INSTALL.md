@@ -1,5 +1,7 @@
 # Installation
 
+> **V2 upgrade safety:** This document currently describes the public v1 installer, not the separate Qwen3.5 4B/V6.6 development setup. Do **not** run this installer over a Pi containing newer standalone Intelligence/voice modules until the [V2 migration and rollback checklist](V2_RELEASE_GATES.md) is completed. The current v2 integration is tracked in [draft release notes](V2_RELEASE_NOTES_DRAFT.md).
+
 This guide covers a fresh Tesla Intelligence Core installation.
 
 > Internal package/service names still use the original `ghost_tesla_ai` / `ghost-tesla-ai-*` names for compatibility.
