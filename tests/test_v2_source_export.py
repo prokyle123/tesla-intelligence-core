@@ -30,6 +30,32 @@ class ExportTests(unittest.TestCase):
             self.assertFalse(r['created'])
             self.assertEqual(r['blocked'][0]['path'],'core/unsafe.py')
             self.assertFalse((p/'review.zip').exists())
+    def test_installed_unit_source_copied_with_no_inline_secret(self):
+        with tempfile.TemporaryDirectory() as td:
+            p=Path(td)
+            (p/'safe.py').write_text('print(1)')
+            with patch.object(mod,'sources',return_value=(('core',p),)), \
+                 patch.object(mod,'installed_service_sources',
+                              return_value=[('systemd-live/ghost-v66-watchdog.service.txt',
+                                             b'[Service]\\nExecStart=/usr/bin/python3 /opt/ghost-intelligence/watchdog.py\\n')]):
+                r=mod.build(p,p/'units.zip')
+            self.assertTrue(r['created'])
+            import zipfile
+            with zipfile.ZipFile(p/'units.zip') as z:
+                self.assertIn('sources/systemd-live/ghost-v66-watchdog.service.txt',z.namelist())
+
+    def test_inline_unit_credential_cancels_export(self):
+        with tempfile.TemporaryDirectory() as td:
+            p=Path(td)
+            (p/'safe.py').write_text('print(1)')
+            with patch.object(mod,'sources',return_value=(('core',p),)), \
+                 patch.object(mod,'installed_service_sources',
+                              return_value=[('systemd-live/private.service.txt',
+                                             b'Environment=TESLA_API_KEY=some_private_value\\n')]):
+                r=mod.build(p,p/'blocked.zip')
+            self.assertFalse(r['created'])
+            self.assertFalse((p/'blocked.zip').exists())
+
     def test_no_output_overwrite(self):
         with tempfile.TemporaryDirectory() as td:
             p=Path(td)
