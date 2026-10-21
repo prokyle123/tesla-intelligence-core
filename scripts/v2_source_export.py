@@ -108,7 +108,51 @@ def check_source(name: str, path: Path):
         return None, 'sensitive_pattern_for_review'
     return data, None
 
-def build(home: Path, output: Path):
+def blocked_diagnostics(home: Path):
+    """Only report match categories and line numbers, never private match text."""
+    categories = (
+        'possible_hardcoded_credential',
+        'bearer_token',
+        'possible_vehicle_identifier',
+        'private_network_address',
+    )
+    report = []
+
+    def inspect(name, raw, unit=False):
+        try:
+            decoded = raw.decode('utf-8')
+        except UnicodeDecodeError:
+            report.append({'path': name, 'matches': [{'category': 'non_utf8'}]})
+            return
+        details = []
+        for label, pattern in zip(categories, SENSITIVE):
+            line_numbers = [decoded.count('\n', 0, hit.start()) + 1
+                            for hit in pattern.finditer(decoded)]
+            if line_numbers:
+                details.append({'category': label, 'count': len(line_numbers),
+                                'first_line_numbers': line_numbers[:15]})
+        if unit:
+            line_numbers = [decoded.count('\n', 0, hit.start()) + 1
+                            for hit in INLINE_SECRET.finditer(decoded)]
+            if line_numbers:
+                details.append({'category': 'inline_systemd_secret',
+                                'count': len(line_numbers),
+                                'first_line_numbers': line_numbers[:15]})
+        if details:
+            report.append({'path': name, 'matches': details})
+
+    for name, path in safe_candidates(home):
+        try:
+            if 0 < path.stat().st_size <= MAX_FILE_BYTES:
+                inspect(name, path.read_bytes())
+        except OSError:
+            continue
+    for name, raw in installed_service_sources():
+        inspect(name, raw, unit=True)
+    return report
+
+
+def build(home: Path, output: Path, allow_incomplete: bool = False):
     if output.exists() or output.is_symlink():
         raise ValueError('Output already exists; choose a new output path (no overwrites)')
     accepted, blocked = [], []
@@ -138,8 +182,9 @@ def build(home: Path, output: Path):
                 raise ValueError('Source bundle exceeds size limit; aborting')
     if not accepted:
         raise ValueError('No permitted source files found')
-    if blocked:
-        # Never publish or upload an incomplete collection without inspecting exclusions.
+    if blocked and not allow_incomplete:
+        # Fail closed by default. With explicit opt-in, archive ONLY the
+        # accepted subset; blocked bytes are never copied into the ZIP.
         return {'created': False, 'files': len(accepted), 'blocked': blocked}
     output.parent.mkdir(parents=True, exist_ok=True)
     manifest = {
@@ -148,6 +193,8 @@ def build(home: Path, output: Path):
                          for name,body in accepted],
         'source_only_no_runtime_data': True,
         'not_an_install_package': True,
+        'incomplete_due_to_blocked_files': bool(blocked),
+        'blocked_paths_not_included': blocked,
     }
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
     fd = os.open(output, flags, 0o600)
@@ -162,20 +209,35 @@ def build(home: Path, output: Path):
         output.unlink(missing_ok=True)
         raise
     return {'created': True, 'files': len(accepted), 'bytes': output.stat().st_size,
-            'output': str(output), 'private_review_required': True}
+            'output': str(output), 'private_review_required': True,
+            'incomplete_due_to_blocked_files': bool(blocked),
+            'blocked_paths_not_included': blocked}
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--home',type=Path,default=Path.home())
     p.add_argument('--output',type=Path,default=Path.home() / 'ghost-v2-source-review.zip')
+    p.add_argument('--export-safe-subset', action='store_true',
+                   help='Explicitly archive only unflagged files; mark ZIP INCOMPLETE')
+    p.add_argument('--diagnose', action='store_true',
+                   help='Only print match categories and line numbers, never private values')
     args=p.parse_args(argv)
     try:
-        result=build(args.home,args.output)
+        if args.diagnose:
+            print(json.dumps({'safe_read_only_diagnostics': blocked_diagnostics(args.home)}, indent=2))
+            print('No source contents or matched strings printed.')
+            return 0
+        result=build(args.home,args.output,allow_incomplete=args.export_safe_subset)
         print(json.dumps(result,indent=2))
         if not result['created']:
             print('STOP: flagged paths require private inspection; no ZIP was created.')
             return 2
-        print('PRIVATE SOURCE REVIEW ZIP CREATED. Upload privately to ChatGPT for reconciliation.')
+        if result['incomplete_due_to_blocked_files']:
+            print('INCOMPLETE PRIVATE SOURCE ZIP: flagged files EXCLUDED.')
+            print('Use --diagnose to inspect the match categories and line numbers.')
+        else:
+            print('Private source ZIP created, pending additional review.')
+        print('Upload this ZIP privately to ChatGPT for reconciliation only.')
         print('Do NOT publish this ZIP or commit it to GitHub as-is.')
         return 0
     except (OSError, ValueError) as e:
