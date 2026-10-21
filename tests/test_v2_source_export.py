@@ -56,6 +56,39 @@ class ExportTests(unittest.TestCase):
             self.assertFalse(r['created'])
             self.assertFalse((p/'blocked.zip').exists())
 
+    def test_explicit_partial_export_excludes_all_flagged_source_bytes(self):
+        with tempfile.TemporaryDirectory() as td:
+            p=Path(td)
+            (p/'safe.py').write_text('print("approved source")')
+            (p/'unsafe.py').write_text('access_token = "some-secret-private-value-123"\n')
+            with patch.object(mod,'sources',return_value=(('core',p),)), \
+                 patch.object(mod,'installed_service_sources',return_value=[]):
+                r=mod.build(p,p/'partial.zip',allow_incomplete=True)
+            self.assertTrue(r['created'])
+            self.assertTrue(r['incomplete_due_to_blocked_files'])
+            self.assertEqual(r['blocked_paths_not_included'][0]['path'],'core/unsafe.py')
+            import json, zipfile
+            with zipfile.ZipFile(p/'partial.zip') as z:
+                self.assertEqual(set(z.namelist()),
+                                 {'sources/core/safe.py','manifest.json'})
+                self.assertNotIn('some-secret-private-value',str(z.namelist()))
+                manifest=json.loads(z.read('manifest.json'))
+                self.assertTrue(manifest['incomplete_due_to_blocked_files'])
+                self.assertFalse('some-secret-private-value' in str(manifest))
+
+    def test_diagnostics_only_print_category_and_line_number(self):
+        with tempfile.TemporaryDirectory() as td:
+            p=Path(td)
+            (p/'file.py').write_text('access_token = "some-secret-private-value-123"\n')
+            with patch.object(mod,'sources',return_value=(('core',p),)), \
+                 patch.object(mod,'installed_service_sources',return_value=[]):
+                d=mod.blocked_diagnostics(p)
+            self.assertEqual(d[0]['path'],'core/file.py')
+            self.assertEqual(d[0]['matches'][0]['category'],
+                             'possible_hardcoded_credential')
+            self.assertEqual(d[0]['matches'][0]['first_line_numbers'],[1])
+            self.assertNotIn('some-secret-private-value',str(d))
+
     def test_no_output_overwrite(self):
         with tempfile.TemporaryDirectory() as td:
             p=Path(td)
