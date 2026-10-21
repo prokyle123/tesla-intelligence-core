@@ -1,5 +1,16 @@
 # Changelog
 
+## Current development update (2026-10-20) — not yet a tagged V2 release
+
+- Replaced the main README dashboard preview with an authentic screenshot of the running GHOST V6.6 dashboard.
+- Updated the current-development feature table to cover local guarded Qwen3.5 4B narration, independent voice alerts, Tessie historical comparisons, verified memory, winter readiness and fail-closed commentary.
+- Corrected public language distinguishing Tesla-reported charge input from independently measured wall power.
+- The new screenshot and descriptions do **not** imply the public v1.0 installer deploys the V6.6 intelligence sidecars; source, portability, and rollback reconciliation remains in draft PR #4.
+- Kept exploratory ambient-context thermal models out of production after inferior historical holdout performance.
+
+---
+
+
 ## v1.0.0 — Major winter & whole-vehicle intelligence release (2026-10-16)
 
 ### Delivered features (new-install hardware test deferred)

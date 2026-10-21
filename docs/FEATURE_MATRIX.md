@@ -1,5 +1,25 @@
 # Feature matrix
 
+## Latest development Pi (guarded GHOST V6.6)
+
+These are **observed on the running developer Pi** and are **not all included in the public v1.0 installer**. Complete V2 packaging is tracked in [draft pull request #4](https://github.com/prokyle123/tesla-intelligence-core/pull/4).
+
+| Feature | How it works | Public installer status |
+| --- | --- | --- |
+| AI Insight | Local Qwen3.5 4B with verified sensor evidence and claim-aware fallback | Not yet packaged for fresh installs |
+| Verified voice/alerts | Browser voice controls, hourly observations, qualified rule alerts | Latest live dashboard source pending reconciliation |
+| Historical intelligence | V5 charging/thermal baselines, V6.2 memory | Sidecar/units not yet integrated |
+| Battery and charging | Direct heater, module spread, charging input and derived power path | Core available; newest UI pending |
+| Separate readiness modes | Right Now / Next Departure, limiters and recorded history | Core present, newest UI pending |
+| Weather and pack outlook | Open-Meteo plus thermal projections with ranges still calibrating | Existing core; current UI pending |
+| Guarded 4B watchdog | Health probe, 0.6B rollback configuration | Portable recovery installer not yet released |
+| Ambient thermal holdout | V6.5.1 research model worse than simple baseline | Not promoted |
+
+**Important:** Vehicle charging input is Tesla-reported, not a wall-meter reading. Model weight training is independent of Qwen narration. Historical medians do not prove stability or fault-free operation.
+
+---
+
+
 This page maps the main Tesla Intelligence Core features to the data or learning layer behind them.
 
 | Area | Feature | What it uses | What it answers |

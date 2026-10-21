@@ -64,7 +64,7 @@ Tesla Intelligence Core is especially useful when **time, temperature and chargi
 | Situation | What the system adds |
 |---|---|
 | **❄️ Long winter commute** | Learns typical trip behavior, projects departure conditions and estimates **arrival SOC reserve** instead of stopping at the current battery percentage. |
-| **🔌 Level 1 / slow home charging** | Learns the car's real charging behavior, tracks wall input and estimates whether the battery is on pace for the next departure. |
+| **🔌 Level 1 / slow home charging** | Learns the car's real charging behavior, tracks Tesla-reported charge input and estimates whether the battery is on pace for the next departure. |
 | **🥶 Outdoor / cold-soaked car** | Tracks pack and module temperatures, cold-soak evidence, thermal retention, governed 1h / 3h / 6h pack forecasts, and learned preconditioning duration. |
 | **🕒 Departure time changes** | Learns recurring drive starts from history and keeps **schedule confidence** separate from **next-trip confidence**, so a random trip does not have to redefine the routine. |
 | **⚡ Charging + thermal load together** | Shows charging power alongside derived pack / non-pack power so it is easier to understand where limited input power is going. |
@@ -85,11 +85,33 @@ Tesla Intelligence Core is especially useful when **time, temperature and chargi
 
 
 <p align="center">
-  <a href="docs/images/v1/v1-home-winter.webp">
-    <img src="docs/images/v1/v1-home-winter.webp" alt="Tesla Intelligence Core v1 Winter Readiness live operations dashboard with outdoor weather, pack temperature, battery heater, cabin HVAC and power path" width="98%">
+  <a href="docs/images/ghost-v2-dashboard-live.webp">
+    <img src="docs/images/ghost-v2-dashboard-live.webp" alt="Actual GHOST development dashboard: AI Insight, Voice & Alerts, Right Now readiness, pack/outside forecasts, heater, HVAC and charging power path" width="98%">
   </a>
 </p>
-<p align="center"><sub><b>Real running dashboard • v1 preview</b> — battery readiness, pack forecasts, 3/6/12-hour outdoor weather and thermal power analysis. Displayed values are an example captured at one instant, not guaranteed for other cars.</sub></p>
+<p align="center"><sub><b>Actual GHOST V6.6 development dashboard • October 2026</b> — guarded local 4B AI commentary, winter readiness, thermal outlook, weather and power flow. Real unmodified screenshot, not AI-generated artwork. Values are a momentary example; the public v1.0 installer does not yet include all visible features.</sub></p>
+
+---
+
+## What's running on the latest GHOST development Pi
+
+GHOST has moved beyond the original v1 dashboard. The screenshot above shows features **verified on the running developer installation**. The separate [V2 source-and-installer integration](https://github.com/prokyle123/tesla-intelligence-core/pull/4) is still in progress; the current GitHub installation command **does not yet install the complete 4B intelligence stack**.
+
+| Area | Current verified capability |
+| --- | --- |
+| **GHOST AI Insight** | Local Qwen3.5 4B produces optional, asynchronous commentary grounded in verified readings; invalid claims yield verified fallback |
+| **Voice & Alerts** | Voice-on controls, speech for verified readings, hourly summaries and independent rule-driven alerts (subject to browser speech permission) |
+| **Winter readiness** | Separate RIGHT NOW versus NEXT DEPARTURE scores, historical score graphs, measured conditions and score limiters |
+| **Charging intelligence** | Tesla-reported input power, charging history compared under similar conditions, derived pack/non-pack power components |
+| **Battery heater and pack** | Direct heater signal separated from conditioning/HVAC; pack, module spread and observed movement |
+| **Pack outlook and weather** | Pack forecasts alongside Open-Meteo weather; estimated error ranges remain blank while calibration continues |
+| **Verified historical memory** | V6.2 observational journal and historical comparisons, retrieved to contextualize 4B explanations |
+| **Claim-aware safety** | Numerical, derived-difference, historical-baseline and trend checks, plus deterministic verified-text fallback |
+| **Numerical learning** | Independently governed trip, neural and readiness predictors—not automatically retrained Qwen weights |
+| **Model recovery** | 4B endpoint health watchdog, original 0.6B configuration retained; full failure-recovery path still being tested |
+| **Ambient thermal research** | V6.5 exploratory day-heldout model; **not promoted** after underperforming simpler baseline predictions |
+
+No direct Tesla vehicle commands are sent. A historical median is not proof of stability, and “readiness” is not a calibrated model-accuracy score.
 
 ---
 
@@ -98,7 +120,7 @@ Tesla Intelligence Core is especially useful when **time, temperature and chargi
 | Core intelligence | What it actually measures and learns |
 | --- | --- |
 | ❄️ **Winter readiness** | Overnight cold-soak, pack heating, module temperature, readiness for the next departure and thermal forecast ranges |
-| 🔌 **Charging intelligence** | Wall input versus derived pack electrical power, slow Level 1 charging performance, charging transitions and optional home-power context |
+| 🔌 **Charging intelligence** | Tesla-reported charging input versus derived pack electrical power, slow Level 1 charging performance, charging transitions and optional home-power context |
 | 🌦️ **Outdoor weather** | Hourly Open-Meteo conditions and 3 / 6 / 12-hour weather forecasts alongside pack-temperature projections |
 | 🚗 **Every-trip learning** | All observed drives, multi-leg journeys, short errands, weekends, charging stops and repeat routes—not just work commutes |
 | 📉 **Forecast and journey quality** | Frozen forecasts compared against later observations; separate error, confidence, missing-data and invalid-comparison states |
