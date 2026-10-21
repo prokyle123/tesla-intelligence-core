@@ -152,13 +152,44 @@ def blocked_diagnostics(home: Path):
     return report
 
 
-def build(home: Path, output: Path, allow_incomplete: bool = False):
+def sanitized_private_network_only(raw: bytes, unit: bool = False):
+    """Redact addresses ONLY if no credential, VIN-like or inline-secret matches exist.
+
+    Returned bytes are review copies and are not deployable source artifacts.
+    Original filesystem files are never modified.
+    """
+    try:
+        source = raw.decode('utf-8')
+    except UnicodeDecodeError:
+        return None
+    if b'\x00' in raw or (unit and INLINE_SECRET.search(source)):
+        return None
+    if any(pattern.search(source) for pattern in SENSITIVE[:3]):
+        return None
+    if not SENSITIVE[3].search(source):
+        return None
+    redacted = SENSITIVE[3].sub('REDACTED_PRIVATE_NETWORK_ADDRESS', source)
+    if any(pattern.search(redacted) for pattern in SENSITIVE):
+        return None
+    return redacted.encode('utf-8')
+
+
+def build(home: Path, output: Path, allow_incomplete: bool = False,
+          redact_private_network: bool = False):
     if output.exists() or output.is_symlink():
         raise ValueError('Output already exists; choose a new output path (no overwrites)')
-    accepted, blocked = [], []
+    accepted, blocked, redacted = [], [], []
     total_bytes = 0
     for name, path in safe_candidates(home):
         contents, reason = check_source(name, path)
+        if reason and redact_private_network and reason == 'sensitive_pattern_for_review':
+            try:
+                cleaned = sanitized_private_network_only(path.read_bytes())
+            except OSError:
+                cleaned = None
+            if cleaned is not None:
+                contents, reason = cleaned, None
+                redacted.append(name)
         if reason:
             blocked.append({'path': name, 'reason': reason})
         else:
@@ -173,7 +204,13 @@ def build(home: Path, output: Path, allow_incomplete: bool = False):
             blocked.append({'path': name, 'reason': 'unit_exceeds_size_limit'})
             continue
         data = contents.decode('utf-8')
-        if INLINE_SECRET.search(data) or any(p.search(data) for p in SENSITIVE):
+        sensitive = INLINE_SECRET.search(data) or any(p.search(data) for p in SENSITIVE)
+        if sensitive and redact_private_network:
+            cleaned = sanitized_private_network_only(contents, unit=True)
+            if cleaned is not None:
+                contents, sensitive = cleaned, False
+                redacted.append(name)
+        if sensitive:
             blocked.append({'path': name, 'reason': 'unit_sensitive_pattern_for_review'})
         else:
             accepted.append((name, contents))
@@ -195,6 +232,8 @@ def build(home: Path, output: Path, allow_incomplete: bool = False):
         'not_an_install_package': True,
         'incomplete_due_to_blocked_files': bool(blocked),
         'blocked_paths_not_included': blocked,
+        'network_addresses_redacted_in_review_copies': sorted(redacted),
+        'redacted_copies_are_not_deployable': bool(redacted),
     }
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
     fd = os.open(output, flags, 0o600)
@@ -211,7 +250,8 @@ def build(home: Path, output: Path, allow_incomplete: bool = False):
     return {'created': True, 'files': len(accepted), 'bytes': output.stat().st_size,
             'output': str(output), 'private_review_required': True,
             'incomplete_due_to_blocked_files': bool(blocked),
-            'blocked_paths_not_included': blocked}
+            'blocked_paths_not_included': blocked,
+            'network_addresses_redacted_in_review_copies': sorted(redacted)}
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
@@ -219,6 +259,8 @@ def main(argv=None):
     p.add_argument('--output',type=Path,default=Path.home() / 'ghost-v2-source-review.zip')
     p.add_argument('--export-safe-subset', action='store_true',
                    help='Explicitly archive only unflagged files; mark ZIP INCOMPLETE')
+    p.add_argument('--redact-private-network', action='store_true',
+                   help='Redact IP addresses in private REVIEW copies only; refuse all other flagged content')
     p.add_argument('--diagnose', action='store_true',
                    help='Only print match categories and line numbers, never private values')
     args=p.parse_args(argv)
@@ -227,11 +269,15 @@ def main(argv=None):
             print(json.dumps({'safe_read_only_diagnostics': blocked_diagnostics(args.home)}, indent=2))
             print('No source contents or matched strings printed.')
             return 0
-        result=build(args.home,args.output,allow_incomplete=args.export_safe_subset)
+        result=build(args.home,args.output,
+                     allow_incomplete=args.export_safe_subset,
+                     redact_private_network=args.redact_private_network)
         print(json.dumps(result,indent=2))
         if not result['created']:
             print('STOP: flagged paths require private inspection; no ZIP was created.')
             return 2
+        if result['network_addresses_redacted_in_review_copies']:
+            print('REVIEW-ONLY SOURCE COPIES: private network addresses redacted; DO NOT DEPLOY AS-IS.')
         if result['incomplete_due_to_blocked_files']:
             print('INCOMPLETE PRIVATE SOURCE ZIP: flagged files EXCLUDED.')
             print('Use --diagnose to inspect the match categories and line numbers.')
