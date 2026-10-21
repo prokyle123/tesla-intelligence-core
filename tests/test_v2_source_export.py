@@ -89,6 +89,47 @@ class ExportTests(unittest.TestCase):
             self.assertEqual(d[0]['matches'][0]['first_line_numbers'],[1])
             self.assertNotIn('some-secret-private-value',str(d))
 
+    def test_review_copies_redact_private_addresses_without_editing_live_files(self):
+        with tempfile.TemporaryDirectory() as td:
+            p=Path(td)
+            file=p/'dashboard.html'
+            original=b'<script>const host = "100.117.230.72";</script>'
+            file.write_bytes(original)
+            with patch.object(mod,'sources',return_value=(('core',p),)), \
+                 patch.object(mod,'installed_service_sources',
+                              return_value=[('systemd-live/intelligence.service.txt',
+                                             b'ExecStart=/bin/tool --host 192.168.1.5\n')]):
+                r=mod.build(p,p/'redacted.zip',redact_private_network=True)
+            self.assertTrue(r['created'])
+            self.assertEqual(set(r['network_addresses_redacted_in_review_copies']),
+                             {'core/dashboard.html','systemd-live/intelligence.service.txt'})
+            self.assertEqual(file.read_bytes(),original)
+            import zipfile
+            with zipfile.ZipFile(p/'redacted.zip') as z:
+                dashboard=z.read('sources/core/dashboard.html')
+                unit=z.read('sources/systemd-live/intelligence.service.txt')
+                self.assertNotIn(b'100.117.230.72',dashboard)
+                self.assertNotIn(b'192.168.1.5',unit)
+                self.assertIn(b'REDACTED_PRIVATE_NETWORK_ADDRESS',dashboard)
+                self.assertIn(b'REDACTED_PRIVATE_NETWORK_ADDRESS',unit)
+                self.assertNotIn(b'100.117.230.72',z.read('manifest.json'))
+
+    def test_redaction_cannot_override_credential_rejection(self):
+        with tempfile.TemporaryDirectory() as td:
+            p=Path(td)
+            (p/'unsafe.py').write_text('access_token = "highly_private_fake_value_123"\nhost="192.168.1.5"\n')
+            (p/'safe.py').write_text("print(1)\n")
+            with patch.object(mod,'sources',return_value=(('core',p),)), \
+                 patch.object(mod,'installed_service_sources',return_value=[]):
+                r=mod.build(p,p/'refused.zip',redact_private_network=True)
+            self.assertFalse(r['created'])
+            self.assertFalse((p/'refused.zip').exists())
+            self.assertEqual(r['blocked'][0]['path'],'core/unsafe.py')
+
+    def test_review_copy_rejects_inline_systemd_secret_even_with_ip(self):
+        v=b'Environment=MY_API_KEY="examplevalue12345" --host 192.168.1.10'
+        self.assertIsNone(mod.sanitized_private_network_only(v,unit=True))
+
     def test_no_output_overwrite(self):
         with tempfile.TemporaryDirectory() as td:
             p=Path(td)
