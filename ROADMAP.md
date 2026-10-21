@@ -2,6 +2,15 @@
 
 Tesla Intelligence Core is an experimental enthusiast project. This roadmap describes useful directions, not guaranteed dates or commitments.
 
+## Major V2 release candidate: guarded local intelligence
+
+- Reconcile production dashboard and all independent intelligence sidecars with versioned, portable source.
+- Provide an optional Qwen3.5 4B install with an explicit model/llama.cpp dependency path, device-capability checks, cache timeouts, verified fallback and watchdog rollback.
+- Keep trained prediction models, hourly memory, optional narration, immediate alerts and verified measurements as separate layers.
+- Validate fresh Pi installation and upgrade/rollback without removing current dashboard features or changing saved vehicle data.
+- Prove long-run performance and post-reboot recovery; do not confuse accepted AI prose with numerical model accuracy.
+- [Release requirements and current blockers](docs/V2_RELEASE_GATES.md).
+
 ## Near-term
 
 - Expand compatibility reports across Model S / 3 / X / Y.
