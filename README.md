@@ -85,11 +85,11 @@ Tesla Intelligence Core is especially useful when **time, temperature and chargi
 
 
 <p align="center">
-  <a href="docs/images/v1/v1-home-winter.webp">
-    <img src="docs/images/v1/v1-home-winter.webp" alt="Tesla Intelligence Core v1 Winter Readiness live operations dashboard with outdoor weather, pack temperature, battery heater, cabin HVAC and power path" width="98%">
+  <a href="docs/images/ghost-v2-dashboard-live.webp">
+    <img src="docs/images/ghost-v2-dashboard-live.webp" alt="Actual current GHOST V6.6 dashboard showing AI Insight, Voice Alerts, Right Now Winter Readiness, battery state, future pack and outdoor weather, and thermal power flow" width="98%">
   </a>
 </p>
-<p align="center"><sub><b>Real running dashboard • v1 preview</b> — battery readiness, pack forecasts, 3/6/12-hour outdoor weather and thermal power analysis. Displayed values are an example captured at one instant, not guaranteed for other cars.</sub></p>
+<p align="center"><sub><b>Actual GHOST V6.6 running dashboard • October 2026</b> — local AI commentary, verified readings, voice alerts, winter readiness, forecast context and electrical power analysis. This is a genuine development-system screenshot, not generated artwork. Displayed values are a point-in-time example. <b>Public v1 installer does not yet reproduce every V6.6 feature shown.</b></sub></p>
 
 ---
 
