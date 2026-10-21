@@ -1,5 +1,7 @@
 # Feature matrix
 
+See the [full upcoming V2 feature and migration notes](V2_RELEASE_NOTES_DRAFT.md). The public v1 installer does **not** yet install the guarded local LLM or the latest AI/voice panel.
+
 ## Current GHOST V6.6 development installation
 
 The following capabilities are verified on the running development Pi, **but are not all deployed by the current public v1.0 installer**. See [V2 architecture](GHOST_INTELLIGENCE_V2.md) and [major release gates](V2_RELEASE_GATES.md).
