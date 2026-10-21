@@ -1,5 +1,14 @@
 # Public screenshots and privacy
 
+## Current GHOST AI development dashboard
+
+The main [README preview](../README.md) now uses the **original screenshot provided from the running October 2026 dashboard**, stored as a pixel-identical lossless WebP at [images/ghost-v2-dashboard-live.webp](images/ghost-v2-dashboard-live.webp). It shows local AI insight, Voice & Alerts, live winter readiness, pack forecast, Open-Meteo weather, heater/HVAC signals and the electrical power-path view.
+
+The original historical v1 screenshot gallery remains intact with its existing checksums. This new image is a genuine operator-supplied screenshot, not an AI rendering, and reflects the **development Pi ahead of the public installer**.
+
+---
+
+
 Tesla Intelligence Core is a **vehicle telemetry** product. Its dashboards may display battery data, a local hostname, route/site IDs, usage patterns, timestamps, charge location clues, and other personal details. Never publish an unreviewed capture from a live car.
 
 ## Current screenshots
