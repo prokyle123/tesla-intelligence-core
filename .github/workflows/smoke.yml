@@ -45,6 +45,9 @@ jobs:
       - name: Portable evaluator and trip regression tests
         run: python3 -m unittest discover -s tests -p 'test_release_contract.py' -v
 
+      - name: V2 source inventory privacy and read-only contract
+        run: python3 -m unittest discover -s tests -p 'test_v2_release_inventory.py' -v
+
       - name: Check committed diff whitespace
         run: git diff --check HEAD~1 HEAD
 
