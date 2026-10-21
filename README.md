@@ -93,6 +93,18 @@ Tesla Intelligence Core is especially useful when **time, temperature and chargi
 
 ---
 
+## GHOST Intelligence V2 — guarded 4B development track
+
+> **Integration in progress, not yet included in the public v1.0 installer.** A Raspberry Pi development deployment has successfully run the optional local Qwen3.5 4B explanation model with verified-data fallback, historical comparisons and an hourly memory journal. That does **not** mean the GitHub one-command installer can recreate that configuration today. The live implementation includes separate software and systemd components that still need portable packaging, upgrade-safety tests and clean-install validation.
+
+- [What the guarded AI does, and doesn't do](docs/GHOST_INTELLIGENCE_V2.md)
+- [Blocking major-release and upgrade checks](docs/V2_RELEASE_GATES.md)
+- [Read-only installed-component inventory](scripts/v2_release_inventory.py)
+
+This work remains separate from the predictive core. A local language model **explains verified telemetry**; it is not autonomously retraining its own weights or controlling the vehicle. The experimental ambient-context thermal predictor has **not** been promoted after failing to outperform a simple held-out baseline.
+
+---
+
 ## What's inside v1.0
 
 | Core intelligence | What it actually measures and learns |
