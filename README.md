@@ -111,6 +111,8 @@ These features are running on the development Raspberry Pi shown above. The [maj
 | **Resilience** | Cached AI briefing, validated fallback, 4B watchdog and retained 0.6B rollback path; full-failure recovery still under test |
 | **Ambient thermal research** | Day-heldout V6.5/V6.5.1 experiments remain exploratory; the ambient model was not promoted after underperforming a baseline |
 
+**Full next-version scope:** [V2 release notes and complete new feature breakdown](docs/V2_RELEASE_NOTES_DRAFT.md) · [V2 feature matrix](docs/FEATURE_MATRIX.md) · [Major-release acceptance requirements](docs/V2_RELEASE_GATES.md).
+
 This is not a vehicle-control system. Historical retrieval is **not** automatic 4B weight retraining. For deployment status, see the [V2 architecture](docs/GHOST_INTELLIGENCE_V2.md) and [release requirements](docs/V2_RELEASE_GATES.md).
 
 ## GHOST Intelligence V2 — guarded 4B development track
