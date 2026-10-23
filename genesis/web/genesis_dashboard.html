@@ -1,0 +1,764 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#080d16">
+<title>GENESIS | Intelligence Laboratory</title>
+<style>
+:root{color-scheme:dark;--bg:#090e17;--side:#0c1520;--surface:#111c29;--surface2:#152333;--elev:#182b3b;--border:#273c4c;--fg:#e8f4f8;--muted:#91aaba;--cyan:#58e2d0;--blue:#69a9ff;--amber:#f9be7a;--red:#fd8f93;--green:#83e5b5}
+*{box-sizing:border-box}html,body{min-height:100%}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}button{font:inherit}a{color:var(--cyan);text-decoration:none}button:focus-visible,a:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+.app{display:grid;grid-template-columns:244px minmax(0,1fr);min-height:100vh}.sidebar{background:var(--side);border-right:1px solid var(--border);padding:26px 17px;display:flex;flex-direction:column;gap:28px;position:sticky;top:0;height:100vh}.brand{display:flex;align-items:center;gap:13px;padding:0 9px}.symbol{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:linear-gradient(130deg,#4cedd6,#377bbf);color:#07202b;font-size:23px;font-weight:900;box-shadow:0 0 28px #31cbb625}.brand strong{font-size:21px;line-height:1.2;letter-spacing:-.06em}.brand small{display:block;font-size:10px;color:var(--muted);letter-spacing:.17em;font-weight:800}.side-label,.eyebrow{font-weight:800;text-transform:uppercase;letter-spacing:.15em;font-size:10px;color:var(--muted)}.side-label{margin:0 0 10px 15px}.nav{display:grid;gap:5px}.nav button{border:1px solid transparent;border-radius:10px;text-align:left;padding:11px 14px;color:var(--muted);background:transparent;cursor:pointer;display:flex;align-items:center;gap:11px}.nav button:hover{color:var(--fg);background:#142738}.nav button.active{background:#183d48;border-color:#295b60;color:var(--cyan);font-weight:750}.nav .glyph{font-size:17px;width:22px;text-align:center}.side-bottom{margin-top:auto;padding:15px;border:1px solid var(--border);border-radius:12px;background:#0f1c29}.side-bottom .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:8px}.side-bottom p{font-size:12px;color:var(--muted);margin:6px 0}.side-bottom a{font-size:12px}
+.page{min-width:0;padding:25px clamp(18px,3.5vw,54px) 55px;max-width:1640px;width:100%;margin:0 auto}.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:25px}.topbar .breadcrumb{color:var(--muted);font-size:12px}.topbar .breadcrumb b{color:var(--fg)}.top-actions{display:flex;align-items:center;gap:12px}.live{font-size:12px;color:var(--green);font-weight:750}.live::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:currentColor;margin-right:8px}.live.off{color:var(--red)}.btn{border:1px solid #3b6170;color:var(--fg);background:#183344;border-radius:9px;cursor:pointer;padding:9px 13px;display:inline-flex;gap:8px;align-items:center;font-weight:650}.btn:hover{background:#214859}.btn:disabled{opacity:.5;cursor:wait}
+.tab-panel[hidden]{display:none!important}.heading{display:flex;justify-content:space-between;align-items:end;gap:20px;margin-bottom:20px}.heading h1{font-size:clamp(26px,3vw,40px);line-height:1.13;letter-spacing:-.045em;margin:4px 0 7px}.heading p{margin:0;color:var(--muted);max-width:780px}.stamp{font-size:11px;color:var(--muted);white-space:nowrap}.hero{position:relative;overflow:hidden;background:radial-gradient(circle at 88% 8%,#24505b 0%,transparent 48%),linear-gradient(120deg,#172d40,#13202e);border:1px solid #2f5563;border-radius:18px;padding:26px 30px;margin:0 0 18px}.hero h2{font-size:25px;letter-spacing:-.035em;line-height:1.15;margin:12px 0 10px}.hero p{max-width:760px;margin:0;color:#b5d2dc}.hero .badge{margin-top:18px}.pill{display:inline-flex;gap:7px;align-items:center;border-radius:30px;border:1px solid #375d60;background:#12313b;padding:5px 10px;color:#9ceade;font-size:11px;font-weight:700}.pill.caution{color:#ffce90;border-color:#6d533f;background:#312417}.pill.dim{color:var(--muted);background:#132330}
+.vehicle-overview{display:grid;grid-template-columns:200px minmax(0,1fr);gap:24px;align-items:center;background:radial-gradient(circle at 16% 38%,#1d4f65,transparent 54%),linear-gradient(125deg,#11283a,#12202f);border:1px solid #2d5163;border-radius:16px;padding:22px;margin-bottom:18px}
+.ev-shell{position:relative;margin:auto;width:100%;max-width:180px;aspect-ratio:1.8;display:grid;place-items:center}
+.ev-shape{position:relative;width:150px;height:62px;background:linear-gradient(180deg,#94b9c8,#315773 52%,#172d44);border-radius:65% 68% 25% 25%/75% 75% 25% 25%;box-shadow:0 16px 34px #020b1490,0 0 20px #51c4dc2a;border:1px solid #8eb4c4}
+.ev-shape:before{content:"";position:absolute;width:72px;height:24px;background:#0c253b;border:1px solid #68889a;top:9px;left:38px;border-radius:75% 75% 12% 12%;transform:skewX(-7deg)}
+.ev-shape:after{content:"";position:absolute;left:20px;right:20px;bottom:-8px;height:13px;border-radius:50%;background:#08101b;filter:blur(4px)}
+.vehicle-panel{min-width:0}.vehicle-panel h2{margin:3px 0 9px;font-size:23px}.soc-row{display:flex;align-items:center;gap:15px}.soc-value{font-size:34px;font-weight:850;font-variant-numeric:tabular-nums}.soc-track{height:11px;flex:1;background:#283a49;border-radius:20px;overflow:hidden}.soc-fill{height:100%;width:0;background:linear-gradient(90deg,#1f8a8c,#64ebce);border-radius:20px}.telemetry-row{display:flex;gap:12px 28px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12px}.telemetry-row strong{color:var(--fg);font-size:15px;display:block}.telemetry-row>div{min-width:100px}
+.hive-banner{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.hive-stat{border:1px solid var(--border);border-radius:10px;padding:17px;background:#122536}
+@media(max-width:690px){.vehicle-overview{grid-template-columns:1fr}.ev-shell{height:105px}.hive-banner{grid-template-columns:1fr}}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}.stat{background:var(--surface);border:1px solid var(--border);padding:17px 19px;border-radius:14px;min-width:0}.stat .value{font-size:clamp(23px,2.65vw,35px);font-weight:800;letter-spacing:-.055em;margin:7px 0 2px;font-variant-numeric:tabular-nums;white-space:nowrap}.stat .hint{font-size:11px;color:var(--muted)}.positive{color:var(--green)}.negative{color:var(--red)}.warn{color:var(--amber)}.aqua{color:var(--cyan)}.muted{color:var(--muted)}
+.grid2{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(320px,1fr);gap:18px;margin-bottom:18px}.grid-equal{grid-template-columns:repeat(2,minmax(0,1fr))}.panel{min-width:0;background:var(--surface);border:1px solid var(--border);border-radius:15px;padding:21px 23px}.panel h2{font-size:16px;letter-spacing:-.02em;margin:0}.section-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:19px}.section-title small,.subhead{color:var(--muted);font-size:11px}.divider{height:1px;background:var(--border);margin:18px 0}.intro{color:var(--muted);margin-top:0}
+.big-status{font-size:20px;line-height:1.2;font-weight:800;letter-spacing:-.025em;margin:3px 0 10px}.item{padding:13px 0;border-top:1px solid var(--border)}.item:first-child{border:0;padding-top:0}.item .detail{font-size:12px;color:var(--muted);margin-top:4px}.empty{border:1px dashed #355061;border-radius:11px;padding:20px;color:var(--muted);font-size:13px}.error{border-color:#885259;color:#ffc8b8}.chart-list{display:grid;gap:19px}.chart-item .rowline{display:flex;justify-content:space-between;gap:10px;margin-bottom:7px;align-items:center}.chart-item strong{font-size:12px}.chart-item small{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}.track{background:#223241;border-radius:40px;overflow:hidden;height:10px}.fill{height:100%;width:0;background:linear-gradient(90deg,#3a95cf,#4fdfcd);border-radius:40px}.fill.amber{background:linear-gradient(90deg,#b77f38,#f2c375)}.fill.red{background:linear-gradient(90deg,#a95572,#fa8797)}
+.legend{display:flex;gap:18px;flex-wrap:wrap;color:var(--muted);font-size:11px;margin-top:18px}.legend i{display:inline-block;height:8px;width:8px;border-radius:2px;background:var(--cyan);margin-right:6px}.legend i.base{background:var(--amber)}.comparison{display:grid;gap:17px}.comparison .scores{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;margin:0 0 5px}.comparison .scores b{color:var(--fg);font-size:12px}.note{color:var(--muted);font-size:12px;line-height:1.6}.notice{padding:12px 14px;border-left:3px solid var(--amber);background:#30291f;color:#f0d1a3;border-radius:5px;font-size:12px;margin-top:18px}
+.quality{display:grid;grid-template-columns:160px minmax(0,1fr);gap:22px;align-items:center}.ring{width:155px;height:155px;border-radius:50%;background:conic-gradient(var(--cyan) var(--angle,0%),#263947 var(--angle,0%));display:grid;place-items:center;margin:auto}.ring-center{height:121px;width:121px;border-radius:50%;background:var(--surface);display:grid;place-items:center;align-content:center}.ring-center strong{font-size:30px;letter-spacing:-.05em}.ring-center span{font-size:10px;color:var(--muted)}.kv{display:grid;grid-template-columns:1fr auto;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}.kv:last-child{border:0}.kv span{color:var(--muted)}.kv strong{font-variant-numeric:tabular-nums}.history-list{display:grid;gap:8px}.history-button{display:flex;justify-content:space-between;gap:12px;text-align:left;background:#132434;border:1px solid #2b4354;border-radius:10px;padding:13px 15px;color:var(--fg);cursor:pointer}.history-button:hover,.history-button.selected{border-color:#49aa9d;background:#18333d}.history-button .meta{display:block;color:var(--muted);font-size:11px;margin-top:3px}.detail-box{background:#132434;border-radius:10px;padding:16px}.detail-box h3{margin:0 0 13px;font-size:14px}.detail-box p{margin:8px 0;font-size:12px;color:var(--muted)}.tag{font-size:10px;font-weight:800;color:var(--cyan);letter-spacing:.08em;text-transform:uppercase}.mono{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+footer{border-top:1px solid var(--border);margin-top:35px;padding-top:18px;color:var(--muted);font-size:11px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+@media(max-width:1050px){.app{grid-template-columns:196px minmax(0,1fr)}.grid4{grid-template-columns:repeat(2,minmax(0,1fr))}.grid2{grid-template-columns:1fr}.page{padding:22px}}
+@media(max-width:690px){.app{display:block}.sidebar{position:relative;height:auto;padding:14px 16px;gap:12px;border-right:0;border-bottom:1px solid var(--border)}.brand{padding:0}.side-label,.side-bottom{display:none}.nav{display:flex;gap:7px;overflow-x:auto;padding:1px 0 2px}.nav button{white-space:nowrap;font-size:12px;padding:9px 11px}.nav .glyph{display:none}.page{padding:16px}.topbar{margin-bottom:18px}.topbar .breadcrumb{display:none}.heading{display:block}.stamp{margin-top:12px;display:block}.hero{padding:22px}.grid4{gap:9px}.stat{padding:13px}.stat .value{font-size:26px}.panel{padding:18px}.quality{grid-template-columns:1fr}.history-button{font-size:12px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+<div class="brand"><div class="symbol" aria-hidden="true">G</div><div><strong>GENESIS.</strong><small>INTELLIGENCE LAB</small></div></div>
+<div><div class="side-label">Workspace</div><nav class="nav" aria-label="Workspace">
+<button class="active" data-tab="overview" aria-current="page"><span class="glyph">◈</span>Overview</button>
+<button data-tab="models"><span class="glyph">⌁</span>Model Lab</button>
+<button data-tab="investigations"><span class="glyph">◇</span>Investigations</button>
+<button data-tab="history"><span class="glyph">▤</span>Research History</button>
+<button data-tab="hive"><span class="glyph">⬡</span>Hive Network</button>
+<button data-tab="system"><span class="glyph">⚙</span>System & Safety</button>
+</nav></div>
+<div class="side-bottom"><div><span class="dot"></span><strong>LOCAL RESEARCH</strong></div><p>Classic GHOST and vehicle controls are isolated from this workspace.</p><span class="note">Classic is available separately on its original dashboard port.</span></div>
+</aside>
+<main class="page">
+<div class="topbar"><span class="breadcrumb">Tesla Intelligence Core <span class="muted">/</span> <b>GENESIS v0.8 preview</b></span><div class="top-actions"><span class="live" id="connection">Connecting</span><button class="btn" id="refresh" type="button">↻ Refresh data</button></div></div>
+<section class="tab-panel" data-panel="overview">
+<div class="heading"><div><div class="eyebrow">Research workspace / Overview</div><h1>Intelligence Command Center</h1><p>Investigate how the battery behaves, measure prediction accuracy, and keep a clear record of what works and what fails.</p></div><span class="stamp" id="updated">Waiting for local data</span></div>
+<section class="vehicle-overview" aria-label="Read-only last observed vehicle status">
+<div class="ev-shell" aria-hidden="true"><div class="ev-shape"></div></div>
+<div class="vehicle-panel">
+<div class="eyebrow">Tesla vehicle context · local read-only</div>
+<div class="status-line"><h2>Battery &amp; Conditions</h2><span class="pill dim" id="vehicle-state">Waiting for telemetry</span></div>
+<div class="soc-row"><strong class="soc-value" id="vehicle-soc">—%</strong><div class="soc-track"><div class="soc-fill" id="vehicle-soc-fill"></div></div></div>
+<div class="telemetry-row">
+<div>Pack temperature<strong id="vehicle-pack">—</strong></div>
+<div>Outside<strong id="vehicle-outside">—</strong></div>
+<div>Cabin<strong id="vehicle-cabin">—</strong></div>
+<div>Charging input<strong id="vehicle-charge">—</strong></div>
+<div>Data freshness<strong id="vehicle-age">—</strong></div>
+</div></div>
+</section>
+<div class="hero"><div class="eyebrow" style="color:#7ce8d9">Independent intelligence division</div><h2>Evidence before confidence.</h2><p>Every candidate competes against a simple baseline. Poor results stay experimental; the car, production forecasts and private telemetry remain protected.</p><span class="pill">◉ No automatic model promotion</span></div>
+<div class="grid4">
+<div class="stat"><div class="eyebrow">Recorded cycles</div><div class="value" id="kpi-cycles">—</div><div class="hint">Private research history</div></div>
+<div class="stat"><div class="eyebrow">Questions tested</div><div class="value" id="kpi-questions">—</div><div class="hint">Most recent unified cycle</div></div>
+<div class="stat"><div class="eyebrow">Historical holdout gain</div><div class="value" id="kpi-gain">—</div><div class="hint">Versus persistence, not Classic</div></div>
+<div class="stat"><div class="eyebrow">Heater state coverage</div><div class="value" id="kpi-heater">—</div><div class="hint">Qualifying parked episodes</div></div>
+</div>
+<div class="grid2">
+<div class="panel"><div class="section-title"><h2>Thermal forecast challenge</h2><small>Historical test · error in °C</small></div><div id="summary-comparison" class="comparison"><div class="empty">No recorded thermal evaluation yet.</div></div><div class="legend"><span><i class="base"></i>Unchanged pack temperature</span><span><i></i>Selected experimental model</span></div><div class="notice">Lower error is better. Historical performance is not verified prospective accuracy.</div></div>
+<div class="panel"><div class="section-title"><h2>Latest research decision</h2><span class="pill dim" id="decision-status">Awaiting research</span></div><div class="big-status" id="decision-title">No recorded cycle</div><p class="note" id="decision-desc">GENESIS will present a decision after an operator-run research cycle is saved.</p><div class="divider"></div><div class="tag">Next investigation</div><p id="decision-next" class="note">No investigation selected yet.</p></div>
+</div>
+<div class="panel"><div class="section-title"><h2>What the system has learned</h2><small>From saved, approved aggregate reports</small></div><div id="quick-findings" class="grid2 grid-equal" style="margin-bottom:0"><div class="empty">Research results will appear after the first saved cycle.</div></div></div>
+</section>
+<section class="tab-panel" data-panel="models" hidden>
+<div class="heading"><div><div class="eyebrow">Research workspace / Models</div><h1>Model Competition Lab</h1><p>Compare the five thermal predictor families, examine held-out errors, and see exactly why a challenger was rejected.</p></div></div>
+<div class="grid2">
+<div class="panel"><div class="section-title"><h2>Validation leaderboard</h2><small>Episode-balanced MAE, °C</small></div><p class="note">All models were fitted using historical training episodes. The validation set selected a challenger; its later holdout is reported separately.</p><div class="divider"></div><div id="model-leaderboard" class="chart-list"><div class="empty">Detailed rankings appear with the next product research cycle.</div></div></div>
+<div class="panel"><div class="section-title"><h2>Selected model assessment</h2><span id="model-status" class="pill dim">No candidate evaluated</span></div><div class="eyebrow">Validation-selected challenger</div><div class="big-status aqua" id="model-selected">—</div><div class="divider"></div><div id="model-scores" class="comparison"><div class="empty">No holdout evidence yet.</div></div><p id="model-rule" class="notice">Research-only: validation improvement does not qualify a model for production.</p></div>
+</div>
+<div class="panel" aria-label="Prediction Truth Lab - local scored GHOST outcomes">
+<div class="section-title"><h2>Prediction Truth Lab</h2><span class="pill dim" id="truth-status">Read-only · waiting</span></div>
+<p class="note">Actual resolved GHOST battery-temperature forecasts, compared across two <strong>non-overlapping</strong> seven-day periods. A model's generation must match before we flag a possible performance change.</p>
+<div id="truth-summary" class="grid4" style="grid-template-columns:repeat(2,minmax(0,1fr));margin:15px 0"><div class="empty">Open this Models tab to read scored prediction evidence.</div></div>
+<div id="truth-models" class="chart-list"><div class="empty">No model diagnostics loaded yet.</div></div>
+<p class="note" id="truth-note">Attention flags are research leads, not statistical proof of drift. No vehicle commands or model promotion.</p>
+</div>
+<div class="grid2" aria-label="Local thermal research context">
+<div class="panel">
+<div class="section-title"><h2>Thermal Conditions Lab</h2><span id="context-status" class="pill dim">Read-only · waiting</span></div>
+<p class="note">Which forecast-source conditions line up with higher errors? Groups cover ambient temperature, reported vehicle state and battery-heater evidence. This does not establish causes.</p>
+<div id="context-coverage" class="note">Context coverage has not been checked.</div>
+<div id="context-groups" class="chart-list"><div class="empty">Open the Models tab to inspect actual data.</div></div>
+</div>
+<div class="panel">
+<div class="section-title"><h2>Next Research Priorities</h2><span class="pill dim">Review only</span></div>
+<p class="note">GENESIS selects the most informative follow-up questions from verified scored history. Proposals cannot execute experiments, transfer data or promote models.</p>
+<div id="context-missions" class="chart-list"><div class="empty">Waiting for enough comparable evidence.</div></div>
+<p id="context-caveat" class="note">Current source conditions are not necessarily the conditions at the future forecast target.</p>
+</div>
+</div><div class="panel" aria-label="Matched production versus persistence challenge">
+<div class="section-title"><h2>Production Model vs Persistence</h2><span class="pill dim" id="paired-status">Read-only · waiting</span></div>
+<p class="note">Same source, same actual outcome, same horizon. Compare each scored production forecast with the simpler prediction that starting pack temperature stays unchanged. These are scored historical observations, not frozen research trials.</p>
+<div id="paired-coverage" class="note">Baseline evidence has not been checked.</div>
+<div id="paired-groups" class="chart-list"><div class="empty">Select the Models tab to compare real forecast outcomes.</div></div>
+<p class="note">Lower MAE is better. A historical improvement does not authorize automatic model promotion.</p>
+</div><div class="panel"><div class="section-title"><h2>Evidence limitations</h2></div><p class="note">Results use observationally inferred parked episodes. Current telemetry may not reveal when the battery heater, conditioning, or changing outside temperatures affected the pack. The tested historical data has already been explored.</p><div id="model-caveats"></div></div>
+</section>
+<section class="tab-panel" data-panel="investigations" hidden>
+<div class="heading"><div><div class="eyebrow">Research workspace / Investigations</div><h1>Hypothesis Architect</h1><p>Understand which question GENESIS selected and what evidence is needed next. No experiment can execute arbitrary generated code.</p></div></div>
+<div class="grid2">
+<div class="panel"><div class="section-title"><h2>Current mission</h2><span class="pill dim">Manual research</span></div><div id="mission-title" class="big-status">Awaiting a research cycle</div><p id="mission-reason" class="note"></p><div class="divider"></div><div class="eyebrow">Planned follow-up</div><p id="mission-next" class="note">No mission selected yet.</p></div>
+<div class="panel"><div class="section-title"><h2>Hypothesis outcomes</h2><small>Latest product cycle</small></div><div class="grid4" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+<div><div class="value aqua" id="outcome-shadow" style="font-size:30px;font-weight:800">—</div><div class="note">Shadow associations</div></div>
+<div><div class="value warn" id="outcome-failed" style="font-size:30px;font-weight:800">—</div><div class="note">Rejected challenges</div></div>
+<div><div class="value" id="outcome-waiting" style="font-size:30px;font-weight:800">—</div><div class="note">Awaiting evidence</div></div>
+</div><div class="divider"></div><p class="note" id="mission-conflicts">Sensor-context diagnostics will appear after a recorded cycle.</p></div>
+</div>
+<div class="panel" aria-label="Frozen prospective truth watch">
+<div class="section-title"><h2>Prospective Truth Watch</h2><span class="pill dim" id="prospective-status">Manual freeze required</span></div>
+<p class="note">A frozen evaluation watches only new GHOST forecasts created after the research watermark. It scores their later real outcomes against persistence using the same event. Start it explicitly from the local GENESIS CLI; this dashboard never starts experiments.</p>
+<div id="prospective-overview" class="note">Awaiting an operator-initiated freeze.</div>
+<div id="prospective-models" class="chart-list"><div class="empty">No post-freeze evidence yet.</div></div>
+<div class="divider"></div><div class="section-title"><h2>Private evidence history</h2><small>Only manually recorded snapshots</small></div><div id="prospective-history" class="chart-list"><div class="empty">No evidence snapshots have been recorded yet.</div></div>
+<p class="note">No model training, no scheduled jobs, no model promotion or Hive uploads. Timestamp-based freezing does not verify ingestion chronology or artifact bytes.</p>
+</div>
+<div class="panel" aria-label="Frozen research challenger comparison">
+<div class="section-title"><h2>Frozen Challenger Competition</h2><span class="pill dim" id="challenger-status">Manual challenger freeze required</span></div>
+<p class="note">A fixed ambient-relaxation model is calibrated from resolved pre-freeze outcomes. When new eligible GHOST forecasts arrive, GENESIS compares that candidate, the production model and persistence against the same actual temperature. No model is deployed.</p>
+<div class="note" id="challenger-coverage">No challenger research artifact has been frozen.</div>
+<div id="challenger-models" class="chart-list"><div class="empty">Run the local challenger-freeze command after reviewing the historical training prerequisites.</div></div>
+<p class="note">Reconstructed predictions use stored forecast-source readings. This is not authenticated ingestion chronology, independent episodes, or permission to promote a model.</p>
+</div>
+<div class="panel" aria-label="Episode-balanced three-way thermal challenge">
+<div class="section-title"><h2>Episode-Balanced Research</h2><span class="pill dim" id="episode-status">Waiting for event evidence</span></div>
+<p class="note">GENESIS groups post-freeze forecasts by inferred GHOST driving, charging, parked, sleep, cold-soak or preconditioning events. Each event counts equally, preventing long sessions from dominating the comparison. Events are inferred, not independently verified.</p>
+<div id="episode-coverage" class="note">No episode-scored future evidence checked.</div>
+<div id="episode-models" class="chart-list"><div class="empty">Open Investigations to check eligible post-freeze events.</div></div>
+<p class="note">A minimum of five inferred events, three UTC days and 100 matched forecasts is a research triage threshold, not proof of independent validation. M9/M10 freeze files remain unchanged.</p>
+</div>
+<div class="panel"><div class="section-title"><h2>Evidence-led next investigations</h2><span class="pill dim">Proposed · not executed</span></div><p class="note">Review scored prediction failures and propose repeatable investigations. No automatic training, model changes or commands.</p><div id="context-missions-investigations" class="chart-list"><div class="empty">Loading evidence-based plans when opened.</div></div></div>
+<div class="panel"><div class="section-title"><h2>Prior Hypothesis Architect notes</h2><small>Available only if the separate Architect ledger was saved</small></div><div id="architect-previous" class="empty">No additional Architect records loaded.</div></div>
+</section>
+<section class="tab-panel" data-panel="history" hidden>
+<div class="heading"><div><div class="eyebrow">Research workspace / History</div><h1>Research Timeline</h1><p>Select a completed cycle to inspect its frozen aggregate report, next mission, and limitations.</p></div></div>
+<div class="grid2">
+<div class="panel"><div class="section-title"><h2>Saved cycles</h2><small id="history-count">0 recorded</small></div><div class="history-list" id="history-list"><div class="empty">No completed cycles recorded yet.</div></div></div>
+<div class="panel"><div class="section-title"><h2>Selected cycle</h2><span id="history-selected" class="pill dim">—</span></div><div id="history-details" class="empty">Choose a cycle to see its results.</div></div>
+</div>
+</section>
+<section class="tab-panel" data-panel="hive" hidden>
+<div class="heading"><div><div class="eyebrow">Fleet intelligence / Hive Network</div><h1>Hive Coordination</h1><p>Approved monthly research summaries are managed by the separate Hive coordinator. This read-only research workspace observes status; participation is controlled from the private Hive dashboard.</p></div></div>
+<div class="panel" style="margin-bottom:18px">
+<div class="section-title"><h2>Transfer &amp; consent controls</h2><span class="pill dim" id="hive-mode">Checking local consent</span></div>
+<div class="hive-banner">
+<div class="hive-stat"><div class="eyebrow">Transfer authorization</div><div class="big-status" id="hive-auth">OFF</div><span class="note">Monthly aggregate updates only after informed owner consent</span></div>
+<div class="hive-stat"><div class="eyebrow">Permitted content</div><div class="big-status">Aggregates only</div><span class="note">No VIN, GPS, trips or raw telemetry</span></div>
+<div class="hive-stat"><div class="eyebrow">Fleet publishing gate</div><div class="big-status">10 nodes</div><span class="note">Minimum reporting installations per UTC month</span></div>
+</div>
+<div class="notice" id="hive-status-detail">Explicitly consented six-field monthly count/error summaries may be accepted. The coordinator can associate each summary with an enrollment: this is pseudonymous, not anonymous, secure aggregation or federated training. No raw telemetry, routes or model weights are transmitted.</div>
+</div>
+<div class="grid2 grid-equal">
+<div class="panel"><div class="section-title"><h2>Hive Server</h2><span class="pill dim">Separate service</span></div><div class="item"><strong>Enrollment &amp; revocation</strong><div class="detail">Each node receives a private credential. Revocation disables future contributions and erases that node's stored aggregate rows.</div></div><div class="item"><strong>Cohort aggregation</strong><div class="detail">Monthly cohort averages stay withheld before 10 reporting installations in that UTC month. Enrollments are not verified unique people.</div></div><div class="item"><strong>Deployment boundary</strong><div class="detail">The preview Hive server binds to localhost and requires a secure proxy and independent review before internet deployment.</div></div></div>
+<div class="panel"><div class="section-title"><h2>Transfer Service</h2><span class="pill dim">Opt-in only</span></div><div class="item"><strong>Default OFF</strong><div class="detail">Reporting remains OFF until the owner opts in through the private Hive contribution card.</div></div><div class="item"><strong>Approved real reporting</strong><div class="detail">Hourly checks submit an updated six-field monthly aggregate only after explicit consent. No raw traces are transmitted.</div></div><div class="item"><strong>Future research sharing</strong><div class="detail">Model-family metrics, collaborative trials and signed model artifacts require further validation and new affirmative consent.</div></div></div>
+</div>
+</section>
+<section class="tab-panel" data-panel="system" hidden>
+<div class="heading"><div><div class="eyebrow">Research workspace / System</div><h1>System & Research Safety</h1><p>This viewer reads local aggregate records. It does not poll the Tesla or control any production service.</p></div></div>
+<div class="grid2 grid-equal">
+<div class="panel"><div class="section-title"><h2>Local workspace health</h2><span id="health-badge" class="pill dim">Checking</span></div><div class="kv"><span>Viewer connectivity</span><strong id="sys-online">Checking</strong></div><div class="kv"><span>Research data available</span><strong id="sys-data">—</strong></div><div class="kv"><span>Viewer version</span><strong id="sys-version">—</strong></div><div class="kv"><span>Network mode</span><strong>LOCAL-ONLY</strong></div><div class="kv"><span>Vehicle actuation</span><strong class="positive">DISABLED</strong></div><div class="kv"><span>Automatic promotion</span><strong class="positive">DISABLED</strong></div></div>
+<div class="panel"><div class="section-title"><h2>Development boundaries</h2></div><div class="item"><b>Classic GHOST remains independent</b><div class="detail">No production model changes or service restarts from the research viewer.</div></div><div class="item"><b>Federated learning is not active</b><div class="detail">Real Hive summary contributions exist separately; shared neural training and remote model execution are not implemented.</div></div><div class="item"><b>Manual cycles only</b><div class="detail">A refresh reads saved research reports; it never runs an experiment or polls Tessie.</div></div><div class="item"><b>Access remains local</b><div class="detail">Preview is loopback-only. Use SSH forwarding; do not expose it publicly without authentication.</div></div></div>
+</div>
+<div class="panel"><div class="section-title"><h2>Research source provenance</h2></div><p class="note">This page is not a live vehicle telemetry dashboard. Scientific results are summaries of prior observational records; attribution, thermal-causality claims, true arrival-time confirmation, and direct comparisons with Classic GHOST remain separate engineering milestones.</p></div>
+</section>
+<footer><span>GHOST GENESIS · v0.8 Product UI · Local-first · Research only</span><span id="footer-state">No model promotion · No research-model uploads</span></footer>
+</main></div>
+<script>
+"use strict";
+const el = id => document.getElementById(id);
+const make = (tag,content,cls) => { const x=document.createElement(tag); if(content!==undefined)x.textContent=String(content); if(cls)x.className=cls; return x; };
+const percent = n => Number.isFinite(Number(n)) ? (Number(n)>0?"+":"")+Number(n).toFixed(2)+"%" : "Not scored";
+const number = (n,places=2) => Number.isFinite(Number(n)) ? Number(n).toFixed(places) : "—";
+const pretty = s => String(s||"No result").replaceAll("_"," ").replace(/\b\w/g,x=>x.toUpperCase());
+const dateText = n => { const dt=new Date(Number(n)*1000); return Number.isFinite(dt.getTime()) ? dt.toLocaleString() : "Unknown date"; };
+let cache=null,historySelected=null,healthOk=false,truthLastRead=0,truthPending=false,contextLastRead=0,contextPending=false,pairedLastRead=0,pairedPending=false,prospectiveLastRead=0,prospectivePending=false,challengerLastRead=0,challengerPending=false,episodeLastRead=0,episodePending=false;
+function label(id,value){el(id).textContent=value;}
+function view(tab) {
+  for(const button of document.querySelectorAll("[data-tab]")) {
+    const current=button.dataset.tab===tab;
+    button.classList.toggle("active",current);
+    if(current)button.setAttribute("aria-current","page");else button.removeAttribute("aria-current");
+  }
+  for(const panel of document.querySelectorAll("[data-panel]"))panel.hidden=panel.dataset.panel!==tab;
+  if(tab==="models" && Date.now()-truthLastRead>300000)void readTruth();
+  if((tab==="models" || tab==="investigations") && Date.now()-contextLastRead>300000)void readContext();
+  if(tab==="investigations" && Date.now()-prospectiveLastRead>300000)void readProspective();
+  if(tab==="investigations" && Date.now()-challengerLastRead>300000)void readChallenger();
+  if(tab==="investigations" && Date.now()-episodeLastRead>300000)void readEpisodeChallenge();
+  if(tab==="models" && Date.now()-pairedLastRead>300000)void readPaired();
+}
+for(const button of document.querySelectorAll("[data-tab]"))button.addEventListener("click",()=>view(button.dataset.tab));
+function failure(message) {
+  label("connection","Unavailable");
+  el("connection").className="live off";
+  label("updated","Last refresh failed");
+  label("health-badge","Unreachable");
+  label("sys-online","Unavailable");
+  if(message)label("footer-state",message);
+}
+function meter(parent,name,base,challenger){
+  if(!Number.isFinite(Number(base))||!Number.isFinite(Number(challenger)))return;
+  const b=Number(base),c=Number(challenger),max=Math.max(b,c,.0001)*1.14;
+  const container=make("div",undefined,"comparison");
+  for(const spec of [{name:"Persistence",value:b,type:"amber"},{name:name||"Challenger",value:c,type:""}]){
+    const shell=make("div");
+    const caption=make("div",undefined,"scores");
+    caption.append(make("span",spec.name),make("b",number(spec.value,4)+" °C"));
+    const t=make("div",undefined,"track");const fill=make("div",undefined,"fill"+(spec.type?" "+spec.type:""));
+    fill.style.width=Math.max(0,Math.min(100,100*spec.value/max))+"%";
+    fill.setAttribute("role","img");
+    fill.setAttribute("aria-label",spec.name+" "+number(spec.value,4)+" degrees Celsius MAE");
+    t.append(fill);shell.append(caption,t);container.append(shell);
+  }
+  parent.append(container);
+}
+function statLabel(id,value,polarity) {
+  const node=el(id);node.textContent=value;
+  node.classList.remove("positive","negative","warn");
+  if(polarity)node.classList.add(polarity);
+}
+function loadOverview(runs){
+  const latest=runs[0]&&runs[0].report||null;
+  label("kpi-cycles",runs.length);
+  label("kpi-questions",latest?latest.research_trials:"—");
+  const gain=latest&&latest.thermal_holdout&&latest.thermal_holdout.improvement_pct;
+  statLabel("kpi-gain",gain===null||gain===undefined?"—":percent(gain),gain>0?"positive":gain<0?"negative":"");
+  const quality=latest&&latest.heater_quality||{};
+  const checked=Number(quality.verified_episodes||0),missing=Number(quality.unverified_episodes||0),total=checked+missing;
+  label("kpi-heater",total?number(100*checked/total,1)+"%":"—");
+  const compare=el("summary-comparison");compare.replaceChildren();
+  if(latest&&latest.thermal_holdout){
+    meter(compare,pretty(latest.thermal_winner),latest.thermal_holdout.episode_balanced_baseline_mae_c,latest.thermal_holdout.episode_balanced_model_mae_c);
+  }else compare.append(make("div","No scored thermal results in the latest cycle.","empty"));
+  label("decision-title",latest?pretty(latest.thermal_status):"No recorded cycle");
+  label("decision-desc",latest?("Selected during validation: "+pretty(latest.thermal_winner)+". Final status: "+pretty(latest.status)+"."):"The first completed research cycle will populate this section.");
+  label("decision-status",latest?pretty(latest.status):"Awaiting research");
+  label("decision-next",latest?latest.next_action||"No action reported":"No investigation selected yet.");
+  el("decision-status").className="pill"+(latest&&latest.status==="REJECTED"?" caution":" dim");
+  const insights=el("quick-findings");insights.replaceChildren();
+  if(!latest){insights.append(make("div","No saved product research data yet. The dashboard will update when your manual cycle is complete.","empty"));return;}
+  for(const info of [
+    {heading:"Hypothesis Architect",value:String(latest.research_trials)+" questions tested",detail:latest.selected_mission&&latest.selected_mission.title||"No mission selected"},
+    {heading:"Thermal evidence",value:total?checked+" verified / "+total+" episodes":"Episode coverage unknown",detail:"Not a production-ready model"}
+  ]){
+    const tile=make("div",undefined,"detail-box");tile.append(make("div",info.heading,"eyebrow"),make("h3",info.value),make("p",info.detail));insights.append(tile);
+  }
+}
+function loadModels(latest){
+  const list=el("model-leaderboard");list.replaceChildren();
+  const rows=latest&&latest.thermal_leaderboard||[];
+  if(!rows.length)list.append(make("div","Individual model rankings weren't stored in this research cycle. They will appear after a cycle using the updated product core.","empty"));
+  else{
+    const ranked=rows.slice().sort((a,b)=>Number(a.validation_mae_c)-Number(b.validation_mae_c));
+    const max=Math.max(1,...ranked.map(x=>Number(x.validation_mae_c)||0))*1.06;
+    for(const rec of ranked){
+      const row=make("div",undefined,"chart-item");
+      const header=make("div",undefined,"rowline");
+      header.append(make("strong",pretty(rec.model)+(rec.model===latest.thermal_winner?" · selected":"")));
+      header.append(make("small",number(rec.validation_mae_c,4)+" °C · "+percent(rec.validation_gain_pct)));
+      const track=make("div",undefined,"track"),fill=make("div",undefined,"fill"+(rec.model==="PERSISTENCE"?" amber":""));
+      fill.style.width=Math.min(100,100*Math.max(0,Number(rec.validation_mae_c))/max)+"%";
+      fill.setAttribute("role","img");fill.setAttribute("aria-label",pretty(rec.model)+" validation mean absolute error "+number(rec.validation_mae_c,4));
+      track.append(fill);row.append(header,track);list.append(row);
+    }
+  }
+  label("model-selected",latest?pretty(latest.thermal_winner):"—");
+  label("model-status",latest?pretty(latest.thermal_status):"Not evaluated");
+  el("model-status").className="pill"+(latest&&latest.status==="REJECTED"?" caution":" dim");
+  const scores=el("model-scores");scores.replaceChildren();
+  if(latest&&latest.thermal_holdout){
+    meter(scores,pretty(latest.thermal_winner),latest.thermal_holdout.episode_balanced_baseline_mae_c,latest.thermal_holdout.episode_balanced_model_mae_c);
+    const score=latest.thermal_holdout;
+    const summary=make("p","Later historical holdout: "+percent(score.improvement_pct)+" improvement. "+String(score.episodes_better)+" of "+String(score.episodes_evaluated)+" episodes had lower error.","note");
+    scores.append(summary);
+  }else scores.append(make("div","No historical holdout score recorded.","empty"));
+  label("model-rule",latest&&latest.status==="REJECTED"?"Historical challenge failed. Persistence remains the safe reference; no research model was promoted.":"Historical associations are not proof of prospective prediction skill or approval for production.");
+  const caveats=el("model-caveats");caveats.replaceChildren();
+  if(latest&&Array.isArray(latest.caveats))for(const item of latest.caveats.slice(0,8))caveats.append(make("div",item,"item note"));
+}
+function loadInvestigations(latest,architect){
+  const mission=latest&&latest.selected_mission||architect&&architect.run&&architect.run.selected_next_mission||{};
+  label("mission-title",mission.title||"Awaiting a research cycle");
+  label("mission-reason",mission.reason||"No saved hypothesis mission in this product workspace.");
+  label("mission-next",latest&&latest.next_action||mission.next_experiment||"No next step has been recorded.");
+  const totals=latest&&latest.architect_status_counts||{};
+  label("outcome-shadow",totals.SHADOW_ASSOCIATION===undefined?"—":totals.SHADOW_ASSOCIATION);
+  label("outcome-failed",totals.CHALLENGE_FAILED===undefined?"—":totals.CHALLENGE_FAILED);
+  label("outcome-waiting",totals.INSUFFICIENT_EVIDENCE===undefined?"—":totals.INSUFFICIENT_EVIDENCE);
+  const follow=latest&&latest.mission_followup||{};
+  label("mission-conflicts",follow.conflicting_observations!==undefined?
+    "Sensor conflict follow-up: "+String(follow.conflicting_observations)+" overlapping observations ("+number(follow.conflict_pct,2)+"%). This does not establish real charging while moving.":
+    "No classified sensor-context follow-up was recorded.");
+  const old=el("architect-previous");old.replaceChildren();
+  const trials=architect&&architect.trials||[];
+  if(!trials.length){old.append(make("div","The earlier Architect ledger is separate. Product research results appear above even when that ledger hasn't been copied into this workspace.","empty"));return;}
+  for(const trial of trials.slice(0,11)){
+    const line=make("div",undefined,"item");
+    line.append(make("strong",pretty(trial.status)+" · "+pretty(trial.regime)));
+    line.append(make("div",String(trial.feature)+" → "+String(trial.target),"detail"));
+    old.append(line);
+  }
+}
+function showHistory(runs,selected){
+  const list=el("history-list");list.replaceChildren();
+  label("history-count",runs.length+" saved");
+  if(!runs.length){
+    list.append(make("div","No saved product research cycles. Run product-cycle --save to record the first one.","empty"));
+    el("history-details").replaceChildren(make("div","Nothing to inspect yet.","empty"));return;
+  }
+  if(!runs.some(x=>x.id===selected)) selected=runs[0].id;
+  historySelected=selected;
+  for(const item of runs){
+    const btn=make("button",undefined,"history-button"+(item.id===selected?" selected":""));
+    btn.type="button";
+    const left=make("span");left.append(make("strong","Research cycle #"+item.id),make("span",dateText(item.created_at),"meta"));
+    btn.append(left,make("span",pretty(item.state),"tag"));
+    btn.addEventListener("click",()=>showHistory(runs,item.id));
+    list.append(btn);
+  }
+  const match=runs.find(x=>x.id===selected),r=match.report;
+  label("history-selected","Cycle #"+match.id);
+  const panel=el("history-details");panel.replaceChildren();panel.className="detail-box";
+  panel.append(make("h3",pretty(r.status)));
+  const pieces=[
+    ["Created",dateText(match.created_at)],
+    ["Questions evaluated",r.research_trials],
+    ["Selected model",pretty(r.thermal_winner)],
+    ["Historical holdout change",r.thermal_holdout?percent(r.thermal_holdout.improvement_pct):"Not scored"],
+    ["Training episodes",r.thermal_episode_counts&&r.thermal_episode_counts.training],
+    ["Validation episodes",r.thermal_episode_counts&&r.thermal_episode_counts.selection_validation],
+    ["Holdout episodes",r.thermal_episode_counts&&r.thermal_episode_counts.historical_holdout],
+    ["Heater state verified",r.heater_quality?r.heater_quality.verified_episodes:"Unknown"],
+    ["Heater state incomplete",r.heater_quality?r.heater_quality.unverified_episodes:"Unknown"]
+  ];
+  for(const info of pieces){
+    const row=make("div",undefined,"kv");row.append(make("span",info[0]),make("strong",info[1]===undefined?"—":info[1]));panel.append(row);
+  }
+  panel.append(make("p","Next: "+String(r.next_action||"No next action selected.")));
+}
+async function readVehicle(){
+ try {
+ const r=await fetch("/api/genesis/vehicle",{cache:"no-store"});
+ if(!r.ok)throw Error("vehicle context unavailable");
+ const d=await r.json();
+ const available=d.available===true;
+ label("vehicle-state",!available?"No telemetry":d.fresh?"Last observed "+String(d.state).replaceAll("_"," "):"Stale · not live");
+ label("vehicle-soc",available&&d.soc_percent!==null?number(d.soc_percent,0)+"%":"—%");
+ const pct=available&&Number.isFinite(d.soc_percent)?Math.max(0,Math.min(100,d.soc_percent)):0;
+ el("vehicle-soc-fill").style.width=pct+"%";
+ label("vehicle-pack",available&&d.pack_temp_f!==null?number(d.pack_temp_f,1)+" °F":"—");
+ label("vehicle-outside",available&&d.outside_temp_f!==null?number(d.outside_temp_f,1)+" °F":"—");
+ label("vehicle-cabin",available&&d.cabin_temp_f!==null?number(d.cabin_temp_f,1)+" °F":"—");
+ label("vehicle-charge",available&&d.charger_kw!==null?number(d.charger_kw,1)+" kW":"—");
+ label("vehicle-age",available?number(d.age_minutes,1)+" min ago":"Unavailable");
+ } catch(e){label("vehicle-state","Source unavailable");}
+}
+async function readTruth(){
+ if(truthPending)return;
+ truthPending=true;
+ truthLastRead=Date.now();
+ try{
+  const response=await fetch("/api/genesis/prediction-quality",{cache:"no-store",credentials:"same-origin"});
+  if(!response.ok)throw Error("Prediction Truth Lab unavailable");
+  const data=await response.json();
+  label("truth-status",data.status==="OK"?"Actual GHOST outcomes":pretty(data.status));
+  const box=el("truth-summary");box.replaceChildren();
+  for(const spec of [
+    {name:"Recent 7 days",v:data.recent||{}},
+    {name:"Previous 7 days",v:data.previous||{}}
+  ]){
+   const tile=make("div",undefined,"stat");
+   tile.append(make("div",spec.name,"eyebrow"),
+               make("div",Number.isFinite(spec.v.mae_f)?number(spec.v.mae_f,2)+" °F":"—","value aqua"),
+               make("div",String(spec.v.samples||0)+" temperature forecasts · "+
+                 (Number.isFinite(spec.v.within_2f_percent)?number(spec.v.within_2f_percent,1)+"% within ±2°F":"no accuracy score"),"hint"));
+   box.append(tile);
+  }
+  const list=el("truth-models");list.replaceChildren();
+  if(!Array.isArray(data.models)||!data.models.length){
+   list.append(make("div",data.status==="NO_SCORED_EVIDENCE"?
+     "No eligible scored temperature forecasts in the last 14 days.":
+     "Model-level comparisons are unavailable for this source.","empty"));
+  }else{
+   for(const row of data.models){
+    const block=make("div",undefined,"item");
+    const line=make("div",undefined,"rowline");
+    line.append(make("strong",String(row.model)+" · "+String(row.horizon_minutes)+"m"));
+    line.append(make("small",pretty(row.state)));
+    block.append(line);
+    const v=row.recent||{},p=row.previous||{};
+    const desc=make("div","Recent: "+String(v.samples||0)+" scores / "+
+      (Number.isFinite(v.mae_f)?number(v.mae_f,2)+" °F":"—")+
+      "  |  Previous: "+String(p.samples||0)+" scores / "+
+      (Number.isFinite(p.mae_f)?number(p.mae_f,2)+" °F":"—"),"detail");
+    block.append(desc);
+    // Signed error is prediction minus actual temperature, according to
+    // GHOST's production truth resolver. Coverage is shown explicitly.
+    for(const [title,spec] of [["Recent",v],["Previous",p]]){
+     const diagnostics=[];
+     if(Number.isFinite(spec.mean_signed_error_f)){
+      diagnostics.push("signed bias "+(spec.mean_signed_error_f>=0?"+":"")+
+        number(spec.mean_signed_error_f,2)+" °F");
+      diagnostics.push(number(spec.overpredict_percent,1)+"% overestimated");
+      diagnostics.push(number(spec.underpredict_percent,1)+"% underestimated");
+      diagnostics.push(String(spec.signed_samples||0)+" signed scores");
+     }
+     if(Number.isFinite(spec.above_5f_percent))
+      diagnostics.push(number(spec.above_5f_percent,1)+"% missed by >5°F");
+     if(Number.isFinite(spec.above_10f_percent))
+      diagnostics.push(number(spec.above_10f_percent,1)+"% missed by >10°F");
+     if(Number.isFinite(spec.target_gap_over_10m_percent))
+      diagnostics.push(number(spec.target_gap_over_10m_percent,1)+
+        "% truth measurements >10m from target ("+String(spec.gap_samples||0)+" matched)");
+     if(diagnostics.length)block.append(make("div",title+": "+diagnostics.join(" · "),"note"));
+    }
+    if(Number.isFinite(row.mae_change_f)&&Number.isFinite(row.accuracy_change_pp)){
+     block.append(make("div","Change: "+
+       (row.mae_change_f>=0?"+":"")+number(row.mae_change_f,2)+
+       " °F mean error · "+
+       (row.accuracy_change_pp>=0?"+":"")+number(row.accuracy_change_pp,1)+
+       " percentage points within ±2°F","note"));
+    }else{
+     block.append(make("div","Comparison withheld: insufficient overlapping generation evidence or too few scored outcomes.","note"));
+    }
+    list.append(block);
+   }
+   if(data.models_omitted)list.append(make("p",String(data.models_omitted)+" additional smaller model groups omitted.","note"));
+  }
+  label("truth-note","Positive signed bias means predicted battery temperature exceeded actual temperature."+
+    " Truth measurement gap is time from forecast target, not scorer delay. Two disjoint resolution-time weeks can still differ in weather and charging mix."+
+    " Repeated forecasts are correlated; diagnostics are hypotheses, not validated causes or approval to promote models.");
+ }catch(e){
+  label("truth-status","Evidence unavailable");
+  el("truth-summary").replaceChildren(make("div","Could not read scored local prediction evidence.","empty"));
+  el("truth-models").replaceChildren();
+ }finally{truthPending=false;}
+}
+async function readContext(){
+ if(contextPending)return;
+ contextPending=true;
+ contextLastRead=Date.now();
+ try{
+  const r=await fetch("/api/genesis/thermal-context",{cache:"no-store",credentials:"same-origin"});
+  if(!r.ok)throw Error("Context lab unavailable");
+  const d=await r.json();
+  label("context-status",d.status==="OK"?"Real GHOST source context":pretty(d.status));
+  label("context-coverage","Forecasts with source context: "+
+    String(d.matched_source_predictions||0)+" · missing source records: "+
+    String(d.unmatched_source_predictions||0));
+  const groups=el("context-groups");groups.replaceChildren();
+  const rows=Array.isArray(d.dimensions)?d.dimensions:[];
+  if(!rows.length)groups.append(make("div","No supported context fields or scored outcomes to segment.","empty"));
+  for(const item of rows.slice(0,18)){
+   const block=make("div",undefined,"item");
+   const title=make("div",undefined,"rowline");
+   title.append(make("strong",String(item.model)+" · "+String(item.horizon_minutes)+"m"));
+   title.append(make("small",pretty(item.group)));
+   block.append(title);
+   block.append(make("div",pretty(item.dimension)+" · "+
+     pretty(item.assessment),"detail"));
+   const now=item.recent||{},prev=item.previous||{};
+   block.append(make("div","Previous: "+String(prev.samples||0)+" / "+
+     (Number.isFinite(prev.mae_f)?number(prev.mae_f,2)+"°F":"—")+
+     " · Recent: "+String(now.samples||0)+" / "+
+     (Number.isFinite(now.mae_f)?number(now.mae_f,2)+"°F":"—"),"note"));
+   if(Number.isFinite(item.delta_mae_f))
+    block.append(make("div","Error change: "+
+      (item.delta_mae_f>=0?"+":"")+number(item.delta_mae_f,2)+"°F","note"));
+   groups.append(block);
+  }
+  if(d.groups_omitted||rows.length>18)
+    groups.append(make("div","Additional context groups not shown. "+
+      "Evidence remains available in the read-only local API.","note"));
+  const destinations=[el("context-missions"),el("context-missions-investigations")];
+  destinations.forEach(dest=>dest.replaceChildren());
+  const plans=Array.isArray(d.priorities)?d.priorities:[];
+  if(!plans.length)destinations.forEach(dest=>dest.append(make("div","No generation-consistent worsening group has enough evidence yet.","empty")));
+  for(const plan of plans){
+   const item=make("div",undefined,"item");
+   item.append(make("strong",String(plan.model)+" · "+pretty(plan.group)));
+   item.append(make("div",String(plan.question),"detail"));
+   item.append(make("div",String(plan.samples_previous)+" previous / "+
+     String(plan.samples_recent)+" recent scored forecasts · "+
+     pretty(plan.state),"note"));
+   destinations.forEach(dest=>dest.append(item.cloneNode(true)));
+  }
+  label("context-caveat","Only forecast-source conditions are used. Groups share underlying forecasts."+
+    " Weather, charging and heater signals are observational, not proof of causality."+
+    " Priorities require operator review and cannot execute.");
+ }catch(e){
+  label("context-status","Context unavailable");
+  el("context-groups").replaceChildren(make("div","Could not evaluate local context data.","empty"));
+  el("context-missions").replaceChildren(make("div","No research priorities available.","empty"));
+  el("context-missions-investigations").replaceChildren(make("div","No research priorities available.","empty"));
+ }finally{contextPending=false;}
+}
+async function readPaired(){
+ if(pairedPending)return;
+ pairedPending=true;
+ pairedLastRead=Date.now();
+ try{
+  const r=await fetch("/api/genesis/paired-baseline",{cache:"no-store",credentials:"same-origin"});
+  if(!r.ok)throw Error("Matched baseline unavailable");
+  const data=await r.json();
+  label("paired-status",data.status==="OK"?"Same-outcome challenge":pretty(data.status));
+  label("paired-coverage","Complete scored pairs: "+String(data.eligible_pairs||0)+
+    " · incomplete source/actual evidence: "+String(data.incomplete_pairs||0));
+  const list=el("paired-groups");list.replaceChildren();
+  const rows=Array.isArray(data.groups)?data.groups:[];
+  if(!rows.length)list.append(make("div","No complete prediction/persistence pairs are available.","empty"));
+  for(const group of rows.slice(0,16)){
+   const item=make("div",undefined,"item");
+   const h=make("div",undefined,"rowline");
+   h.append(make("strong",String(group.model)+" · "+String(group.horizon_minutes)+
+     "m · generation "+String(group.generation)));
+   h.append(make("small",pretty(group.assessment)));
+   item.append(h);
+   const now=group.recent||{},prev=group.previous||{};
+   for(const [title,w] of [["Recent",now],["Previous",prev]]){
+    item.append(make("div",title+" · "+String(w.samples||0)+" matched scores · Model "+
+       (Number.isFinite(w.model_mae_f)?number(w.model_mae_f,2)+"°F":"—")+
+       " · Persistence "+(Number.isFinite(w.persistence_mae_f)?number(w.persistence_mae_f,2)+"°F":"—")+
+       " · Model advantage "+(Number.isFinite(w.model_advantage_f)?
+         (w.model_advantage_f>=0?"+":"")+number(w.model_advantage_f,2)+"°F":"—"),"note"));
+   }
+   list.append(item);
+  }
+  if(data.groups_omitted||rows.length>16)list.append(make("div",
+    "Additional model/generation groups are omitted from this summary.","note"));
+ }catch(e){
+  label("paired-status","Evidence unavailable");
+  el("paired-groups").replaceChildren(make("div",
+    "Could not compare real paired forecasts with persistence.","empty"));
+ }finally{pairedPending=false;}
+}
+async function readProspective(){
+ if(prospectivePending)return;
+ prospectivePending=true;
+ prospectiveLastRead=Date.now();
+ try {
+  const r=await fetch("/api/genesis/prospective-watch",{cache:"no-store",credentials:"same-origin"});
+  if(!r.ok)throw Error("Prospective watch unavailable");
+  const d=await r.json();
+  label("prospective-status",d.status==="NOT_FROZEN"?"Not frozen":pretty(d.status));
+  const n=el("prospective-models");n.replaceChildren();
+  const saved=el("prospective-history");saved.replaceChildren();
+  const history=d.history||{}, snapshots=Array.isArray(history.snapshots)?history.snapshots:[];
+  if(!snapshots.length)saved.append(make("div","No recorded evidence yet. After new scored forecasts arrive, use GENESIS CLI truth-watch-record.","empty"));
+  for(const item of snapshots.slice(0,10)){
+   const card=make("div",undefined,"item");
+   card.append(make("strong",String(item.day_utc)+" UTC"));
+   const qualified=(Array.isArray(item.models)?item.models:[]).filter(m=>m.samples>=100 && Number.isFinite(m.model_advantage_f));
+   card.append(make("div",String(item.eligible_pairs||0)+" matched forecasts · "+String(qualified.length)+" well-sampled model groups","detail"));
+   if(qualified.length){
+    qualified.sort((a,b)=>a.model_advantage_f-b.model_advantage_f);
+    const worst=qualified[0];
+    card.append(make("div",String(worst.model)+" "+String(worst.horizon_minutes)+"m · model advantage "+
+      number(worst.model_advantage_f,2)+"°F (negative favors persistence)","note"));
+   }
+   saved.append(card);
+  }
+  if(d.status==="NOT_FROZEN"){
+    label("prospective-overview","No frozen watch exists. Start a new research-only watch explicitly using GENESIS CLI truth-watch-freeze.");
+    n.append(make("div","Only future forecasts created after a verified manual freeze can be evaluated.","empty"));
+    return;
+  }
+  label("prospective-overview","Eligible matched future forecasts: "+String(d.eligible_pairs||0)+
+    " · incomplete: "+String(d.incomplete_pairs||0)+
+    " · different model generations excluded: "+String(d.new_generation_pairs||0));
+  const rows=Array.isArray(d.models)?d.models:[];
+  if(!rows.length)n.append(make("div","No frozen model generations or future scored evidence available.","empty"));
+  for(const m of rows){
+    const group=make("div",undefined,"item");
+    group.append(make("strong",String(m.model)+" · "+String(m.horizon_minutes)+"m · generation "+String(m.generation)));
+    group.append(make("div",pretty(m.assessment)+" · "+String(m.samples||0)+" matched future forecasts across "+String(m.evidence_days||0)+" UTC days (minimum "+String(d.min_evidence_days||3)+" days to assess)","detail"));
+    group.append(make("div","GHOST model "+(Number.isFinite(m.model_mae_f)?number(m.model_mae_f,2)+"°F":"—")+
+      " · Persistence "+(Number.isFinite(m.persistence_mae_f)?number(m.persistence_mae_f,2)+"°F":"—")+
+      " · Model advantage "+(Number.isFinite(m.model_advantage_f)?number(m.model_advantage_f,2)+"°F":"—"),"note"));
+    n.append(group);
+  }
+ }catch(e){
+  label("prospective-status","Evaluation unavailable");
+  label("prospective-overview","The local prospective watch could not be evaluated.");
+  el("prospective-models").replaceChildren();
+  el("prospective-history").replaceChildren(make("div","Could not read private evidence history.","empty"));
+ }finally{prospectivePending=false;}
+}
+async function readChallenger(){
+ if(challengerPending)return;
+ challengerPending=true;
+ challengerLastRead=Date.now();
+ try{
+  const r=await fetch("/api/genesis/challenger",{cache:"no-store",credentials:"same-origin"});
+  if(!r.ok)throw Error("Challenger status unavailable");
+  const data=await r.json();
+  label("challenger-status",data.status==="NOT_FROZEN"?"Not frozen":pretty(data.status));
+  const list=el("challenger-models");list.replaceChildren();
+  if(data.status==="NOT_FROZEN"){
+    label("challenger-coverage","Candidate has not been trained/frozen. M9's existing watch is unaffected.");
+    list.append(make("div","Use the reviewed GENESIS CLI challenger-freeze command when you choose to begin this separate prospective trial.","empty"));
+    return;
+  }
+  label("challenger-coverage","Complete same-event comparisons: "+String(data.matched_pairs||0)+
+    " · missing paired evidence: "+String(data.incomplete_pairs||0)+
+    " · generation exclusions: "+String(data.generation_excluded||0)+
+    " · unsupported horizons: "+String(data.unsupported_horizon_pairs||0)+
+    " · missing ambient: "+String(data.missing_ambient_pairs||0));
+  for(const candidate of Array.isArray(data.candidates)?data.candidates:[]){
+    const box=make("div",undefined,"item");
+    box.append(make("strong",String(candidate.horizon_minutes)+"-minute candidate · fixed α "+String(candidate.alpha)));
+    box.append(make("div",String(candidate.training_samples)+" pre-freeze training outcomes · "+
+      String(candidate.validation_samples)+" historical validation outcomes · "+
+      pretty(candidate.historical_status),"detail"));
+    list.append(box);
+  }
+  for(const row of Array.isArray(data.models)?data.models:[]){
+    const box=make("div",undefined,"item");
+    box.append(make("strong",String(row.model)+" · "+String(row.horizon_minutes)+"m · generation "+String(row.generation)));
+    box.append(make("div",pretty(row.assessment)+" · "+String(row.samples||0)+" matched future outcomes over "+
+      String(row.evidence_days||0)+" UTC days","detail"));
+    const show=value=>Number.isFinite(value)?number(value,2)+"°F":"—";
+    box.append(make("div","GHOST "+show(row.production_mae_f)+
+      " · Challenger "+show(row.challenger_mae_f)+
+      " · Persistence "+show(row.persistence_mae_f),"note"));
+    box.append(make("div","Challenger advantage vs GHOST "+show(row.challenger_advantage_vs_production_f)+
+      " · vs persistence "+show(row.challenger_advantage_vs_persistence_f),"note"));
+    list.append(box);
+  }
+  if(!Array.isArray(data.models)||!data.models.length)
+    list.append(make("div","No eligible same-event future scores yet.","empty"));
+ }catch(e){
+  label("challenger-status","Evaluation unavailable");
+  label("challenger-coverage","Could not inspect the local challenger.");
+  el("challenger-models").replaceChildren();
+ }finally{challengerPending=false;}
+}
+async function readEpisodeChallenge(){
+ if(episodePending)return;
+ episodePending=true;
+ episodeLastRead=Date.now();
+ try{
+  const response=await fetch("/api/genesis/episode-challenge",
+    {cache:"no-store",credentials:"same-origin"});
+  if(!response.ok)throw Error("Episode evaluation unavailable");
+  const data=await response.json();
+  label("episode-status",data.status==="NOT_FROZEN"?"Not frozen":pretty(data.status));
+  label("episode-coverage","Matched: "+String(data.matched_forecasts||0)+
+    " · No source event: "+String(data.unmatched_event_forecasts||0)+
+    " · Incomplete event scores: "+String(data.incomplete_matched_forecasts||0));
+  const list=el("episode-models");list.replaceChildren();
+  const rows=Array.isArray(data.model_groups)?data.model_groups:[];
+  if(!rows.length)
+   list.append(make("div","No eligible post-freeze predictions linked to inferred vehicle events yet. Results will accumulate naturally as the existing GHOST system records more outcomes.","empty"));
+  for(const item of rows.slice(0,18)){
+   const card=make("div",undefined,"item");
+   const heading=make("div",undefined,"rowline");
+   heading.append(make("strong",String(item.model)+" · "+String(item.horizon_minutes)+"m"));
+   heading.append(make("small",pretty(item.event_type)));
+   card.append(heading);
+   card.append(make("div",pretty(item.assessment)+" · "+String(item.episodes||0)+
+     " inferred events · "+String(item.evidence_days||0)+" UTC days · "+
+     String(item.forecast_count||0)+" forecasts","detail"));
+   const metric=value=>Number.isFinite(value)?number(value,2)+"°F":"—";
+   card.append(make("div","Equal-event MAE: GHOST "+metric(item.production_mae_f)+
+     " · GENESIS "+metric(item.challenger_mae_f)+
+     " · Persistence "+metric(item.persistence_mae_f),"note"));
+   list.append(card);
+  }
+  if(rows.length>18||data.groups_omitted)
+    list.append(make("div","More event categories are available in the local read-only API.","note"));
+ }catch(e){
+  label("episode-status","Evidence unavailable");
+  label("episode-coverage","Could not inspect local inferred-event outcomes.");
+  el("episode-models").replaceChildren();
+ }finally{episodePending=false;}
+}
+async function readHive(){
+ // GENESIS research UI is GET-only. Prefer the already-existing integrated
+ // GHOST Hive status if this workspace is mounted in the same GHOST server.
+ try {
+  const response=await fetch("/api/hive/local",{cache:"no-store",credentials:"same-origin"});
+  if(response.ok){
+   const d=await response.json();
+   if(d.scope==="LOCAL_GHOST_ONLY" && d.hive && d.fleet){
+    const active=d.hive.contribution==="OPTED_IN";
+    const online=d.fleet.coordinator_connected===true;
+    label("hive-mode",online?"Coordinator reachable":"Coordinator unavailable");
+    label("hive-auth",active?"OPTED IN":"OFF");
+    const total=d.fleet.participating_vehicles;
+    label("hive-status-detail",
+      (active?"Owner monthly aggregate consent active.":"Owner monthly aggregate consent is OFF.")+
+      " Coordinator "+(online?"reachable.":"unavailable.")+
+      " Reporting installations: "+(Number.isInteger(total)?total:"unknown")+
+      ". Accuracy stays private below 10 reporting installations per UTC month."+
+      " This is not federated model training.");
+    return;
+   }
+  }
+ } catch(e) { /* No integrated Hive route in isolated research preview. */ }
+ try {
+  const r=await fetch("/api/genesis/hive",{cache:"no-store",credentials:"same-origin"});
+  if(!r.ok)throw Error("No legacy preview");
+  const d=await r.json();
+  label("hive-mode","Isolated research preview");
+  label("hive-auth",d.mode==="SYNTHETIC_TEST"?"SYNTHETIC TEST":"NOT CONNECTED");
+  label("hive-status-detail",
+    "Only the legacy synthetic client is visible in this separate GENESIS workspace."+
+    " The private GHOST /hive page owns real contribution status.");
+ }catch(e){
+  label("hive-mode","Status unavailable");
+  label("hive-auth","UNKNOWN");
+  label("hive-status-detail","No confirmed Hive participation status available.");
+ }
+}
+async function readHealth(){
+  try{
+    const response=await fetch("/api/genesis/health",{cache:"no-store",credentials:"same-origin"});
+    if(!response.ok)throw Error("Viewer health request failed");
+    const h=await response.json();
+    healthOk=h.ok===true;
+    label("health-badge",healthOk?"Workspace online":"Viewer unavailable");
+    label("sys-online",healthOk?"Connected":"Unavailable");
+    label("sys-data",h.data_available?"Yes · saved reports":"Not yet");
+    label("sys-version",h.version||"Unknown");
+  }catch(e){
+    healthOk=false;label("health-badge","Health check failed");label("sys-online","Unavailable");
+  }
+}
+async function refresh(){
+  const btn=el("refresh");btn.disabled=true;btn.textContent="↻ Updating";
+  try{
+    const response=await fetch("/api/genesis/overview",{cache:"no-store",credentials:"same-origin"});
+    if(!response.ok)throw Error("Overview request failed");
+    const data=await response.json();
+    cache=data;
+    const runs=data.product_runs||[],latest=runs[0]&&runs[0].report||null;
+    loadOverview(runs);loadModels(latest);loadInvestigations(latest,data.architect||{});showHistory(runs,historySelected);
+    label("connection","Research console online");el("connection").className="live";
+    label("updated","Refreshed "+new Date().toLocaleTimeString());
+    label("footer-state","Local GENESIS research · no model promotion or research-model uploads");
+    await Promise.all([readHealth(),readVehicle(),readHive()]);
+  }catch(e){failure("Could not load local research records. Check the preview process or SSH connection.");}
+  finally{btn.disabled=false;btn.textContent="↻ Refresh data";}
+}
+el("refresh").addEventListener("click",refresh);
+const hash=location.hash.slice(1);if(["overview","models","investigations","history","hive","system"].includes(hash))view(hash);
+refresh();
+setInterval(()=>{if(!document.hidden)refresh();},45000);
+</script>
+</body></html>

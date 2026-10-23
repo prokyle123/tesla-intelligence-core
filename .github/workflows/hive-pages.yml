@@ -1,0 +1,81 @@
+name: Hive public analytics
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/hive/**'
+      - '.github/workflows/hive-pages.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '20 * * * *'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: hive-public-pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout reviewed public content
+        uses: actions/checkout@v4
+      - name: Load live sanitized snapshot if HTTPS relay is configured
+        env:
+          HIVE_PUBLIC_URL: ${{ vars.HIVE_PUBLIC_URL }}
+        run: |
+          if [ -n "$HIVE_PUBLIC_URL" ]; then
+            case "$HIVE_PUBLIC_URL" in
+              https://*/v1/public-network) ;;
+              *) echo "HIVE_PUBLIC_URL must be an HTTPS public-network endpoint" >&2; exit 1 ;;
+            esac
+            curl --fail --silent --show-error --proto '=https' \
+              --max-time 12 --max-redirs 0 --max-filesize 40000 \
+              "$HIVE_PUBLIC_URL" -o docs/hive/network.json
+          else
+            echo "Public relay not configured; showing clearly unconnected checked-in snapshot."
+          fi
+      - name: Validate public JSON is aggregate-only
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path('docs/hive/network.json').read_text())
+          assert d['schema']=='ghost-hive-public-v1'
+          allowed={'schema','published_at_utc','source','network_status',
+              'reporting_nodes','verified_unique_people','fleet_accuracy_percent',
+              'predictions_checked','mean_error_f','monthly','regions','countries',
+              'private_group_threshold','model_weights_shared',
+              'federated_models_enabled','privacy_note'}
+          assert set(d)<=allowed, "Unexpected public fields"
+          assert d['verified_unique_people'] is False
+          assert d['model_weights_shared'] is False
+          assert d['countries'] is None and d['regions']==[]
+          assert not (set(d) & {'vin','car_id','gps','latitude','longitude',
+                                'raw_json','token','secret','routes','model_weights'})
+          assert isinstance(d['reporting_nodes'],int)
+          assert d['reporting_nodes']>=0
+          assert d['private_group_threshold']>=10
+          for m in d['monthly']:
+              assert set(m)=={'month','label','status','reporting_nodes',
+                              'predictions_checked','mean_error_f'}
+              if m['status']!='SHARED_GROUP':
+                  assert m['reporting_nodes'] is None
+                  assert m['predictions_checked'] is None
+                  assert m['mean_error_f'] is None
+          PY
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/hive
+      - name: Publish sanitized Hive dashboard
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -115,6 +115,16 @@ CONFIG_FUNNEL=false
 if yn "Configure optional PIN-protected Tailscale Funnel after install?" n; then CONFIG_FUNNEL=true; fi
 fi
 
+# Fresh installs can opt into a standard PIN-protected private HTTPS URL.
+# Do not auto-enable a public Funnel or modify existing remote access in
+# upgrade/reuse-config mode. Region, Hive enrollment and uploads stay off.
+CONFIG_OWNER_HTTPS=false
+if ! $KEEP_CONFIG; then
+  if yn "Set up private HTTPS dashboard access for your phone/PC via Tailscale (PIN required; no public exposure)?" n; then
+    CONFIG_OWNER_HTTPS=true
+  fi
+fi
+
 echo
 banner
 echo "Installing operating-system dependencies..."
@@ -149,8 +159,11 @@ if [[ -d "$INSTALL_DIR" ]]; then
   echo "Code backup: $BACKUP"
 fi
 $SUDO mkdir -p "$INSTALL_DIR" "$DATA_DIR/models" "$CONF_DIR"
-$SUDO rm -rf "$INSTALL_DIR/ghost_tesla_ai" "$INSTALL_DIR/web" "$INSTALL_DIR/systemd" "$INSTALL_DIR/release-sidecars"
+# Genesis is code-only and uses a separate private research database.
+# Existing runtime history and model artifacts are never removed here.
+$SUDO rm -rf "$INSTALL_DIR/ghost_tesla_ai" "$INSTALL_DIR/web" "$INSTALL_DIR/systemd" "$INSTALL_DIR/release-sidecars" "$INSTALL_DIR/genesis"
 $SUDO cp -a "$ROOT/ghost_tesla_ai" "$INSTALL_DIR/"
+$SUDO cp -a "$ROOT/genesis" "$INSTALL_DIR/"
 $SUDO cp -a "$ROOT/web" "$INSTALL_DIR/"
 $SUDO cp -a "$ROOT/systemd" "$INSTALL_DIR/"
 $SUDO cp -a "$ROOT/release-sidecars" "$INSTALL_DIR/"
@@ -296,6 +309,19 @@ if $CONFIG_FUNNEL; then
     $SUDO -u "$INSTALL_USER" env PYTHONPATH="$INSTALL_DIR" "$INSTALL_DIR/venv/bin/python" -m ghost_tesla_ai.funnel_pin_setup
     $SUDO systemctl enable --now ghost-tesla-ai-funnel-gateway.service
     $SUDO tailscale funnel --bg http://127.0.0.1:8777 || echo "WARN: Funnel could not be enabled automatically. See docs/REMOTE_ACCESS.md."
+  fi
+fi
+
+if $CONFIG_OWNER_HTTPS; then
+  echo
+  echo "Configuring optional private HTTPS owner dashboard..."
+  if command -v tailscale >/dev/null 2>&1; then
+    OWNER_HOME="$(getent passwd "$INSTALL_USER" | cut -d: -f6)"
+    $SUDO -u "$INSTALL_USER" env HOME="$OWNER_HOME" bash "$ROOT/scripts/hive_owner_private_https_setup.sh" || \
+      echo "NOTE: Private HTTPS setup needs Tailscale connected and a PIN. Retry with scripts/hive_owner_private_https_setup.sh; dashboard remains installed."
+  else
+    echo "NOTE: Tailscale is not installed. Install and connect it first, then run:"
+    echo "  bash scripts/hive_owner_private_https_setup.sh"
   fi
 fi
 

@@ -15,8 +15,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   publish:
-    # Initial GitHub Pages setup must be completed first. Prevent scheduled
-    # failures and accidental public publication until operator go-live.
+    # Wait for site configuration or an operator-triggered deployment.
     if: ${{ github.event_name == 'workflow_dispatch' || vars.HIVE_PUBLIC_FEED_URL != '' }}
     runs-on: ubuntu-latest
     environment:
@@ -37,8 +36,12 @@ jobs:
           cp docs/hive/index.html /tmp/hive-pages/index.html
           if [[ -n "$PUBLIC_FEED_URL" ]]; then
             [[ "$PUBLIC_FEED_URL" == https://* ]] || exit 1
+            # HTTPS only; reject redirects instead of following a changed destination.
+            # Never fall back to an unreviewed feed when the configured endpoint fails.
             curl --fail --silent --show-error --location \
-              --max-time 15 --max-filesize 65536 "$PUBLIC_FEED_URL" \
+              --proto '=https' --proto-redir '=https' --max-redirs 0 \
+              --connect-timeout 5 --max-time 15 --max-filesize 65536 \
+              "$PUBLIC_FEED_URL" \
               -o /tmp/hive-candidate.json
           else
             cp docs/hive/network.json /tmp/hive-candidate.json

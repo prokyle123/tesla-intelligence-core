@@ -48,7 +48,7 @@ body{background:radial-gradient(ellipse at 52% -20%,#14344952,transparent 58%),#
 .content{min-height:282px;padding:18px 18px}.grid-bottom .content{min-height:263px}
 .map-wrap{height:211px;overflow:hidden;background:radial-gradient(ellipse at center,#14394a 0%,transparent 64%),#081925;position:relative}
 .world-map-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:.33;filter:grayscale(1) invert(1) sepia(1) hue-rotate(142deg) saturate(1.7) brightness(.55);mix-blend-mode:screen}
-.world-fallback{position:absolute;inset:0;opacity:.45}
+.world-fallback{position:absolute;inset:0;opacity:.68}
 .world-fallback svg{width:100%;height:100%}
 .map-label{bottom:9px;left:10px;right:10px;color:#80adc5;background:#061521e9}
 .line-chart svg,.graph svg{filter:drop-shadow(0 1px 4px #1be9f42b)}
@@ -58,7 +58,7 @@ body{background:radial-gradient(ellipse at 52% -20%,#14344952,transparent 58%),#
 @media(max-width:800px){.grid-mid,.grid-bottom{grid-template-columns:1fr}.grid-mid .map-card,.grid-bottom .privacy-card{grid-column:auto}.globe-photo{top:-30%;height:170%}.hero-sats{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:490px){.hero-copy{max-width:92%}.globe-visual{opacity:.34;width:90%;right:-36%}.hero-sats{grid-template-columns:repeat(2,minmax(0,1fr))}.top-actions{width:100%}.status{flex:1;min-width:0}.periods button{padding:5px}}
 
-/* Overlay only data-backed, threshold-qualified macro-region dots. */
+/* Marker and world-land art share the same SVG 760x330 viewBox. */
 .hive-region-pins{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
 .hive-region-pins .pin-halo{fill:#10bfe4;opacity:.13;filter:blur(4px)}
 .hive-region-pins .pin-core{fill:#48f5ff;stroke:#7befff;stroke-width:1;filter:drop-shadow(0 0 4px #04d5ff)}
@@ -71,28 +71,28 @@ body{background:radial-gradient(ellipse at 52% -20%,#14344952,transparent 58%),#
 <header class="top">
 <div class="identity"><div class="hex" aria-hidden="true"><svg viewBox="0 0 70 70" fill="none" stroke="#26d7f5" stroke-width="2.5"><path d="M35 3 62 18v34L35 67 8 52V18Z"/><circle cx="35" cy="36" r="8"/><circle cx="20" cy="27" r="5"/><circle cx="49" cy="27" r="5"/><circle cx="20" cy="47" r="5"/><circle cx="50" cy="47" r="5"/><path d="M26 30 31 34 M44 31 40 34 M29 41 24 45 M41 41 47 45"/></svg></div>
 <div><h1>GHOST <span>HIVE</span></h1><p>Real driving data. Smarter predictions. A stronger community.</p></div></div>
-<div class="top-actions"><div class="network"><div><i class="dot" id="network-dot"></i><b id="network-status">Fleet connection not configured</b></div><small id="updated">Waiting for local measurements</small></div><div class="status" id="consent-status" aria-label="Read-only public network analytics"><span class="check">◎</span><span>GHOST HIVE<strong id="consent-text">Public Analytics</strong><small id="consent-sub">Group statistics only · Read-only</small></span></div></div>
+<div class="top-actions"><div class="network"><div><i class="dot" id="network-dot"></i><b id="network-status">Fleet connection not configured</b></div><small id="updated">Waiting for local measurements</small></div><div class="status" id="consent-status" aria-label="Read-only public network analytics"><span class="check">◎</span><span>GHOST HIVE<strong id="consent-text">Public Analytics</strong><small id="consent-sub">Public-consented or qualified aggregate results · Read-only</small></span></div></div>
 </header>
 <section class="grid-top">
 <div class="panel hero">
 <div class="globe-visual" role="img" aria-label="Decorative NASA Earth image; not a map of Hive members"><img class="globe-photo" loading="lazy" alt="" src="https://svs.gsfc.nasa.gov/vis/a030000/a030800/a030878/BlackMarble_2016_rotate_print.jpg"><div class="globe-fallback" aria-hidden="true"><svg class="globe" viewBox="0 0 580 390" role="img" aria-label="Decorative digital globe illustration, not contributor locations"><defs><radialGradient id="ocean"><stop stop-color="#065b93"/><stop offset=".65" stop-color="#082c56"/><stop offset="1" stop-color="#010e1d"/></radialGradient><radialGradient id="shine" cx=".2" cy=".3"><stop stop-color="#0fa5c5" stop-opacity=".6"/><stop offset="1" stop-color="#0c2b4d" stop-opacity="0"/></radialGradient><clipPath id="earth"><circle cx="332" cy="203" r="185"/></clipPath></defs><circle cx="332" cy="203" r="188" fill="url(#ocean)" stroke="#3aabf3" stroke-width="2"/><g clip-path="url(#earth)" opacity=".75"><path fill="#124867" stroke="#28b2ca" stroke-width="1.3" d="M185 111 222 75 281 80 305 110 283 135 257 140 244 174 225 181 235 218 215 241 184 212 170 178 149 160Z M249 239 274 220 286 241 282 293 258 342 233 324 240 279Z M321 110 349 78 380 95 387 119 421 127 449 160 429 194 386 187 363 209 345 182 310 158Z M366 206 412 205 426 250 393 286 381 334 351 299 348 249Z M444 280 472 266 489 291 479 319 453 317Z"/><g stroke="#2475a9" opacity=".62"><path d="M160 203H517 M173 145H500 M212 89H457 M209 263H465 M266 330H414 M332 18V387"/><ellipse cx="332" cy="203" rx="80" ry="185" fill="none"/><ellipse cx="332" cy="203" rx="155" ry="185" fill="none"/></g></g><circle cx="332" cy="203" r="185" fill="url(#shine)"/><ellipse cx="332" cy="203" rx="193" ry="185" fill="none" stroke="#12d5e8" opacity=".35"/><g fill="#3cbeff" opacity=".7"><circle cx="143" cy="117" r="1.2"/><circle cx="514" cy="47" r="1.5"/><circle cx="125" cy="274" r="1"/><circle cx="540" cy="312" r="1.5"/></g></svg></div><div class="orbit-glow" aria-hidden="true"></div></div>
 <div class="hero-copy"><h2>A Global Network<br>for <em>Real-World Intelligence</em></h2><p>Help GHOST learn from real-world battery behavior. Each owner controls participation; fleet-wide results appear only when the research network can verify them.</p></div>
 <div class="hero-sats">
-<div class="hero-stat"><div class="symbol">♟</div><div><b id="fleet-vehicles">—</b><span>Contributing Vehicles</span><small>Verified Hive nodes</small></div></div>
+<div class="hero-stat"><div class="symbol">♟</div><div><b id="fleet-vehicles">—</b><span>Contributing Vehicles</span><small>Opt-in reporting installations</small></div></div>
 <div class="hero-stat"><div class="symbol">▤</div><div><b id="local-predictions">—</b><span>Fleet Predictions Checked</span><small>Grouped research</small></div></div>
 <div class="hero-stat"><div class="symbol">▥</div><div><b id="local-accuracy">—</b><span>Fleet Prediction Accuracy</span><small>Within ±2°F</small></div></div>
 <div class="hero-stat"><div class="symbol">◎</div><div><b id="fleet-regions">—</b><span>Contributing Regions</span><small>Opt-in broad regions only</small></div></div>
 </div></div>
-<div class="panel chart-panel"><div class="panel-heading"><h3><span class="cyan">♧</span> Contributing Vehicles</h3><div class="periods" role="group" aria-label="Contributing vehicles time range"><button type="button" data-window="7d" title="Day-level public contributor history is not available">7D</button><button type="button" data-window="30d" title="Day-level contributor history is not available">30D</button><button type="button" data-window="6m" class="chosen" aria-pressed="true">6M</button><button type="button" data-window="1y">1Y</button></div></div><div id="vehicles-chart" class="graph"><div class="empty">No published contributor cohorts yet.<br>The dashboard will populate from real opt-in Hive reports.</div></div><p class="subtle">Group monthly trends stay hidden for small cohorts. Only approved, real network results appear.</p></div>
+<div class="panel chart-panel"><div class="panel-heading"><h3><span class="cyan">♧</span> Contributing Vehicles</h3><div class="periods" role="group" aria-label="Contributing vehicles time range"><button type="button" data-window="7d" title="Day-level public contributor history is not available">7D</button><button type="button" data-window="30d" title="Day-level contributor history is not available">30D</button><button type="button" data-window="6m" class="chosen" aria-pressed="true">6M</button><button type="button" data-window="1y">1Y</button></div></div><div id="vehicles-chart" class="graph"><div class="empty">No published contributor cohorts yet.<br>The dashboard will populate from real opt-in Hive reports.</div></div><p class="subtle">Real monthly scores appear from the first explicitly PUBLIC-reporting installation, or when an existing cohort qualifies. No fabricated trends.</p></div>
 </section>
 <section class="grid-mid">
-<div class="panel content"><div class="panel-heading"><h3>◎ Prediction Accuracy <span class="muted">ⓘ</span></h3><span class="pill">Battery Temperature · °F</span></div><div class="metric"><strong id="accuracy-value">—</strong><span>within ±2°F · local GHOST</span></div><div class="metric-note">Actual scored predictions, not model-training accuracy</div><div id="accuracy-chart" class="line-chart"><div class="empty">Waiting for actual prediction outcomes</div></div><div class="key"><span><i></i>Hive participants</span><span><i class="grey"></i>Hive comparison unavailable</span></div></div>
+<div class="panel content"><div class="panel-heading"><h3>◎ Prediction Accuracy <span class="muted">ⓘ</span></h3><span class="pill">Battery Temperature · °F</span></div><div class="metric"><strong id="accuracy-value">—</strong><span>within ±2°F · fleet cohort</span></div><div class="metric-note">Actual scored predictions, not model-training accuracy</div><div id="accuracy-chart" class="line-chart"><div class="empty">Waiting for actual prediction outcomes</div></div><div class="key"><span><i></i>Hive participants</span><span><i class="grey"></i>Hive comparison unavailable</span></div></div>
 <div class="panel content"><div class="panel-heading"><h3>♧ Battery Temperature Error <span class="muted">ⓘ</span></h3></div><div class="split"><div><div class="metric"><strong id="local-error" class="cyan">—</strong></div><div class="metric-note">Fleet mean prediction miss</div></div><div><div class="metric"><strong id="hive-error" style="color:var(--grey)">—</strong></div><div class="metric-note">Independent baseline · pending</div></div></div><div id="thermal-chart" class="line-chart"><div class="empty">Temperature validation history will appear after scored results accumulate.</div></div><p class="note">Lower error means better temperature predictions. No fleet improvement is claimed yet.</p></div>
-<div class="panel content map-card"><div class="panel-heading"><h3>◎ Where Our Contributors Drive <span class="muted">ⓘ</span></h3><span class="pill">Opt-in only</span></div><div class="map-wrap"><img class="world-map-photo" alt="" aria-hidden="true" loading="lazy" src="https://commons.wikimedia.org/wiki/Special:Redirect/file/Blank_world_map_with_rivers_Equal_Earth_projection.svg?width=960"><div class="world-fallback" aria-hidden="true"><svg viewBox="0 0 760 330" role="img" aria-label="Decorative world map showing no contributor positions"><defs><linearGradient id="land"><stop stop-color="#14384b"/><stop offset="1" stop-color="#0e2c3c"/></linearGradient></defs><g fill="url(#land)" stroke="#265069" stroke-width="1.2"><path d="M37 93 75 53 145 30 211 41 241 84 211 110 183 115 167 148 126 180 96 159 61 153 28 115Z M133 175 167 185 204 225 187 269 154 323 130 300 120 249 107 207Z M310 62 362 44 410 57 446 72 489 43 565 65 632 92 699 121 716 157 672 169 618 152 587 184 541 179 520 137 477 136 450 162 404 151 391 125 351 134 304 111Z M374 162 428 160 462 192 444 259 408 307 384 290 359 227Z M625 238 688 232 720 272 687 308 627 294Z M302 31 318 20 332 30 328 49Z M258 90 277 73 289 92 282 116Z"/></g><g stroke="#1b4152" opacity=".5"><path d="M0 85H760 M0 165H760 M0 245H760 M152 0V330 M304 0V330 M456 0V330 M608 0V330"/></g></svg></div><svg id="hive-region-pins" class="hive-region-pins" viewBox="0 0 760 330" aria-label="Broad consenting region cohorts only"></svg><div id="region-map-note" class="map-label">Only opt-in broad regional summaries can appear here. No GPS is collected.</div></div></div>
+<div class="panel content map-card"><div class="panel-heading"><h3>◎ Where Our Contributors Drive <span class="muted">ⓘ</span></h3><span class="pill">Opt-in only</span></div><div class="map-wrap"><div class="world-fallback" aria-hidden="true"><svg viewBox="0 0 760 330" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Geographically projected simplified world coastlines"><g fill="#17465a" fill-opacity=".82" stroke="#2d7189" stroke-width="1.0" stroke-linejoin="round"><path d="M0 31 13 37 22 37 0 39 0 31Z M760 39 725 49 711 66 709 55 729 44 665 58 679 62 676 70 649 88 653 97 637 85 629 89 639 92 632 97 638 108 626 120 605 124 610 143 601 148 591 139 600 162 573 121 549 135 544 149 534 122 483 106 488 118 499 114 506 122 472 140 449 107 456 93 435 88 467 85 457 77 463 73 444 75 441 85 428 86 431 91 429 94 409 76 419 87 414 91 398 79 376 94 360 90 360 81 377 81 370 71 401 61 398 54 403 60 421 60 430 50 444 49 425 47 434 39 428 37 413 56 403 49 392 51 391 44 432 27 467 35 447 35 459 41 473 37 471 32 524 33 521 27 531 23 535 32 526 36 532 36 546 34 536 31 538 24 557 30 550 22 600 14 621 18 617 18 620 19 606 22 603 24 752 29 760 39Z M447 104 470 143 489 145 463 174 466 194 453 203 455 212 437 230 422 233 405 200 409 186 401 157 362 156 345 141 344 123 368 95 401 92 402 99 420 106 447 104Z M204 135 210 151 199 146 195 139 161 129 137 103 149 120 143 117 119 89 121 70 106 56 71 46 60 50 65 46 43 57 35 59 49 50 29 46 41 39 25 37 42 36 28 32 110 28 154 36 156 31 179 35 181 25 195 35 199 29 206 30 204 36 182 40 189 42 180 50 212 66 215 44 235 52 244 48 259 59 252 62 262 64 232 71 251 77 217 90 210 117 194 105 174 112 178 129 197 124 192 134 204 135Z M225 268 220 256 227 251 232 201 208 173 217 157 211 147 229 141 229 147 232 141 249 144 272 157 269 168 282 167 307 179 293 208 277 214 266 232 257 229 259 239 243 244 236 267 225 268Z M689 240 657 226 623 232 621 207 659 187 677 199 681 186 704 221 689 240Z M286 49 267 37 274 33 267 34 274 33 265 28 271 26 226 13 294 5 287 3 353 6 335 9 346 9 332 16 337 22 321 23 335 28 318 28 333 29 293 39 286 49Z M697 185 673 181 656 168 685 172 697 185Z M623 173 610 163 627 151 631 163 623 173Z M475 214 473 199 484 188 487 195 475 214Z M241 45 215 40 228 36 217 29 191 27 208 22 236 28 251 36 237 36 241 45Z M600 175 594 171 581 154 599 164 600 175Z M677 96 656 98 679 85 677 96Z M167 29 132 29 145 28 129 26 155 23 167 29Z M380 66 368 68 375 64 369 64 374 61 369 51 380 66Z M186 6 246 4 251 5 209 17 191 16 218 7 186 6Z M632 175 633 164 644 162 634 164 641 166 632 175Z M621 182 608 180 602 178 614 177 621 182Z M749 245 749 237 748 237 745 232 757 238 749 245Z M269 73 255 72 262 65 269 73Z M222 126 207 121 205 121 203 122 201 123 222 126Z M642 140 635 138 635 129 638 129 642 140Z M352 39 332 41 328 38 352 39Z M647 151 637 151 645 146 647 151Z M367 64 359 60 367 58 367 64Z M688 81 676 84 680 77 688 81Z M680 76 679 63 681 59 686 71 680 76Z M137 22 120 27 114 25 137 22Z M195 20 176 16 212 20 195 20Z M243 271 239 272 228 271 235 267 243 271Z M524 17 493 22 525 16 524 17Z M157 18 132 19 150 16 157 18Z M416 16 403 11 425 12 416 16Z M175 22 171 26 163 24 175 22Z M437 10 430 11 417 9 428 9 437 10Z"/></g><g stroke="#31566c" opacity=".32" stroke-width=".7"><path d="M0 82.5H760 M0 165H760 M0 247.5H760 M190 0V330 M380 0V330 M570 0V330"/></g></svg></div><svg id="hive-region-pins" class="hive-region-pins" viewBox="0 0 760 330" aria-label="Broad consenting region cohorts only"></svg><div id="region-map-note" class="map-label">Only opt-in broad regional summaries can appear here. No GPS is collected.</div></div></div>
 </section>
 <section class="grid-bottom">
 <div class="panel content"><div class="panel-heading"><h3><span class="cyan">⌁</span> Research Activity</h3><span class="pill">PUBLIC NETWORK</span></div>
-<div class="strip"><div><b id="local-week">—</b><span>Reports · 7 Days</span><small>Local outcomes only</small></div><div><b id="local-total">—</b><span>Qualified Network Predictions</span></div><div><b id="local-pending">—</b><span>Accuracy in Review</span></div></div>
+<div class="strip"><div><b id="local-week">—</b><span>Released Monthly Cohorts</span><small>Groups passing privacy rules</small></div><div><b id="local-total">—</b><span>Qualified Network Predictions</span></div><div><b id="local-pending">—</b><span>Release Threshold</span><small>Installations · same month</small></div></div>
 <div id="activity-chart" class="graph" style="height:115px"><div class="empty">Waiting for research outcomes</div></div><p class="note">Network activity requires qualified group statistics. No individual-node activity is displayed.</p></div>
 <div class="panel content"><div class="panel-heading"><h3><span class="cyan">✧</span> Top Contributing Regions</h3></div><div id="regions-list" class="regions"><div class="empty">No contributor regions have been shared. Opt-in region summaries can appear here later.</div></div></div>
 <div class="panel content"><div class="panel-heading"><h3><span class="cyan">◇</span> Data Privacy & Security</h3></div>
@@ -109,6 +109,7 @@ const fixed=(n,p=1)=>typeof n==="number"&&Number.isFinite(n)?n.toFixed(p):"—";
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const ns="http://www.w3.org/2000/svg";
 const shape=(tag,a,text)=>{const e=document.createElementNS(ns,tag);for(const [k,v] of Object.entries(a))e.setAttribute(k,String(v));if(text!==undefined)e.textContent=String(text);return e;};
+const GEO_MAP_PINS={"NORTH_AMERICA_WEST":[137,78],"NORTH_AMERICA_EAST":[201,82],"SOUTH_AMERICA":[253,194],"EUROPE":[412,70],"AFRICA":[422,165],"ASIA":[570,87],"OCEANIA":[665,214]};
 function renderRegions(groups){
  const list=$("regions-list");
  const pins=$("hive-region-pins");
@@ -116,33 +117,35 @@ function renderRegions(groups){
  list.replaceChildren();pins.replaceChildren();
  const safe=Array.isArray(groups)?groups.filter(r=>
    typeof r==="object" && r!==null && Number.isInteger(r.reporting_nodes) &&
-   r.reporting_nodes>=10 && Number.isInteger(r.x)&&Number.isInteger(r.y) &&
-   typeof r.label==="string" && r.x>=0&&r.x<=760&&r.y>=0&&r.y<=330):[];
+   (r.reporting_nodes>=10 || (r.visibility==="EXPLICIT_PUBLIC_OPT_IN" && r.reporting_nodes>=1)) && Number.isInteger(r.x)&&Number.isInteger(r.y) &&
+   typeof r.label==="string" && Object.prototype.hasOwnProperty.call(GEO_MAP_PINS,r.code) && r.x>=0&&r.x<=760&&r.y>=0&&r.y<=330):[];
  if(!safe.length){
   const empty=document.createElement("div");empty.className="empty";
-  empty.textContent="No publishable regional groups yet. A dot appears only with 10 or more opted-in, reporting installations in a broad region.";
+  empty.textContent="No publishable regional groups yet. A broad-region dot appears from one installation that explicitly chooses public listing, or from a qualified ten-member cohort.";
   list.append(empty);
   $("region-map-note").textContent="No qualified region dots yet. Never exact vehicle positions.";
   return;
  }
  const max=Math.max(...safe.map(r=>r.reporting_nodes));
  safe.forEach((r,i)=>{
-   const halo=shape("circle",{cx:r.x,cy:r.y,r:9+Math.sqrt(r.reporting_nodes)*2,
+   // Ignore legacy coordinator marker pixels; map using the verified region code.
+   const [px,py]=GEO_MAP_PINS[r.code];
+   const halo=shape("circle",{cx:px,cy:py,r:9+Math.sqrt(r.reporting_nodes)*2,
                             class:"pin-halo"});
-   const core=shape("circle",{cx:r.x,cy:r.y,r:Math.min(7,3+Math.sqrt(r.reporting_nodes)/3),
+   const core=shape("circle",{cx:px,cy:py,r:Math.min(7,3+Math.sqrt(r.reporting_nodes)/3),
                             class:"pin-core"});
-   const caption=shape("title",{},r.label+" — "+r.reporting_nodes+" enrolled reporting installations");
+   const caption=shape("title",{},r.label+" — "+r.reporting_nodes+" "+(r.visibility==="EXPLICIT_PUBLIC_OPT_IN"?"explicit public listings":"qualified reporters"));
    core.append(caption);pins.append(halo,core);
    const item=document.createElement("div");item.className="region-result";
    const text=document.createElement("div");text.className="region-line";
    const label=document.createElement("span");label.textContent=(i+1)+". "+r.label;
-   const value=document.createElement("strong");value.textContent=String(r.reporting_nodes)+" nodes";
+   const value=document.createElement("strong");value.textContent=String(r.reporting_nodes)+(r.visibility==="EXPLICIT_PUBLIC_OPT_IN"?" public":" nodes");
    text.append(label,value);
    const bar=document.createElement("div");bar.className="progress";
    const fill=document.createElement("span");fill.style.width=String(100*r.reporting_nodes/max)+"%";
    bar.append(fill);item.append(text,bar);list.append(item);
  });
- $("region-map-note").textContent="Cyan lights show consenting broad-region cohorts (10+); locations are approximate category centers, not vehicle positions.";
+ $("region-map-note").textContent="Cyan lights show expressly public-listed broad regions (from one contributor) or qualified cohorts; generic region centers, NEVER driving locations.";
 }
 
 let vehicleWindow="6m";
@@ -155,11 +158,15 @@ function vehicleBars(container,months){
   container.append(box);return;
  }
  data=vehicleWindow==="6m"?data.slice(-6):data.slice(-12);
- const available=data.filter(r=>r.status==="SHARED_GROUP"&&Number.isFinite(r.reporting_nodes));
+ const available=data.filter(r=>(r.status==="SHARED_GROUP"||r.status==="EXPLICIT_PUBLIC_OPT_IN")&&Number.isFinite(r.reporting_nodes));
  if(!available.length){
+  const total=Number.isInteger(window.hiveReporting)?window.hiveReporting:null;
   const box=document.createElement("div");box.className="empty";
-  box.textContent="No reportable monthly cohorts yet. Contributor totals can begin at one, but month-by-month groups remain private until the release threshold.";
-  container.append(box);return;
+  box.textContent=(total===null?"No verified reporter total available.":
+    number(total)+" enrolled reporting installations overall.")+
+    " Public monthly values will appear once a member expressly permits first-member publication, or a cohort qualifies under its original sharing terms.";
+  container.append(box);
+  return;
  }
  const max=Math.max(1,...available.map(r=>r.reporting_nodes));
  const svg=shape("svg",{viewBox:"0 0 600 218",role:"img","aria-label":"Real monthly participating GHOST Hive installations"});
@@ -171,7 +178,7 @@ function vehicleBars(container,months){
  }
  data.forEach((r,i)=>{
   const x=56+i*spacing+(spacing-barWidth)/2;
-  const ok=r.status==="SHARED_GROUP"&&Number.isFinite(r.reporting_nodes);
+  const ok=(r.status==="SHARED_GROUP"||r.status==="EXPLICIT_PUBLIC_OPT_IN")&&Number.isFinite(r.reporting_nodes);
   const val=ok?r.reporting_nodes:null;
   const height=ok?Math.max(2,val/max*144):0;
   if(ok){
@@ -231,28 +238,42 @@ function render(d){
  const months=Array.isArray(d.monthly)?d.monthly:[];
  renderRegions(d.regions||[]);
  window.hiveMonths=months;
+ window.hiveReporting=Number.isInteger(d.reporting_nodes)?d.reporting_nodes:null;
+ window.hiveReleaseThreshold=Number.isInteger(d.private_group_threshold)?d.private_group_threshold:10;
  vehicleBars($("vehicles-chart"),window.hiveMonths);
 
  const latest=months.map(x=>({label:x.label||x.month||"",
    within_2f_percent:null,
-   temp_mae_f:x.status==="SHARED_GROUP"?x.mean_error_f:null}));
+   temp_mae_f:(x.status==="SHARED_GROUP"||x.status==="EXPLICIT_PUBLIC_OPT_IN")?x.mean_error_f:null}));
  $("fleet-vehicles").textContent=number(d.reporting_nodes);
  $("local-predictions").textContent=number(d.predictions_checked);
  $("local-accuracy").textContent=d.fleet_accuracy_percent===null?"—":fixed(d.fleet_accuracy_percent,1)+"%";
- $("fleet-regions").textContent=number(d.countries);
+ $("fleet-regions").textContent=Array.isArray(d.regions)?String(d.regions.length):"—";
  $("accuracy-value").textContent=d.fleet_accuracy_percent===null?"—":fixed(d.fleet_accuracy_percent,1)+"%";
  $("local-error").textContent=d.mean_error_f===null?"—":fixed(d.mean_error_f,2)+"°F";
  $("hive-error").textContent="—";
  $("local-total").textContent=number(d.predictions_checked);
- $("local-pending").textContent="—";
- $("local-week").textContent="—";
+ $("local-pending").textContent=number(d.private_group_threshold);
+ $("local-week").textContent=number(months.filter(m=>m.status==="SHARED_GROUP"||m.status==="EXPLICIT_PUBLIC_OPT_IN").length);
  $("consent-text").textContent="Read only";
  $("consent-sub").textContent="Shared network totals · No login";
  $("network-status").textContent=d.network_status==="AWAITING_FIRST_PUBLIC_EXPORT"?"Waiting for first public export":Number.isFinite(d.reporting_nodes)?"Hive public analytics":"No network snapshot";
  $("network-dot").style.background=Number.isFinite(d.reporting_nodes)?"#18df9b":"#e8b86b";
  $("updated").textContent=d.published_at_utc?"Snapshot "+new Date(d.published_at_utc).toLocaleString():"No public update published yet";
- lineGraph($("accuracy-chart"),latest,"within_2f_percent",{suffix:"%",maxValue:100});
- lineGraph($("thermal-chart"),latest,"temp_mae_f",{suffix:"°F"});
+ if(d.fleet_accuracy_percent===null||d.fleet_accuracy_percent===undefined){
+  const box=document.createElement("div");box.className="empty";
+  box.textContent="Fleet ±2°F accuracy is not collected by the current six-field monthly protocol. A new separately consented aggregate metric is required.";
+  $("accuracy-chart").replaceChildren(box);
+ }else{
+  lineGraph($("accuracy-chart"),latest,"within_2f_percent",{suffix:"%",maxValue:100});
+ }
+ if(months.some(m=>m.status==="SHARED_GROUP"||m.status==="EXPLICIT_PUBLIC_OPT_IN")){
+  lineGraph($("thermal-chart"),latest,"temp_mae_f",{suffix:"°F"});
+ }else{
+  const box=document.createElement("div");box.className="empty";
+  box.textContent="Monthly error will appear as soon as one reporter explicitly consents to public small-cohort reporting, or a group qualifies under existing rules.";
+  $("thermal-chart").replaceChildren(box);
+ }
  $("activity-chart").replaceChildren();
  const n=document.createElement("div");n.className="empty";
  n.textContent="No daily contributor activity is published to protect individual participants.";

@@ -12,6 +12,7 @@ import time
 from pathlib import Path
 
 from flask import Flask, Response, jsonify, make_response, redirect, request
+from .hive_owner_proof import allowed_browser_origin, sign as sign_hive_action
 
 PIN_FILE = Path(os.environ.get("GHOST_FUNNEL_PIN_FILE", "/var/lib/ghost-tesla-ai/funnel_pin.json"))
 BACKEND_HOST = "127.0.0.1"
@@ -174,11 +175,24 @@ def _proxy(path: str):
     body = request.get_data(cache=False)
     headers = {}
     for key, value in request.headers.items():
-        if key.lower() in {"host", "connection", "content-length", "cookie", "transfer-encoding", "upgrade", "proxy-connection"}:
+        if key.lower() in {"host", "connection", "content-length", "cookie", "transfer-encoding", "upgrade", "proxy-connection"} or key.lower().startswith("x-ghost-owner-"):
             continue
         headers[key] = value
     headers["Host"] = f"{BACKEND_HOST}:{BACKEND_PORT}"
-    headers["X-GHOST-Funnel-Authenticated"] = "1"
+    headers["X-GHOST-Funnel-Authenticated"] = "1"  # informational only, NEVER authorization
+    if request.method == "POST" and request.path.startswith("/api/hive/control/"):
+        origin=request.headers.get("Origin","")
+        # Serve/Funnel can forward the HTTPS origin through a local HTTP
+        # proxy. Require the origin's authority to match original host.
+        forwarded_host=request.headers.get("X-Forwarded-Host","")
+        valid=(allowed_browser_origin(origin,request.host) or
+               (forwarded_host and allowed_browser_origin(origin,forwarded_host)))
+        if not valid:
+            return jsonify({"error":"OWNER_ORIGIN_MISMATCH"}),403
+        try:
+            headers.update(sign_hive_action(request.method,request.path,origin,body))
+        except ValueError:
+            return jsonify({"error":"HIVE_OWNER_PIN_NOT_CONFIGURED"}),503
 
     conn = http.client.HTTPConnection(BACKEND_HOST, BACKEND_PORT, timeout=35)
     try:

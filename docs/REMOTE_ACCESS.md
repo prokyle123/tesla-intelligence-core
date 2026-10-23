@@ -16,7 +16,21 @@ Install/connect Tailscale on the Pi, then access:
 http://TAILSCALE_IP:8766
 ```
 
-That route stays inside your tailnet.
+That route stays inside your tailnet but is **read-only for Hive contribution settings** unless separate owner proof is supplied. Do not mistake private-network reachability for authenticated ownership.
+
+### Recommended: private HTTPS Tailscale Serve for PIN-authenticated Hive controls
+
+On reviewed GENESIS/Hive owner-enabled source, run:
+
+```bash
+bash scripts/hive_owner_gateway_deploy.sh check
+bash scripts/hive_owner_gateway_deploy.sh install
+bash scripts/hive_owner_private_https_setup.sh
+```
+
+Tailscale must be installed and connected on the Pi and your phone/PC. The setup reuses the existing GHOST PIN, or prompts to create one once. It does not create a public Funnel and will not overwrite an existing Serve/Funnel route. It prints a **private HTTPS** tailnet URL. Open that URL, enter the PIN, then manage Hive at `/hive` normally: join, change sharing, pause or revoke enrollment. No SSH tunnel or browser-injected API token is needed.
+
+If a separately configured PIN-protected Funnel already exists, retain its approved HTTPS URL instead. **Never route Funnel directly to 8766.** Only the loopback PIN gateway at 8777 can sign short-lived owner actions.
 
 ## Option 2: public Tailscale Funnel + PIN gateway
 

@@ -12,15 +12,16 @@ FIELDS={"schema","published_at_utc","source","network_status","reporting_nodes",
 ROW={"month","label","status","reporting_nodes","predictions_checked","mean_error_f"}
 # Fixed approximate geographic macros; never accept free-form location coordinates.
 PUBLIC_REGION_CENTERS={
-    "NORTH_AMERICA_WEST":("Western North America",128,111),
-    "NORTH_AMERICA_EAST":("Eastern North America",180,110),
-    "SOUTH_AMERICA":("South America",166,235),
-    "EUROPE":("Europe",371,99),
-    "AFRICA":("Africa",397,189),
-    "ASIA":("Asia",520,118),
-    "OCEANIA":("Oceania",653,260),
+    "NORTH_AMERICA_WEST":("Western North America",137,78),
+    "NORTH_AMERICA_EAST":("Eastern North America",201,82),
+    "SOUTH_AMERICA":("South America",253,194),
+    "EUROPE":("Europe",412,70),
+    "AFRICA":("Africa",422,165),
+    "ASIA":("Asia",570,87),
+    "OCEANIA":("Oceania",665,214),
 }
 REGION_ROW={"code","label","x","y","reporting_nodes"}
+SINGLE_PUBLIC_REGION_ROW=REGION_ROW|{"visibility"}
 
 
 def check(d):
@@ -45,7 +46,8 @@ def check(d):
         raise ValueError("Invalid public region list")
     seen_regions=set()
     for region in groups:
-        if not isinstance(region,dict) or set(region)!=REGION_ROW:
+        fields=set(region) if isinstance(region,dict) else set()
+        if fields not in (REGION_ROW,SINGLE_PUBLIC_REGION_ROW):
             raise ValueError("Unexpected regional data fields")
         code=region["code"]
         if not isinstance(code,str) or code not in PUBLIC_REGION_CENTERS or code in seen_regions:
@@ -54,7 +56,12 @@ def check(d):
         label,x,y=PUBLIC_REGION_CENTERS[code]
         if region["label"]!=label or type(region["x"]) is not int or type(region["y"]) is not int or (region["x"],region["y"])!=(x,y):
             raise ValueError("Region coordinates must be privacy-reviewed fixed macro centroids")
-        integer(region["reporting_nodes"],10)
+        if fields==SINGLE_PUBLIC_REGION_ROW:
+            if region["visibility"]!="EXPLICIT_PUBLIC_OPT_IN":
+                raise ValueError("Unapproved singleton visibility claim")
+            integer(region["reporting_nodes"],1)
+        else:
+            integer(region["reporting_nodes"],10)
         if region["reporting_nodes"]>d["reporting_nodes"]:
             raise ValueError("Region count exceeds total reporting installations")
     if groups!=sorted(groups,key=lambda r:(-r["reporting_nodes"],r["code"])):
@@ -83,6 +90,13 @@ def check(d):
             integer(row["predictions_checked"],1)
             measure(row["mean_error_f"])
             if row["reporting_nodes"]>d["reporting_nodes"]:raise ValueError("Cohort exceeds network")
+            qualified.append(row)
+        elif row["status"]=="EXPLICIT_PUBLIC_OPT_IN":
+            integer(row["reporting_nodes"],1)
+            integer(row["predictions_checked"],1)
+            measure(row["mean_error_f"])
+            if row["reporting_nodes"]>d["reporting_nodes"]:
+                raise ValueError("Explicit cohort larger than total")
             qualified.append(row)
         elif row["status"]=="SMALL_GROUP_PRIVATE":
             if any(row[x] is not None for x in ("reporting_nodes","predictions_checked","mean_error_f")):

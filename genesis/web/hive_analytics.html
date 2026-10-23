@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer"><meta name="theme-color" content="#0a101b">
+<title>Hive Analytics · GENESIS</title>
+<style>
+:root{color-scheme:dark;--bg:#090f19;--panel:#111d2a;--panel2:#162838;--line:#273c4b;--text:#e8f4f5;--muted:#8ea8b6;--aqua:#58e8d4;--blue:#81baff;--amber:#f4c282;--green:#7de2b5;--red:#ff9b9d}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font:14px/1.52 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text)}button,select{font:inherit}button:focus-visible,select:focus-visible,a:focus-visible{outline:2px solid var(--aqua);outline-offset:3px}
+.layout{display:grid;grid-template-columns:225px minmax(0,1fr);min-height:100vh}.sidebar{padding:28px 16px;background:#0d1723;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:34px;position:sticky;top:0;height:100vh}.brand{display:flex;align-items:center;gap:11px;padding:0 7px}.logo{width:43px;height:43px;border:1px solid #3f827e;border-radius:14px;display:grid;place-items:center;background:linear-gradient(130deg,#1b4856,#173342);font-size:24px;color:var(--aqua);box-shadow:0 0 22px #31ab9d25}.brand strong{font-size:19px;letter-spacing:-.06em}.brand small{color:var(--muted);display:block;letter-spacing:.2em;font-size:10px;font-weight:750}.tiny{font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:850;color:var(--muted)}.nav{display:grid;gap:6px}.nav a{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--muted);font-weight:620;padding:11px 13px;border:1px solid transparent;border-radius:9px}.nav a:first-child,.nav a:hover{color:var(--aqua);background:#183342;border-color:#29545b}.nav-icon{font-size:17px;width:23px;text-align:center}.sideinfo{margin-top:auto;border:1px solid var(--line);background:#12202d;border-radius:12px;padding:14px}.sideinfo .live{color:var(--green);font-weight:750;font-size:12px}.sideinfo p{color:var(--muted);font-size:12px;margin:7px 0 0}
+.main{width:100%;max-width:1600px;margin:auto;padding:30px clamp(18px,3.2vw,46px) 36px;min-width:0}.topline{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:27px;flex-wrap:wrap}.breadcrumbs{color:var(--muted);font-size:12px}.breadcrumbs b{color:var(--text)}.toptools{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.button,.select{border:1px solid #365669;background:#183142;color:var(--text);border-radius:9px;padding:9px 12px;cursor:pointer}.button:hover,.select:hover{border-color:var(--aqua)}.button.primary{background:#205d5c;border-color:#348f80}.select{min-width:144px}.status-inline{color:var(--green);font-size:12px;font-weight:750}.status-inline:before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:currentColor;margin-right:6px}
+h1{font-size:clamp(28px,3vw,41px);letter-spacing:-.055em;line-height:1.08;margin:5px 0 10px}h2{font-size:17px;letter-spacing:-.025em;margin:0}h3{font-size:13px;margin:0}.lead{margin:0;color:var(--muted);max-width:830px}.heading{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:23px;flex-wrap:wrap}.updated{color:var(--muted);font-size:11px}.badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border:1px solid #2c6060;background:#16323c;border-radius:25px;color:var(--aqua);font-size:11px;font-weight:750}.badge.yellow{color:var(--amber);background:#302819;border-color:#6a5235}
+.demo-ribbon{padding:14px 17px;border:1px solid #bd8541;background:#38291c;border-radius:12px;color:#ffd8a1;margin-bottom:19px;font-size:12px}.demo-ribbon[hidden]{display:none}.intro{border-radius:17px;padding:23px 26px;background:radial-gradient(ellipse at 85% 20%,#236b68 0%,transparent 45%),linear-gradient(115deg,#1a3c4b,#142230);border:1px solid #35626a;margin-bottom:18px;display:grid;grid-template-columns:1.4fr auto;gap:25px;align-items:center}.intro h2{font-size:22px;letter-spacing:-.04em;margin:5px 0 7px}.intro p{margin:0;color:#bcdae0;font-size:13px;max-width:620px}.intro-sign{display:flex;gap:9px;align-items:center;border:1px solid #397576;background:#113c46;border-radius:12px;padding:12px 15px;font-size:12px;color:#bbfae7;font-weight:730}.intro-sign strong{font-size:19px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:0 0 18px}.kpi{padding:18px 19px;background:var(--panel);border:1px solid var(--line);border-radius:14px}.kpi .value{font-size:clamp(25px,2.8vw,36px);font-weight:820;letter-spacing:-.055em;line-height:1.1;margin:10px 0 3px;font-variant-numeric:tabular-nums}.kpi .caption{font-size:11px;color:var(--muted)}.aqua{color:var(--aqua)}.blue{color:var(--blue)}.green{color:var(--green)}
+.columns{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(310px,1fr);gap:17px;margin-bottom:18px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:21px 23px;min-width:0}.panel-head{display:flex;align-items:start;justify-content:space-between;gap:13px;margin-bottom:19px}.panel-head small{color:var(--muted);font-size:11px}.panel-head>div>p{margin:5px 0 0;color:var(--muted);font-size:12px}.chart{min-height:220px}.chart-key{display:flex;gap:16px;flex-wrap:wrap;font-size:11px;color:var(--muted)}.key-dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;background:var(--aqua)}.key-dot.blue{background:var(--blue)}.svg-chart{width:100%;height:205px;overflow:visible}.svg-chart text{font:11px system-ui;fill:#8ba4b1}.svg-chart .guide{stroke:#314554;stroke-dasharray:3 6}.svg-chart .trend{stroke:var(--aqua);stroke-width:3;fill:none;stroke-linecap:round;stroke-linejoin:round}.svg-chart .dot{fill:var(--aqua);stroke:var(--panel);stroke-width:3}
+.bars{height:200px;display:flex;align-items:stretch;gap:11px;padding-top:8px}.bar-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:end;min-width:0}.bar-wrap{display:flex;align-items:flex-end;height:145px;width:100%;max-width:45px;border-radius:7px 7px 0 0;overflow:hidden}.bar{width:100%;background:linear-gradient(180deg,#68bbfa,#3e668e);border-radius:6px 6px 0 0}.bar-value{font-size:11px;color:var(--text);margin:0 0 8px;font-weight:700}.bar-label{border-top:1px solid var(--line);padding-top:8px;font-size:11px;color:var(--muted);width:100%;text-align:center;white-space:nowrap}
+.big-signal{font-size:32px;font-weight:820;letter-spacing:-.055em}.small-note{font-size:12px;color:var(--muted);margin:9px 0 0;line-height:1.7}.quality-strip{height:12px;background:#2a3c49;border-radius:30px;overflow:hidden;margin:16px 0}.quality-strip>div{background:linear-gradient(90deg,#3497b7,#61e5ce);height:100%;border-radius:30px;transition:width .3s}.info-row{display:flex;justify-content:space-between;gap:13px;border-bottom:1px solid var(--line);padding:10px 0}.info-row:last-child{border:0}.info-row span{color:var(--muted);font-size:12px}.info-row b{font-size:12px}
+.data-table{width:100%;border-collapse:collapse;white-space:nowrap;font-size:12px}.data-table th{text-align:left;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.11em;padding:13px 10px;border-bottom:1px solid var(--line)}.data-table td{padding:13px 10px;border-bottom:1px solid #243745;font-variant-numeric:tabular-nums}.data-table tr:last-child td{border-bottom:0}.data-table td:first-child{font-weight:700}.table-scroll{overflow-x:auto}.unavailable{color:var(--muted)}.withheld{border:1px solid #775c35;color:var(--amber);background:#37291b;border-radius:18px;padding:4px 8px;display:inline-block;font-size:10px;font-weight:760}
+.privacy-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.privacy{border:1px solid var(--line);border-radius:11px;background:#142635;padding:15px}.privacy h3{color:var(--text);margin-bottom:5px}.privacy p{font-size:12px;color:var(--muted);margin:0}.footer{border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-top:25px;padding-top:17px;font-size:11px;color:var(--muted)}.empty-state{color:var(--muted);font-size:13px;min-height:130px;display:grid;place-items:center;text-align:center;padding:20px;border:1px dashed #375165;border-radius:12px}
+@media(max-width:1100px){.layout{grid-template-columns:190px minmax(0,1fr)}.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.columns{grid-template-columns:1fr}.main{padding:22px}.privacy-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.layout{display:block}.sidebar{position:relative;height:auto;padding:13px 17px;gap:12px;border:0;border-bottom:1px solid var(--line)}.brand{padding:0}.nav{display:flex;overflow-x:auto;gap:8px}.nav a{padding:7px 12px;white-space:nowrap;font-size:12px}.nav-icon{display:none}.sideinfo{display:none}.main{padding:19px 15px}.topline{margin-bottom:21px}.breadcrumbs{display:none}.intro{grid-template-columns:1fr;padding:20px}.intro-sign{width:max-content}.kpis{gap:9px}.kpi{padding:14px}.kpi .value{font-size:26px}.panel{padding:17px}.privacy-grid{grid-template-columns:1fr}.chart{min-height:175px}.svg-chart{height:190px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+</style>
+</head>
+<body><div class="layout">
+<aside class="sidebar">
+<div class="brand"><div class="logo" aria-hidden="true">⬡</div><div><strong>HIVE</strong><small>GENESIS NETWORK</small></div></div>
+<nav class="nav" aria-label="Hive sections">
+<a href="#overview"><span class="nav-icon">◈</span>Overview</a>
+<a href="#activity"><span class="nav-icon">▥</span>Participation</a>
+<a href="#quality"><span class="nav-icon">⌁</span>Research Quality</a>
+<a href="#privacy"><span class="nav-icon">◇</span>Privacy</a>
+</nav>
+<div class="sideinfo"><div class="live">Private Hive preview</div><p>Group statistics only. All vehicle commands and model promotion are disabled.</p></div>
+</aside>
+<main class="main">
+<div class="topline"><div class="breadcrumbs">GENESIS / Hive Network / <b>Analytics</b></div>
+<div class="toptools"><span class="status-inline" id="connection">Connecting</span>
+<select class="select" id="dataset" aria-label="Data category">
+<option value="synthetic">Test network</option><option value="qualified_post_freeze">Verified research</option>
+</select>
+<button class="button" id="demo" type="button">View sample data</button>
+<button class="button primary" id="refresh" type="button">↻ Refresh</button>
+</div></div>
+<section id="overview">
+<div class="heading"><div><div class="tiny">Network intelligence · Analytics</div><h1>Hive Overview</h1><p class="lead">A clear picture of how the research network is growing, what contributors are sharing, and how well our battery predictions perform.</p></div><div class="updated" id="updated">Waiting for data</div></div>
+<div class="demo-ribbon" id="demo-ribbon" hidden><strong>SAMPLE DASHBOARD</strong> — These are fictional numbers to preview the final experience. No real contributors or vehicle records are represented.</div>
+<div class="intro"><div><div class="tiny" style="color:#96f1de">Shared research, individual privacy</div><h2 id="hero-title">Building the Hive.</h2><p id="hero-copy">Group analytics remain private until at least 25 distinct enrolled nodes have contributed within the same month.</p></div><div class="intro-sign"><strong>⬡</strong><span id="cohort-pill">Cohort protected</span></div></div>
+<div class="kpis">
+<div class="kpi"><div class="tiny">Contributing nodes</div><div class="value aqua" id="kpi-nodes">—</div><div class="caption">Latest eligible month</div></div>
+<div class="kpi"><div class="tiny">Predictions checked</div><div class="value" id="kpi-tests">—</div><div class="caption">Across eligible months shown</div></div>
+<div class="kpi"><div class="tiny">Average prediction miss</div><div class="value blue" id="kpi-error">—</div><div class="caption">Temperature difference, in °F</div></div>
+<div class="kpi"><div class="tiny">Returning nodes</div><div class="value green" id="kpi-returning">—</div><div class="caption">From preceding eligible month</div></div>
+</div></section>
+<section id="activity"><div class="columns">
+<div class="panel"><div class="panel-head"><div><h2>Participation over time</h2><p>Contributing nodes each month</p></div><small>Last 6 months</small></div><div id="participation-chart" class="chart"><div class="empty-state">Waiting for an eligible Hive cohort.</div></div><div class="chart-key"><span><i class="key-dot"></i>Eligible monthly contributors</span></div></div>
+<div class="panel"><div class="panel-head"><div><h2>Research activity</h2><p>Battery predictions evaluated by month</p></div><small>Monthly totals</small></div><div id="activity-chart" class="chart"><div class="empty-state">No shareable activity yet.</div></div><div class="chart-key"><span><i class="key-dot blue"></i>Eligible predictions</span></div></div>
+</div></section>
+<section id="quality"><div class="columns">
+<div class="panel"><div class="panel-head"><div><h2>Prediction quality</h2><p>How close the baseline predictions were to measured outcomes</p></div><small>Lower is better</small></div><div id="quality-chart" class="chart"><div class="empty-state">Prediction quality will appear after cohort approval.</div></div>
+<div class="chart-key"><span><i class="key-dot"></i>Average absolute error in °F</span></div>
+</div>
+<div class="panel"><div class="panel-head"><div><h2>Network health</h2><small id="network-status">Private by default</small></div>
+<div class="tiny">Cohort reporting threshold</div><div class="big-signal" id="threshold">25 nodes</div><div class="quality-strip"><div style="width:100%"></div></div>
+<p class="small-note" id="threshold-note">Monthly results are hidden until the threshold is met. This protects against very small groups, but is not a guarantee of anonymity.</p>
+<div class="info-row"><span>Months with eligible group results</span><b id="eligible-months">—</b></div>
+<div class="info-row"><span>Identity exposure on dashboard</span><b>None</b></div>
+<div class="info-row"><span>Data category</span><b id="data-category">Test network</b></div>
+</div></div>
+<div class="panel"><div class="panel-head"><div><h2>Monthly research summary</h2><p>Only qualifying group statistics. No individual node profiles.</p></div><small>Six-month window</small></div>
+<div class="table-scroll"><table class="data-table"><thead><tr><th>Month</th><th>Contributors</th><th>Predictions checked</th><th>Avg. miss (°F)</th><th>Returning</th><th>Group visibility</th></tr></thead><tbody id="monthly-rows"><tr><td colspan="6" class="unavailable">Waiting for data.</td></tr></tbody></table></div></div>
+</section>
+<section id="privacy" style="margin-top:18px"><div class="panel"><div class="panel-head"><div><h2>What the Hive shares</h2><p>Built to be useful, not invasive.</p></div><span class="badge yellow">Research preview</span></div>
+<div class="privacy-grid">
+<div class="privacy"><h3>✓ Group analytics</h3><p>Monthly participant totals, number of evaluated predictions, and averaged prediction error after the threshold.</p></div>
+<div class="privacy"><h3>✓ Contributor-controlled</h3><p>Participating installations opt in explicitly. The transfer client is off by default and test uploads are manual.</p></div>
+<div class="privacy"><h3>× No driving records</h3><p>No VIN, GPS, addresses, routes, trip traces, timestamps of trips, or individual node dashboards here.</p></div>
+</div>
+<p class="small-note" id="privacy-explanation">The private Hive coordinator can inspect individual contributed aggregates. This prototype is not anonymous federated learning, differential privacy, or secure aggregation.</p>
+</div></section>
+<footer class="footer"><span>GENESIS Hive Analytics · Local development preview</span><span>Group metrics only · No production Tesla control</span></footer>
+</main></div>
+<script>
+"use strict";
+const el=id=>document.getElementById(id);
+const node=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=String(text);return n;};
+const format=n=>Number.isFinite(n)?new Intl.NumberFormat().format(n):"—";
+const errorValue=n=>Number.isFinite(n)?Number(n).toFixed(2)+"°F":"—";
+const svgNS="http://www.w3.org/2000/svg";
+const shape=(tag,attributes,content)=>{
+ const element=document.createElementNS(svgNS,tag);
+ for(const [k,v] of Object.entries(attributes||{}))element.setAttribute(k,String(v));
+ if(content!==undefined)element.textContent=String(content);
+ return element;
+};
+let demo=false,last=null;
+function plot(parent,months,key,{kind="line",unit="",className="trend"}={}){
+ parent.replaceChildren();
+ const points=months.map((m,i)=>({i,label:m.label.split(" ")[0],value:m.status==="READY"&&Number.isFinite(m[key])?m[key]:null}));
+ if(!points.some(p=>p.value!==null)){
+   parent.append(node("div","empty-state","Not enough contributing nodes to show a group trend yet."));
+   return;
+ }
+ if(kind==="bar"){
+    const area=node("div","bars");
+    const max=Math.max(1,...points.map(p=>p.value||0));
+    for(const p of points){
+      const col=node("div","bar-col");
+      col.append(node("div","bar-value",p.value===null?"—":format(p.value)));
+      const wrap=node("div","bar-wrap"),bar=node("div","bar");
+      bar.style.height=p.value===null?"0%":Math.max(3,100*p.value/max)+"%";
+      wrap.append(bar);col.append(wrap,node("div","bar-label",p.label));area.append(col);
+    }
+    parent.append(area);return;
+ }
+ const svg=shape("svg",{class:"svg-chart",viewBox:"0 0 640 205",role:"img",
+        "aria-label":key==="contributors"?"Monthly contributing node trend":"Monthly average prediction error"});
+ const max=Math.max(...points.filter(p=>p.value!==null).map(p=>p.value),.01)*1.14;
+ for(let tick=0;tick<4;tick++){
+   const y=12+tick*52;
+   svg.append(shape("line",{x1:46,y1:y,x2:630,y2:y,class:"guide"}));
+   svg.append(shape("text",{x:39,y:y+4,"text-anchor":"end"},(max*(1-tick/3)).toFixed(key==="contributors"?0:1)+unit));
+ }
+ const xy=p=>[54+p.i*(566/5),171-(p.value/max)*154];
+ let segment=[];
+ const finish=()=>{if(segment.length>=2)svg.append(shape("polyline",{points:segment.map(x=>x.join(",")).join(" "),class:className}));segment=[];};
+ for(const p of points){
+    if(p.value===null){finish();continue;}
+    const xyPoint=xy(p);
+    segment.push(xyPoint);
+ }
+ finish();
+ for(const p of points){
+   const x=54+p.i*(566/5);
+   svg.append(shape("text",{x,y:195,"text-anchor":"middle"},p.label));
+   if(p.value!==null){const [xx,yy]=xy(p);svg.append(shape("circle",{cx:xx,cy:yy,r:5,class:"dot"}));}
+ }
+ parent.append(svg);
+}
+function show(report){
+ last=report;
+ const periods=report.months||[],sum=report.summary||{};
+ const eligible=report.status==="COHORT_AVAILABLE"||report.demo===true;
+ el("demo-ribbon").hidden=!report.demo;
+ el("connection").textContent=report.demo?"Sample analytics":"Hive online";
+ el("hero-title").textContent=eligible?"Every contribution moves research forward.":"Building a private research cohort.";
+ el("hero-copy").textContent=eligible?
+     "Follow network participation and historical prediction quality. Only group-level evidence is displayed.":
+     "Real group analytics remain withheld until at least 25 enrolled nodes have submitted a qualifying monthly summary.";
+ el("cohort-pill").textContent=report.demo?"Synthetic example":eligible?"Threshold reached":"Cohort protected";
+ el("kpi-nodes").textContent=format(sum.contributors);
+ el("kpi-tests").textContent=format(sum.predictions_evaluated);
+ el("kpi-error").textContent=errorValue(sum.average_error_f);
+ el("kpi-returning").textContent=format(sum.returning_contributors);
+ el("eligible-months").textContent=String(sum.months_available||0)+" / 6";
+ el("data-category").textContent=report.demo?"Fictional sample":report.origin==="synthetic"?"Test network":"Verified research";
+ el("network-status").textContent=eligible?"Group reporting active":"Not yet eligible";
+ el("privacy-explanation").textContent=report.explanation+" The private server can access individual submitted aggregates; this is not cryptographic anonymity, secure aggregation, or differential privacy.";
+ el("updated").textContent="Updated "+new Date().toLocaleTimeString();
+ plot(el("participation-chart"),periods,"contributors");
+ plot(el("activity-chart"),periods,"predictions",{kind:"bar"});
+ plot(el("quality-chart"),periods,"average_error_f",{unit:"°"});
+ const rows=el("monthly-rows");rows.replaceChildren();
+ for(const month of [...periods].reverse()){
+   const line=node("tr");
+   const values=[month.label,month.contributors,month.predictions,
+                 month.average_error_f,month.returning_contributors];
+   values.forEach((value,i)=>line.append(node("td",value===null?"unavailable":"",i===3?errorValue(value):i===0?value:format(value))));
+   const badge=node("span",month.status==="READY"?"badge":"withheld",month.status==="READY"?"Group available":"Private");
+   const td=node("td");td.append(badge);line.append(td);rows.append(line);
+ }
+}
+async function refresh(){
+ const b=el("refresh");b.disabled=true;b.textContent="Loading…";
+ try{
+  const params=new URLSearchParams({origin:el("dataset").value});
+  if(demo)params.set("demo","1");
+  const response=await fetch("/api/hive/analytics?"+params.toString(),{cache:"no-store"});
+  if(!response.ok)throw Error("Hive Analytics unavailable");
+  show(await response.json());
+ }catch(error){
+  el("connection").textContent="Disconnected";
+  el("updated").textContent="Could not fetch Hive statistics";
+ }finally{b.disabled=false;b.textContent="↻ Refresh";}
+}
+el("refresh").addEventListener("click",refresh);
+el("dataset").addEventListener("change",()=>{demo=false;el("demo").textContent="View sample data";refresh();});
+el("demo").addEventListener("click",()=>{demo=!demo;el("demo").textContent=demo?"View actual groups":"View sample data";refresh();});
+refresh();
+setInterval(()=>{if(!document.hidden)refresh();},60000);
+</script>
+</body></html>
